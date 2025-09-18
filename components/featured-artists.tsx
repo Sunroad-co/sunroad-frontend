@@ -17,6 +17,24 @@ interface Artist {
   category?: string
 }
 
+interface SupabaseArtist {
+  id: string
+  handle: string
+  display_name: string
+  avatar_url?: string
+  banner_url?: string
+  locations?: {
+    city?: string
+    state?: string
+    country?: string
+  }
+  artist_categories?: Array<{
+    categories?: {
+      name: string
+    }
+  }>
+}
+
 export default function FeaturedArtists() {
   const [artists, setArtists] = useState<Artist[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,19 +65,19 @@ export default function FeaturedArtists() {
           setArtists([])
         } else {
           // Flatten nested locations for ease
-          const flattened = (data || []).map((artist: Record<string, unknown>) => ({
-            id: artist.id as string,
-            handle: artist.handle as string,
-            display_name: artist.display_name as string,
-            avatar_url: artist.avatar_url as string | undefined,
-            banner_url: artist.banner_url as string | undefined,
-            city: (artist.locations as Record<string, unknown>)?.city as string | undefined,
-            state: (artist.locations as Record<string, unknown>)?.state as string | undefined,
-            country: (artist.locations as Record<string, unknown>)?.country as string | undefined,
-            category: ((artist.artist_categories as Record<string, unknown>[]) || [])
-              .map((ac: Record<string, unknown>) => (ac.categories as Record<string, unknown>)?.name)
-              .filter(Boolean)[0] as string | undefined
-          })) as Artist[]
+          const flattened = (data || []).map((artist: SupabaseArtist): Artist => ({
+            id: artist.id,
+            handle: artist.handle,
+            display_name: artist.display_name,
+            avatar_url: artist.avatar_url,
+            banner_url: artist.banner_url,
+            city: artist.locations?.city,
+            state: artist.locations?.state,
+            country: artist.locations?.country,
+            category: artist.artist_categories
+              ?.map((ac) => ac.categories?.name)
+              .filter(Boolean)[0]
+          }))
           setArtists(flattened)
         }
       } catch (error) {
