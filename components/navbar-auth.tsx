@@ -15,13 +15,13 @@ export default function NavbarAuth() {
     const supabase = createClient()
 
     // Get initial session
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: { user: User } | null } }) => {
       setUser(data.session?.user || null)
       setLoading(false)
     })
 
     // Subscribe to auth changes
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event: string, session: { user: User } | null) => {
       setUser(session?.user || null)
       setLoading(false)
     })

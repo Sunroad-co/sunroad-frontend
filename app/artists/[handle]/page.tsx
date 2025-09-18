@@ -1,6 +1,24 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import SimilarArtists from '@/components/similar-artists'
+import { createAnonClient } from '@/lib/supabase/anon'
+
+interface ArtistWithCategories {
+  id: string
+  handle: string
+  display_name: string
+  avatar_url?: string
+  banner_url?: string
+  bio?: string
+  website_url?: string
+  instagram_url?: string
+  facebook_url?: string
+  artist_categories?: Array<{
+    categories?: {
+      name: string
+    }
+  }>
+}
 
 // Route config - ISR with time-based revalidation
 export const revalidate = 3600 // Revalidate every hour
@@ -20,31 +38,63 @@ export async function generateStaticParams() {
 }
 
 async function fetchArtist(handle: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/artist?handle=${handle}`, {
-    next: { tags: [`artist:${handle}`] },
-    cache: 'force-cache', // Ensure static generation
-  })
-  if (!res.ok) return res.status === 404 ? null : Promise.reject(res.statusText)
-  const artist = await res.json()
-  
-  // Extract category from the nested structure
-  const category = artist.artist_categories?.[0]?.categories?.name || 'Artist'
-  
-  return {
-    ...artist,
-    category
+  try {
+    const supabase = createAnonClient()
+    const { data: artist, error } = await supabase
+      .from('artists_min')
+      .select(`
+        *,
+        artist_categories (
+          categories (
+            name
+          )
+        )
+      `)
+      .eq('handle', handle)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Error fetching artist:', error)
+      return null
+    }
+
+    if (!artist) {
+      return null
+    }
+
+    // Extract category from the nested structure
+    const typedArtist = artist as ArtistWithCategories
+    const category = typedArtist.artist_categories?.[0]?.categories?.name || 'Artist'
+    
+    return {
+      ...typedArtist,
+      category
+    }
+  } catch (error) {
+    console.error('Unexpected error fetching artist:', error)
+    return null
   }
 }
 
 async function fetchWorks(artistId: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/works?artistId=${artistId}`, {
-    next: { tags: [`artist-works:${artistId}`] },
-    cache: 'force-cache', // Ensure static generation
-  })
-  if (!res.ok) throw new Error(`Failed to fetch works: ${res.statusText}`)
-  return res.json()
+  try {
+    const supabase = createAnonClient()
+    const { data: works, error } = await supabase
+      .from('works')
+      .select('id, title, thumb_url')
+      .eq('artist_id', artistId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching works:', error)
+      return []
+    }
+
+    return works || []
+  } catch (error) {
+    console.error('Unexpected error fetching works:', error)
+    return []
+  }
 }
 
 export default async function ArtistPage({ params }: { params: Promise<{ handle: string }> }) {
@@ -112,7 +162,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
 
           {/* About */}
           <div className="mb-8">
-          {artist.artist_categories?.length > 0 && (
+          {artist.artist_categories && artist.artist_categories.length > 0 && (
   <div className="flex flex-wrap gap-2 mt-3">
     {artist.artist_categories.map((ac: { categories?: { name: string } }, i: number) => (
       <span
