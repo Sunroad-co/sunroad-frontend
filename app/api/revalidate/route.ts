@@ -1,27 +1,32 @@
-import { revalidateTag } from 'next/cache'
+import { revalidateTag, revalidatePath } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { tags } = body
+    const { tags, handle, artistId } = body
 
-    if (!tags || !Array.isArray(tags)) {
-      return NextResponse.json(
-        { error: 'Tags array is required' },
-        { status: 400 }
-      )
+    // Support both tag-based and artist-specific revalidation
+    if (tags && Array.isArray(tags)) {
+      tags.forEach((tag: string) => {
+        revalidateTag(tag)
+      })
     }
 
-    // Revalidate each tag
-    tags.forEach((tag: string) => {
-      revalidateTag(tag)
-    })
+    // Artist-specific revalidation
+    if (handle) {
+      revalidateTag(`artist:${handle}`)
+      revalidatePath(`/artists/${handle}`)
+    }
+
+    if (artistId) {
+      revalidateTag(`artist-works:${artistId}`)
+    }
 
     return NextResponse.json(
       { 
         message: 'Revalidation successful',
-        revalidated: tags,
+        revalidated: { tags, handle, artistId },
         now: Date.now()
       },
       { status: 200 }

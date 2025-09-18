@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [new URL('https://sunroad.io/upload/uploads/**'), new URL('https://epicmargin.com/upload/uploads/**')],
   },
+  reactStrictMode: false,
 };
 
 export default nextConfig;

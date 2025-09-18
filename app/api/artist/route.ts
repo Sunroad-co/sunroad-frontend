@@ -13,7 +13,14 @@ export async function GET(req: Request) {
     const supabase = createAnonClient()
     const { data: artist, error } = await supabase
       .from('artists_min')
-      .select('*')
+      .select(`
+        *,
+        artist_categories (
+          categories (
+            name
+          )
+        )
+      `)
       .eq('handle', handle)
       .maybeSingle()
 
