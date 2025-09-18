@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import SimilarArtists from '@/components/similar-artists'
+import WorksGallery from '@/components/works-gallery'
 import { createAnonClient } from '@/lib/supabase/anon'
 
 interface ArtistWithCategories {
@@ -18,6 +19,12 @@ interface ArtistWithCategories {
       name: string
     }
   }>
+}
+
+interface Work {
+  id: string
+  title?: string
+  thumb_url: string
 }
 
 // Route config - ISR with time-based revalidation
@@ -80,7 +87,7 @@ async function fetchWorks(artistId: string) {
   try {
     const supabase = createAnonClient()
     const { data: works, error } = await supabase
-      .from('works')
+      .from('artworks_min')
       .select('id, title, thumb_url')
       .eq('artist_id', artistId)
       .order('created_at', { ascending: false })
@@ -90,7 +97,16 @@ async function fetchWorks(artistId: string) {
       return []
     }
 
-    return works || []
+    if (!works) return []
+
+    // Remove duplicates based on id
+    const uniqueWorks = works.filter((work: Work, index: number, self: Work[]) => 
+      index === self.findIndex((w: Work) => w.id === work.id)
+    )
+
+    console.log(`Fetched ${works.length} works, ${uniqueWorks.length} unique works for artist ${artistId}`)
+    
+    return uniqueWorks
   } catch (error) {
     console.error('Unexpected error fetching works:', error)
     return []
@@ -185,28 +201,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           {/* Works */}
           <div className="mb-12">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Work</h3>
-            {works?.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {works.map((work: { id: string; title?: string; thumb_url: string }) => (
-                  <div key={work.id} className="relative group rounded-lg overflow-hidden">
-                    <Image
-                      src={work.thumb_url}
-                      alt={work.title || 'Artwork'}
-                      width={400}
-                      height={300}
-                      className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    {/* {work.title && (
-                      <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white px-2 py-1 text-sm truncate">
-                        {work.title}
-                      </div>
-                    )} */}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">No works available yet.</p>
-            )}
+            <WorksGallery works={works} />
           </div>
           {/* Social links */}
           <div className="mb-8 flex flex-wrap gap-3">
