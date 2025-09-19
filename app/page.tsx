@@ -3,6 +3,7 @@ import Link from "next/link";
 import FeaturedArtists from "@/components/featured-artists";
 import FeaturedBlog from "@/components/featured-blog";
 import PopularCategories from "@/components/popular-categories";
+import SocialProof from "@/components/social-proof";
 
 export default function Home() {
   return (
@@ -11,8 +12,8 @@ export default function Home() {
      {/* Hero Section */}
 {/* Hero Section */}
 <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-  <div className="bg-amber-800 border-2 border-gray-900 rounded-3xl overflow-hidden">
-    <div className=" bg-amber-800 grid grid-cols-1 lg:grid-cols-2 items-stretch">
+  <div className="bg-[#9B6752] border-2 border-gray-900 rounded-3xl overflow-hidden">
+    <div className=" bg-[#9B6752] grid grid-cols-1 lg:grid-cols-2 items-stretch">
       
       {/* Left Panel */}
       <div className="p-8 lg:p-12 flex flex-col justify-center space-y-6 text-center lg:text-left">
@@ -66,7 +67,8 @@ export default function Home() {
   </div>
 </section>
 
-
+      {/* Social Proof Section */}
+      <SocialProof />
 
       {/* Featured Artists Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
