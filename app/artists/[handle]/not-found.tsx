@@ -8,6 +8,7 @@ export default function NotFound() {
         <p className="text-gray-600 mb-8">The artist you&apos;re looking for doesn&apos;t exist or may have been removed.</p>
         <Link 
           href="/"
+          prefetch={false}
           className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
         >
           Go Home

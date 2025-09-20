@@ -113,6 +113,7 @@ export default function FeaturedArtists() {
     <Link
     key={artist.id}
     href={`/artists/${artist.handle}`}
+    prefetch={false}
     className="bg-white rounded-2xl border border-gray-200 overflow-hidden 
                shadow-sm hover:shadow-md hover:-translate-y-1 
                transition-all duration-300 group"

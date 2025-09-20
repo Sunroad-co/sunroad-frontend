@@ -222,6 +222,7 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategorie
           <Link
             key={artist.id}
             href={`/artists/${artist.handle}`}
+            prefetch={false}
             className="group block"
           >
             <div className="relative overflow-hidden rounded-lg mb-2">

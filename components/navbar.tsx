@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import NavbarAuth from './navbar-auth'
+import SearchBar from './search-bar'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -28,18 +29,10 @@ export default function Navbar() {
           
           {/* Search Bar */}
           <div className="flex-1 max-w-lg mx-8">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search for local creatives..."
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent shadow-sm"
-              />
-              <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
+            <SearchBar 
+              placeholder="Search for local creatives..."
+              onResultClick={() => setIsMobileMenuOpen(false)}
+            />
           </div>
           
           {/* Right side - Help, Home, Auth */}
@@ -84,17 +77,11 @@ export default function Navbar() {
           </div>
           
           {/* Search Bar */}
-          <div className="relative mb-4">
-            <input
-              type="text"
+          <div className="mb-4">
+            <SearchBar 
               placeholder="Search for local creatives"
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent shadow-sm"
+              onResultClick={() => setIsMobileMenuOpen(false)}
             />
-            <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
           </div>
 
           {/* Mobile Menu */}
