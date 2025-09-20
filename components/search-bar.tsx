@@ -35,6 +35,9 @@ export default function SearchBar({
     limit: 8
   })
 
+  // Show skeleton loader when dropdown is open but we haven't started loading yet
+  const shouldShowSkeleton = isOpen && (loading || (!hasSearched && query.length >= 2))
+
 
   // Handle click outside to close dropdown and prevent scrolling
   useEffect(() => {
@@ -210,7 +213,7 @@ export default function SearchBar({
                 Try again
               </button>
             </div>
-          ) : loading ? (
+          ) : shouldShowSkeleton ? (
             <SkeletonLoader />
           ) : results.length > 0 ? (
             <div className="py-2">
