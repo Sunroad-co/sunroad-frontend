@@ -27,7 +27,8 @@ export default function SearchBar({
     loading,
     error,
     isOpen,
-    setIsOpen
+    setIsOpen,
+    hasSearched
   } = useSearch({
     debounceMs: 300,
     minQueryLength: 2,
@@ -184,10 +185,10 @@ export default function SearchBar({
         )}
       </div>
 
-      {/* Backdrop - desktop only, exclude navbar area */}
+      {/* Backdrop - positioned below navbar on both desktop and mobile */}
       {isOpen && (
         <div 
-          className="hidden md:block fixed top-20 left-0 right-0 bottom-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-200"
+          className="fixed left-0 right-0 bottom-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-200 md:top-20 top-32"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -299,7 +300,7 @@ export default function SearchBar({
                 </div>
               )}
             </div>
-          ) : query.length >= 2 && !loading && results.length === 0 ? (
+          ) : query.length >= 2 && !loading && hasSearched && results.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
               <p className="text-sm">No artists found for &quot;{query}&quot;</p>
               <p className="text-xs mt-1">Try a different search term</p>

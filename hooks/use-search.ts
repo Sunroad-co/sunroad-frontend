@@ -16,6 +16,7 @@ interface UseSearchReturn {
   isOpen: boolean
   setIsOpen: (isOpen: boolean) => void
   clearSearch: () => void
+  hasSearched: boolean
 }
 
 export function useSearch({
@@ -28,6 +29,7 @@ export function useSearch({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false) // Track if we've completed a search
 
   // Debounced search function
   const debouncedSearch = useCallback(
@@ -35,6 +37,7 @@ export function useSearch({
       if (searchQuery.length < minQueryLength) {
         setResults([])
         setLoading(false)
+        setHasSearched(false)
         return
       }
 
@@ -47,10 +50,12 @@ export function useSearch({
           limit
         })
         setResults(searchResults)
+        setHasSearched(true) // Mark that we've completed a search
       } catch (err) {
         console.error('Search error:', err)
         setError('Failed to search artists')
         setResults([])
+        setHasSearched(true) // Mark that we've completed a search (even if failed)
       } finally {
         setLoading(false)
       }
@@ -61,11 +66,13 @@ export function useSearch({
   // Effect to trigger search when query changes
   useEffect(() => {
     if (query.trim() && query.trim().length >= minQueryLength) {
+      setHasSearched(false) // Reset search completion flag when starting new search
       debouncedSearch(query.trim())
     } else {
       setResults([])
       setLoading(false)
       setError(null)
+      setHasSearched(false)
     }
   }, [query, debouncedSearch, minQueryLength])
 
@@ -76,6 +83,7 @@ export function useSearch({
     setError(null)
     setLoading(false)
     setIsOpen(false)
+    setHasSearched(false)
   }, [])
 
   return {
@@ -86,7 +94,8 @@ export function useSearch({
     error,
     isOpen,
     setIsOpen,
-    clearSearch
+    clearSearch,
+    hasSearched
   }
 }
 
