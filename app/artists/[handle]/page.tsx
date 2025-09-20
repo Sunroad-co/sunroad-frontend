@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import { Metadata } from 'next'
 import Image from 'next/image'
 import SimilarArtists from '@/components/similar-artists'
 import WorksGallery from '@/components/works-gallery'
@@ -116,106 +115,6 @@ async function fetchWorks(artistId: string) {
   }
 }
 
-export async function generateMetadata({ 
-  params 
-}: { 
-  params: Promise<{ handle: string }> 
-}): Promise<Metadata> {
-  const { handle } = await params
-  const artist = await fetchArtist(handle)
-
-  if (!artist) {
-    return {
-      title: 'Artist Not Found | Sun Road',
-      description: 'The requested artist profile could not be found.',
-    }
-  }
-
-  // Extract categories for description
-  const categories = artist.artist_categories
-    ?.map(ac => ac.categories?.name)
-    .filter((name): name is string => Boolean(name)) || []
-
-  const categoryText = categories.length > 0 
-    ? `Specializing in ${categories.join(', ')}` 
-    : 'Creative professional'
-
-  // Create description from bio or fallback
-  let description: string
-  if (artist.bio) {
-    // Get first sentence of bio, clean it up
-    const firstSentence = artist.bio.split(/[.!?]/)[0].trim()
-    const cleanedBio = firstSentence.length > 120 
-      ? firstSentence.substring(0, 120).trim() + '...'
-      : firstSentence
-    description = `${cleanedBio} Discover ${artist.display_name}'s work, connect with local creatives, and explore the Sun Road artist community.`
-  } else {
-    description = `${artist.display_name} is a ${categoryText.toLowerCase()} on Sun Road. Discover their work, connect with local creatives, and explore the Sun Road artist community.`
-  }
-
-  // Use avatar as Open Graph image, fallback to banner
-  const imageUrl = artist.avatar_url || artist.banner_url
-
-  const metadata: Metadata = {
-    title: `${artist.display_name} | Sun Road`,
-    description,
-    keywords: [
-      artist.display_name,
-      ...categories,
-      'local artist',
-      'creative',
-      'Tulsa',
-      'Oklahoma',
-      'Sun Road'
-    ],
-    authors: [{ name: artist.display_name }],
-    openGraph: {
-      title: `${artist.display_name} | Sun Road`,
-      description,
-      type: 'profile',
-      url: `https://sunroad-frontend.vercel.app/artists/${handle}`,
-      siteName: 'Sun Road',
-      ...(imageUrl && {
-        images: [
-          {
-            url: imageUrl,
-            width: 400,
-            height: 400,
-            alt: `${artist.display_name} profile picture`,
-          }
-        ]
-      }),
-      ...(artist.website_url && {
-        url: artist.website_url,
-      })
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${artist.display_name} | Sun Road`,
-      description,
-      ...(imageUrl && {
-        images: [imageUrl],
-      })
-    },
-    ...(artist.website_url && {
-      other: {
-        'profile:website': artist.website_url,
-      }
-    }),
-    ...(artist.instagram_url && {
-      other: {
-        'profile:instagram': artist.instagram_url,
-      }
-    }),
-    ...(artist.facebook_url && {
-      other: {
-        'profile:facebook': artist.facebook_url,
-      }
-    })
-  }
-
-  return metadata
-}
 
 export default async function ArtistPage({ params }: { params: Promise<{ handle: string }> }) {
   try {
