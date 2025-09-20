@@ -60,14 +60,14 @@ export function useSearch({
 
   // Effect to trigger search when query changes
   useEffect(() => {
-    if (query.trim()) {
+    if (query.trim() && query.trim().length >= minQueryLength) {
       debouncedSearch(query.trim())
     } else {
       setResults([])
       setLoading(false)
       setError(null)
     }
-  }, [query, debouncedSearch])
+  }, [query, debouncedSearch, minQueryLength])
 
   // Clear search function
   const clearSearch = useCallback(() => {

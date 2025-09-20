@@ -27,15 +27,15 @@ export default function SearchBar({
     loading,
     error,
     isOpen,
-    setIsOpen,
-    clearSearch
+    setIsOpen
   } = useSearch({
     debounceMs: 300,
     minQueryLength: 2,
     limit: 8
   })
 
-  // Handle click outside to close dropdown
+
+  // Handle click outside to close dropdown and prevent scrolling
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -48,9 +48,20 @@ export default function SearchBar({
       }
     }
 
+    // Prevent scrolling when dropdown is open
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [setIsOpen])
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.body.style.overflow = 'unset'
+    }
+  }, [setIsOpen, isOpen])
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -63,7 +74,13 @@ export default function SearchBar({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setQuery(value)
-    setIsOpen(value.length >= 2)
+    
+    // Show dropdown with skeleton loader immediately when typing 2+ characters
+    if (value.length >= 2) {
+      setIsOpen(true)
+    } else {
+      setIsOpen(false)
+    }
   }
 
   const handleInputFocus = () => {
@@ -84,6 +101,11 @@ export default function SearchBar({
     onResultClick?.()
   }
 
+  const handleClearSearch = () => {
+    setQuery('')
+    setIsOpen(false)
+  }
+
   const formatLocation = (city: string | null, state: string | null) => {
     if (!city && !state) return null
     return [city, state].filter(Boolean).join(', ')
@@ -93,6 +115,30 @@ export default function SearchBar({
     if (!categories) return null
     return categories.split(',').slice(0, 2).join(', ')
   }
+
+  // Skeleton loader component
+  const SkeletonLoader = () => (
+    <div className="py-2">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="px-4 py-3 border-b border-gray-100 last:border-b-0">
+          <div className="flex items-center space-x-3">
+            {/* Avatar skeleton */}
+            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+            
+            {/* Content skeleton */}
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+              <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
+              <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+            </div>
+            
+            {/* Arrow skeleton */}
+            <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 
   return (
     <div className={`relative ${className}`}>
@@ -128,8 +174,8 @@ export default function SearchBar({
         {/* Clear Button */}
         {query && (
           <button
-            onClick={clearSearch}
-            className="absolute inset-y-0 right-8 pr-2 flex items-center text-gray-400 hover:text-gray-600"
+            onClick={handleClearSearch}
+            className="absolute inset-y-0 right-8 pr-2 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -138,11 +184,20 @@ export default function SearchBar({
         )}
       </div>
 
+      {/* Backdrop - desktop only, exclude navbar area */}
+      {isOpen && (
+        <div 
+          className="hidden md:block fixed top-20 left-0 right-0 bottom-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-200"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
       {/* Dropdown Results */}
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto"
+          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto
+                     animate-in slide-in-from-top-2 fade-in duration-200"
         >
           {error ? (
             <div className="p-4 text-center text-red-600">
@@ -154,6 +209,8 @@ export default function SearchBar({
                 Try again
               </button>
             </div>
+          ) : loading ? (
+            <SkeletonLoader />
           ) : results.length > 0 ? (
             <div className="py-2">
               {results.map((artist) => (
@@ -162,7 +219,8 @@ export default function SearchBar({
                   href={`/artists/${artist.handle}`}
                   prefetch={false}
                   onClick={handleResultClick}
-                  className="block px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                  className="block px-4 py-3 hover:bg-gray-50 transition-all duration-150 border-b border-gray-100 last:border-b-0 
+                             hover:shadow-sm hover:scale-[1.01]"
                 >
                   <div className="flex items-center space-x-3">
                     {/* Avatar */}
@@ -233,14 +291,15 @@ export default function SearchBar({
                     href={`/search?q=${encodeURIComponent(query)}`}
                     prefetch={false}
                     onClick={handleResultClick}
-                    className="block text-center text-sm text-amber-600 hover:text-amber-700 font-medium"
+                    className="block text-center text-sm text-amber-600 hover:text-amber-700 font-medium 
+                               transition-colors duration-150 hover:bg-amber-50 py-2 rounded-lg"
                   >
                     View all results for &quot;{query}&quot;
                   </Link>
                 </div>
               )}
             </div>
-          ) : query.length >= 2 && !loading ? (
+          ) : query.length >= 2 && !loading && results.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
               <p className="text-sm">No artists found for &quot;{query}&quot;</p>
               <p className="text-xs mt-1">Try a different search term</p>
