@@ -69,13 +69,15 @@ async function fetchArtist(handle: string) {
       return null
     }
 
-    // Extract category from the nested structure
+    // Extract categories from the nested structure
     const typedArtist = artist as ArtistWithCategories
-    const category = typedArtist.artist_categories?.[0]?.categories?.name || 'Artist'
+    const categories = typedArtist.artist_categories
+      ?.map(ac => ac.categories?.name)
+      .filter((name): name is string => Boolean(name)) || ['Artist']
     
     return {
       ...typedArtist,
-      category
+      categories
     }
   } catch (error) {
     console.error('Unexpected error fetching artist:', error)
@@ -250,7 +252,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           {/* Similar Artists */}
           <SimilarArtists 
             currentArtistId={artist.id}
-            currentArtistCategory={artist.category}
+            currentArtistCategories={artist.categories}
           />
         </div>
       </div>

@@ -19,15 +19,60 @@ interface Artist {
 
 interface SimilarArtistsProps {
   currentArtistId: string
-  currentArtistCategory?: string
+  currentArtistCategories?: string[]
 }
 
-export default function SimilarArtists({ currentArtistId, currentArtistCategory }: SimilarArtistsProps) {
+export default function SimilarArtists({ currentArtistId, currentArtistCategories }: SimilarArtistsProps) {
   const [artists, setArtists] = useState<Artist[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    async function fetchRandomArtists() {
+      const supabase = createAnonClient()
+      const { data, error } = await supabase
+        .from('artists_min')
+        .select(`
+          id,
+          handle,
+          display_name,
+          avatar_url,
+          banner_url,
+          locations:location_id (
+            city,
+            state,
+            country
+          ),
+          artist_categories (
+            categories (
+              name
+            )
+          )
+        `)
+        .neq('id', currentArtistId)
+        .limit(4)
+
+      if (error) {
+        console.error('Error fetching random artists:', error)
+        setArtists([])
+      } else {
+        const flattened = (data || []).map((artist: Record<string, unknown>) => ({
+          id: artist.id as string,
+          handle: artist.handle as string,
+          display_name: artist.display_name as string,
+          avatar_url: artist.avatar_url as string | undefined,
+          banner_url: artist.banner_url as string | undefined,
+          city: (artist.locations as Record<string, unknown>)?.city as string | undefined,
+          state: (artist.locations as Record<string, unknown>)?.state as string | undefined,
+          country: (artist.locations as Record<string, unknown>)?.country as string | undefined,
+          category: ((artist.artist_categories as Record<string, unknown>[]) || [])
+            .map((ac: Record<string, unknown>) => (ac.categories as Record<string, unknown>)?.name)
+            .filter(Boolean)[0] as string | undefined
+        })) as Artist[]
+        setArtists(flattened)
+      }
+    }
+
     async function fetchSimilarArtists() {
       try {
         setLoading(true)
@@ -36,10 +81,11 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategory 
         // Use the singleton anon client
         const supabase = createAnonClient()
         
-        // If we have a category, try to find artists with the same category
-        if (currentArtistCategory) {
-          console.log('Looking for artists with category:', currentArtistCategory)
+        // If we have categories, try to find artists with matching categories
+        if (currentArtistCategories && currentArtistCategories.length > 0) {
+          console.log('Looking for artists with categories:', currentArtistCategories)
           
+          // Try to find artists that match any of the current artist's categories
           const { data, error } = await supabase
             .from('artists_min')
             .select(`
@@ -54,8 +100,8 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategory 
                 )
               `)
             .neq('id', currentArtistId) // Exclude current artist
-            .eq('artist_categories.categories.name', currentArtistCategory) // Filter by category
-            .limit(4)
+            .in('artist_categories.categories.name', currentArtistCategories) // Filter by any of the categories
+            .limit(8) // Get more to filter from
 
           if (error) {
             console.error('Error fetching similar artists:', error)
@@ -116,57 +162,25 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategory 
                 .filter(Boolean)[0] as string | undefined
             })) as Artist[]
             
-            // Filter by category in JavaScript since Supabase filtering might not work
-            const similarArtists = flattened.filter(artist => 
-              artist.category === currentArtistCategory
-            )
+            // Filter by categories in JavaScript - find artists that share any category
+            const similarArtists = flattened.filter(artist => {
+              if (!artist.category) return false
+              return currentArtistCategories.includes(artist.category)
+            })
             
             console.log('Found similar artists:', similarArtists.length)
-            setArtists(similarArtists.slice(0, 4))
+            
+            if (similarArtists.length > 0) {
+              setArtists(similarArtists.slice(0, 4))
+            } else {
+              // No similar artists found, fallback to random artists
+              console.log('No similar artists found, fetching random artists...')
+              await fetchRandomArtists()
+            }
           }
         } else {
-          // Fallback: just get some random artists
-          const { data, error } = await supabase
-            .from('artists_min')
-            .select(`
-              id,
-              handle,
-              display_name,
-              avatar_url,
-              banner_url,
-              locations:location_id (
-                city,
-                state,
-                country
-              ),
-              artist_categories (
-                categories (
-                  name
-                )
-              )
-            `)
-            .neq('id', currentArtistId)
-            .limit(4)
-
-          if (error) {
-            console.error('Error fetching similar artists:', error)
-            setArtists([])
-          } else {
-            const flattened = (data || []).map((artist: Record<string, unknown>) => ({
-              id: artist.id as string,
-              handle: artist.handle as string,
-              display_name: artist.display_name as string,
-              avatar_url: artist.avatar_url as string | undefined,
-              banner_url: artist.banner_url as string | undefined,
-              city: (artist.locations as Record<string, unknown>)?.city as string | undefined,
-              state: (artist.locations as Record<string, unknown>)?.state as string | undefined,
-              country: (artist.locations as Record<string, unknown>)?.country as string | undefined,
-              category: ((artist.artist_categories as Record<string, unknown>[]) || [])
-                .map((ac: Record<string, unknown>) => (ac.categories as Record<string, unknown>)?.name)
-                .filter(Boolean)[0] as string | undefined
-            })) as Artist[]
-            setArtists(flattened)
-          }
+          // No categories provided, fetch random artists
+          await fetchRandomArtists()
         }
       } catch (error) {
         console.error('Unexpected error:', error)
@@ -177,7 +191,7 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategory 
     }
 
     fetchSimilarArtists()
-  }, [currentArtistId, currentArtistCategory])
+  }, [currentArtistId, currentArtistCategories])
 
   if (loading) {
     return (
