@@ -63,6 +63,18 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+  }
+  
+  /* Prevent scrolling on auth pages */
+  .auth-page {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  
+  /* Smooth scrolling for other pages */
+  html {
+    scroll-behavior: smooth;
   }
 }

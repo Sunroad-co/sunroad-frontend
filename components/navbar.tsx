@@ -10,8 +10,8 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
-    <header className="bg-[#f5f5dc]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 lg:mt-4 lg:mb-4">
+    <header className="sticky top-0 z-50 bg-gradient-to-br from-slate-50/98 via-amber-50/30/98 to-orange-50/20/98 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Desktop Layout */}
         <div className="hidden md:flex justify-between items-center h-16">
           {/* Logo */}
@@ -37,12 +37,12 @@ export default function Navbar() {
           
           {/* Right side - Help, Home, Auth */}
           <div className="flex items-center space-x-4">
-            <button className="p-2 text-gray-600 hover:text-amber-600 transition-colors">
+            <button className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50">
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
-            <button className="p-2 text-gray-600 hover:text-amber-600 transition-colors">
+            <button className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50">
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
@@ -68,7 +68,7 @@ export default function Navbar() {
             {/* Hamburger Menu */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-gray-600 hover:text-amber-600 transition-colors"
+              className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50"
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -86,24 +86,24 @@ export default function Navbar() {
 
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
-            <div className="bg-white rounded-lg shadow-lg p-4 space-y-4">
+            <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 space-y-4 border border-sunroad-amber-100/50">
               <div className="flex items-center space-x-4">
-                <button className="p-2 text-gray-600 hover:text-amber-600 transition-colors">
+                <button className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </button>
-                <span className="text-sm text-gray-600">Help</span>
+                <span className="text-sm text-sunroad-brown-600 font-body">Help</span>
               </div>
               <div className="flex items-center space-x-4">
-                <button className="p-2 text-gray-600 hover:text-amber-600 transition-colors">
+                <button className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
                 </button>
-                <span className="text-sm text-gray-600">Home</span>
+                <span className="text-sm text-sunroad-brown-600 font-body">Home</span>
               </div>
-              <div className="pt-2 border-t border-gray-200">
+              <div className="pt-2 border-t border-sunroad-amber-100/50">
                 <NavbarAuth />
               </div>
             </div>
