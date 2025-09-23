@@ -62,7 +62,7 @@ export default function NavbarAuth() {
               className="w-8 h-8 rounded-full object-cover"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-sunroad-amber-600 flex items-center justify-center">
               <span className="text-white text-sm font-medium">
                 {user.user_metadata?.full_name?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
               </span>
@@ -77,11 +77,11 @@ export default function NavbarAuth() {
         {showDropdown && (
           <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
             <Link
-              href="/profile"
+              href="/dashboard/profile"
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               onClick={() => setShowDropdown(false)}
             >
-              Profile
+              Dashboard
             </Link>
             <Link
               href="/settings"

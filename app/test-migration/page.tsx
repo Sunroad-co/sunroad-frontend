@@ -3,8 +3,8 @@
 import { useState } from 'react'
 
 export default function TestMigrationPage() {
-  const [email, setEmail] = useState('jes.mcdaniel@gmail.com')
-  const [encodedPassword, setEncodedPassword] = useState('UGFzc3dvcmQxJA==')
+  const [email, setEmail] = useState('')
+  const [encodedPassword, setEncodedPassword] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -179,15 +179,7 @@ export default function TestMigrationPage() {
               </ul>
             </div>
 
-            {/* Example */}
-            <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-              <h3 className="text-lg font-medium text-gray-800 mb-2">💡 Example</h3>
-              <div className="text-sm text-gray-700 space-y-1">
-                <p><strong>Email:</strong> jes.mcdaniel@gmail.com</p>
-                <p><strong>Base64 Password:</strong> UGFzc3dvcmQxJA==</p>
-                <p><strong>Decodes to:</strong> Password1$</p>
-              </div>
-            </div>
+          
           </div>
         </div>
       </div>
