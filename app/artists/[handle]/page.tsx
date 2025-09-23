@@ -3,6 +3,7 @@ import { Metadata } from 'next'
 import Image from 'next/image'
 import SimilarArtists from '@/components/similar-artists'
 import WorksGallery from '@/components/works-gallery'
+import ShareButton from '@/components/share-button'
 import { createAnonClient } from '@/lib/supabase/anon'
 
 interface ArtistWithCategories {
@@ -267,10 +268,17 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
         {/* Content */}
         <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
           {/* Artist Name */}
-          <header className="mt-3 text-center sm:text-left">
-            <h1 className="text-5xl sm:text-2xl font-bold text-gray-900 mb-2 drop-shadow-md">
-              {artist.display_name}
-            </h1>
+          <header className="mt-3 text-center sm:text-left relative">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h1 className="text-5xl sm:text-2xl font-bold text-gray-900 mb-2 drop-shadow-md">
+                {artist.display_name}
+              </h1>
+              <ShareButton 
+                artistName={artist.display_name}
+                artistHandle={artist.handle}
+                className="self-center sm:self-auto"
+              />
+            </div>
           </header>
 
           {/* About */}

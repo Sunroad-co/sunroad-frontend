@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -10,6 +10,7 @@ export default function NavbarAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [showDropdown, setShowDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -29,10 +30,29 @@ export default function NavbarAuth() {
     return () => subscription.subscription.unsubscribe()
   }, [])
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showDropdown])
+
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
     setShowDropdown(false)
+    // Redirect to login page
+    window.location.href = '/auth/login'
   }
 
   if (loading) {
@@ -48,7 +68,7 @@ export default function NavbarAuth() {
   if (user) {
     // Authenticated view
     return (
-      <div className="relative">
+      <div className="relative" ref={dropdownRef}>
         <button 
           onClick={() => setShowDropdown(!showDropdown)}
           className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
