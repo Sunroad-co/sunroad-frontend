@@ -7,6 +7,7 @@ import EditButton from './edit-button'
 import EditBannerModal from './edit-banner-modal'
 import EditAvatarModal from './edit-avatar-modal'
 import { UserProfile } from '@/hooks/use-user-profile'
+import { getMediaUrl } from '@/lib/media'
 
 interface ProfileHeaderProps {
   user: User
@@ -22,15 +23,17 @@ export default function ProfileHeader({ user, profile }: ProfileHeaderProps) { /
       <header className="relative max-w-6xl mx-auto">
         {/* Banner */}
         <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden group">
-          {profile.banner_url ? (
-            <Image
-              src={profile.banner_url}
-              alt={`${profile.display_name} banner`}
-              fill
-              className="object-cover"
-              priority
-            />
-          ) : (
+          {(() => {
+            const bannerSrc = getMediaUrl(profile.banner_url);
+            return bannerSrc ? (
+              <Image
+                src={bannerSrc}
+                alt={`${profile.display_name} banner`}
+                fill
+                className="object-cover"
+                priority
+              />
+            ) : (
             <div className="w-full h-full bg-gradient-to-br from-sunroad-amber-200 to-sunroad-amber-300 flex items-center justify-center">
               <div className="text-center text-sunroad-brown-700">
                 <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,7 +42,8 @@ export default function ProfileHeader({ user, profile }: ProfileHeaderProps) { /
                 <p className="text-sm">Add a banner image</p>
               </div>
             </div>
-          )}
+            );
+          })()}
           {/* Dark overlay for readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           
@@ -57,19 +61,22 @@ export default function ProfileHeader({ user, profile }: ProfileHeaderProps) { /
         <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center sm:items-start sm:left-6 sm:transform-none">
           {/* Avatar */}
           <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white group">
-            {profile.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={`${profile.display_name} profile picture`}
-                width={200}
-                height={200}
-                className="w-full h-full object-cover rounded-full"
-              />
-            ) : (
+            {(() => {
+              const avatarSrc = getMediaUrl(profile.avatar_url);
+              return avatarSrc ? (
+                <Image
+                  src={avatarSrc}
+                  alt={`${profile.display_name} profile picture`}
+                  width={200}
+                  height={200}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
               <div className="w-full h-full bg-sunroad-amber-100 flex items-center justify-center text-2xl text-sunroad-brown-600 rounded-full">
                 {profile.display_name?.charAt(0)}
               </div>
-            )}
+              );
+            })()}
             
             {/* Edit Avatar Button */}
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

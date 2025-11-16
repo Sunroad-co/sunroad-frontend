@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
+import { getMediaUrl } from '@/lib/media'
 
 interface Work {
   id: string
@@ -84,19 +85,21 @@ export default function WorksGallery({ works }: WorksGalleryProps) {
     <>
       {/* Works Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {works.map((work, index) => (
-          <div 
-            key={work.id} 
-            className="relative group rounded-lg overflow-hidden cursor-pointer"
-            onClick={() => openModal(index)}
-          >
-            <Image
-              src={work.thumb_url}
-              alt={work.title || 'Artwork'}
-              width={400}
-              height={300}
-              className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-            />
+        {works.map((work, index) => {
+          const thumbSrc = getMediaUrl(work.thumb_url);
+          return thumbSrc ? (
+            <div 
+              key={work.id} 
+              className="relative group rounded-lg overflow-hidden cursor-pointer"
+              onClick={() => openModal(index)}
+            >
+              <Image
+                src={thumbSrc}
+                alt={work.title || 'Artwork'}
+                width={400}
+                height={300}
+                className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+              />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +108,8 @@ export default function WorksGallery({ works }: WorksGalleryProps) {
               </div>
             </div>
           </div>
-        ))}
+          ) : null;
+        })}
       </div>
 
       {/* Modal */}
@@ -155,14 +159,19 @@ export default function WorksGallery({ works }: WorksGalleryProps) {
 
           {/* Image Container */}
           <div className="relative max-w-7xl max-h-[90vh] mx-4">
-            <Image
-              src={works[selectedIndex].thumb_url}
-              alt={works[selectedIndex].title || 'Artwork'}
-              width={1200}
-              height={800}
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              priority
-            />
+            {(() => {
+              const thumbSrc = getMediaUrl(works[selectedIndex].thumb_url);
+              return thumbSrc ? (
+                <Image
+                  src={thumbSrc}
+                  alt={works[selectedIndex].title || 'Artwork'}
+                  width={1200}
+                  height={800}
+                  className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                  priority
+                />
+              ) : null;
+            })()}
             
             {/* Image Info */}
             {works[selectedIndex].title && (

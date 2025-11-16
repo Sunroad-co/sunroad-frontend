@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { getMediaUrl } from '@/lib/media'
 
 interface Artist {
   id: string
@@ -226,13 +227,18 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategorie
             className="group block"
           >
             <div className="relative overflow-hidden rounded-lg mb-2">
-              <Image
-                src={artist.banner_url || '/api/placeholder/400/300'}
-                alt={artist.display_name}
-                width={400}
-                height={300}
-                className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-              />
+              {(() => {
+                const bannerSrc = getMediaUrl(artist.banner_url) || '/api/placeholder/400/300';
+                return (
+                  <Image
+                    src={bannerSrc}
+                    alt={artist.display_name}
+                    width={400}
+                    height={300}
+                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                );
+              })()}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
             <div className="space-y-1">

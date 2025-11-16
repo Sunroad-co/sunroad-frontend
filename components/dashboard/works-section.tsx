@@ -7,6 +7,7 @@ import EditButton from './edit-button'
 import AddWorkModal from './add-work-modal'
 import EditWorkModal from './edit-work-modal'
 import { UserProfile } from '@/hooks/use-user-profile'
+import { getMediaUrl } from '@/lib/media'
 
 interface Work {
   id: string
@@ -51,18 +52,20 @@ export default function WorksSection({ user, profile }: WorksSectionProps) { // 
 
         {works.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {works.map((work) => (
-              <div
-                key={work.id}
-                className="relative group/work rounded-lg overflow-hidden cursor-pointer"
-              >
-                <Image
-                  src={work.thumb_url}
-                  alt={work.title}
-                  width={400}
-                  height={300}
-                  className="w-full h-48 object-cover transition-transform duration-300 group-hover/work:scale-105"
-                />
+            {works.map((work) => {
+              const thumbSrc = getMediaUrl(work.thumb_url);
+              return thumbSrc ? (
+                <div
+                  key={work.id}
+                  className="relative group/work rounded-lg overflow-hidden cursor-pointer"
+                >
+                  <Image
+                    src={thumbSrc}
+                    alt={work.title}
+                    width={400}
+                    height={300}
+                    className="w-full h-48 object-cover transition-transform duration-300 group-hover/work:scale-105"
+                  />
                 
                 {/* Work Info Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/work:opacity-100 transition-opacity duration-300">
@@ -84,7 +87,8 @@ export default function WorksSection({ user, profile }: WorksSectionProps) { // 
                   />
                 </div>
               </div>
-            ))}
+              ) : null;
+            })}
           </div>
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">

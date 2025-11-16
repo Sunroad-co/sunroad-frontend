@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { getMediaUrl } from '@/lib/media'
 
 interface EditBannerModalProps {
   isOpen: boolean
@@ -60,14 +61,17 @@ export default function EditBannerModal({ isOpen, onClose, currentBanner }: Edit
               Current Banner
             </label>
             <div className="relative h-32 rounded-lg overflow-hidden bg-gray-100">
-              {currentBanner && (
-                <Image
-                  src={currentBanner}
-                  alt="Current banner"
-                  fill
-                  className="object-cover"
-                />
-              )}
+              {(() => {
+                const bannerSrc = getMediaUrl(currentBanner);
+                return bannerSrc ? (
+                  <Image
+                    src={bannerSrc}
+                    alt="Current banner"
+                    fill
+                    className="object-cover"
+                  />
+                ) : null;
+              })()}
             </div>
           </div>
 

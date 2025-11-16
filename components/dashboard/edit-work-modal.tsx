@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { getMediaUrl } from '@/lib/media'
 
 interface Work {
   id: string
@@ -86,12 +87,17 @@ export default function EditWorkModal({ isOpen, onClose, work }: EditWorkModalPr
                 Current Image
               </label>
               <div className="relative h-48 rounded-lg overflow-hidden bg-gray-100">
-                <Image
-                  src={work.thumb_url}
-                  alt={work.title}
-                  fill
-                  className="object-cover"
-                />
+                {(() => {
+                  const thumbSrc = getMediaUrl(work.thumb_url);
+                  return thumbSrc ? (
+                    <Image
+                      src={thumbSrc}
+                      alt={work.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : null;
+                })()}
               </div>
             </div>
 

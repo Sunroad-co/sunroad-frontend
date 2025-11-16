@@ -5,6 +5,7 @@ import SimilarArtists from '@/components/similar-artists'
 import WorksGallery from '@/components/works-gallery'
 import ShareButton from '@/components/share-button'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { getMediaUrl } from '@/lib/media'
 
 interface ArtistWithCategories {
   id: string
@@ -155,7 +156,7 @@ export async function generateMetadata({
   }
 
   // Use avatar as Open Graph image, fallback to banner
-  const imageUrl = artist.avatar_url || artist.banner_url
+  const imageUrl = getMediaUrl(artist.avatar_url) || getMediaUrl(artist.banner_url)
 
   const metadata: Metadata = {
     title: `${artist.display_name} | Sun Road`,
@@ -231,15 +232,18 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
         <header className="relative max-w-6xl mx-auto">
           {/* Banner */}
           <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden">
-            {artist.banner_url && (
-              <Image
-                src={artist.banner_url}
-                alt={`${artist.display_name} banner`}
-                fill
-                className="object-cover"
-                priority
-              />
-            )}
+            {(() => {
+              const bannerSrc = getMediaUrl(artist.banner_url);
+              return bannerSrc ? (
+                <Image
+                  src={bannerSrc}
+                  alt={`${artist.display_name} banner`}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              ) : null;
+            })()}
             {/* Dark overlay for readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           </div>
@@ -248,19 +252,22 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center sm:items-start sm:left-6 sm:transform-none">
             {/* Avatar */}
             <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
-              {artist.avatar_url ? (
-                <Image
-                  src={artist.avatar_url}
-                  alt={`${artist.display_name} profile picture`}
-                  width={200}
-                  height={200}
-                  className="w-full h-full object-cover rounded-full"
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-300 flex items-center justify-center text-2xl text-gray-600 rounded-full" aria-label={`${artist.display_name} profile picture`}>
-                  {artist.display_name?.charAt(0)}
-                </div>
-              )}
+              {(() => {
+                const avatarSrc = getMediaUrl(artist.avatar_url);
+                return avatarSrc ? (
+                  <Image
+                    src={avatarSrc}
+                    alt={`${artist.display_name} profile picture`}
+                    width={200}
+                    height={200}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-300 flex items-center justify-center text-2xl text-gray-600 rounded-full" aria-label={`${artist.display_name} profile picture`}>
+                    {artist.display_name?.charAt(0)}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </header>

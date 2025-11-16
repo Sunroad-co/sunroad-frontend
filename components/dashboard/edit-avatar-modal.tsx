@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { getMediaUrl } from '@/lib/media'
 
 interface EditAvatarModalProps {
   isOpen: boolean
@@ -60,19 +61,22 @@ export default function EditAvatarModal({ isOpen, onClose, currentAvatar }: Edit
               Current Profile Picture
             </label>
             <div className="relative w-24 h-24 mx-auto rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
-              {currentAvatar ? (
-                <Image
-                  src={currentAvatar}
-                  alt="Current avatar"
-                  width={96}
-                  height={96}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
+              {(() => {
+                const avatarSrc = getMediaUrl(currentAvatar);
+                return avatarSrc ? (
+                  <Image
+                    src={avatarSrc}
+                    alt="Current avatar"
+                    width={96}
+                    height={96}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
                 <div className="w-full h-full bg-gray-300 flex items-center justify-center text-2xl text-gray-600">
                   ?
                 </div>
-              )}
+                );
+              })()}
             </div>
           </div>
 

@@ -3,7 +3,29 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
-    remotePatterns: [new URL('https://sunroad.io/upload/uploads/**'), new URL('https://epicmargin.com/upload/uploads/**'), new URL('https://www.sunroad.io/upload/uploads/**')],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'qotblmfwurnyumgrlfep.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'sunroad.io',
+        pathname: '/upload/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'epicmargin.com',
+        pathname: '/upload/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.sunroad.io',
+        pathname: '/upload/uploads/**',
+      },
+    ],
   },
   reactStrictMode: false,
 };

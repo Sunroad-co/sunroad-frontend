@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { User } from '@supabase/supabase-js'
+import { getMediaUrl } from '@/lib/media'
 
 export default function NavbarAuth() {
   const [user, setUser] = useState<User | null>(null)
@@ -73,21 +74,24 @@ export default function NavbarAuth() {
           onClick={() => setShowDropdown(!showDropdown)}
           className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
         >
-          {user.user_metadata?.avatar_url ? (
-            <Image
-              src={user.user_metadata.avatar_url}
-              alt="Profile"
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-          ) : (
+          {(() => {
+            const avatarSrc = getMediaUrl(user.user_metadata?.avatar_url);
+            return avatarSrc ? (
+              <Image
+                src={avatarSrc}
+                alt="Profile"
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+            ) : (
             <div className="w-8 h-8 rounded-full bg-sunroad-amber-600 flex items-center justify-center">
               <span className="text-white text-sm font-medium">
                 {user.user_metadata?.full_name?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
               </span>
             </div>
-          )}
+            );
+          })()}
           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>

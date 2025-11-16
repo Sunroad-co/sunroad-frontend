@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearch } from '@/hooks/use-search'
+import { getMediaUrl } from '@/lib/media'
 
 interface SearchBarProps {
   placeholder?: string
@@ -229,21 +230,24 @@ export default function SearchBar({
                   <div className="flex items-center space-x-3">
                     {/* Avatar */}
                     <div className="flex-shrink-0">
-                      {artist.avatar_url ? (
-                        <Image
-                          src={artist.avatar_url}
-                          alt={artist.display_name}
-                          width={40}
-                          height={40}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
-                          <span className="text-amber-600 font-medium text-sm">
-                            {artist.display_name.charAt(0)}
-                          </span>
-                        </div>
-                      )}
+                      {(() => {
+                        const avatarSrc = getMediaUrl(artist.avatar_url);
+                        return avatarSrc ? (
+                          <Image
+                            src={avatarSrc}
+                            alt={artist.display_name}
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                            <span className="text-amber-600 font-medium text-sm">
+                              {artist.display_name.charAt(0)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Artist Info */}
