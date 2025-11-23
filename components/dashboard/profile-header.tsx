@@ -12,9 +12,10 @@ import { getMediaUrl } from '@/lib/media'
 interface ProfileHeaderProps {
   user: User
   profile: UserProfile
+  onProfileUpdate?: () => void
 }
 
-export default function ProfileHeader({ user, profile }: ProfileHeaderProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
+export default function ProfileHeader({ user, profile, onProfileUpdate }: ProfileHeaderProps) {
   const [showBannerModal, setShowBannerModal] = useState(false)
   const [showAvatarModal, setShowAvatarModal] = useState(false)
 
@@ -105,6 +106,8 @@ export default function ProfileHeader({ user, profile }: ProfileHeaderProps) { /
           isOpen={showAvatarModal}
           onClose={() => setShowAvatarModal(false)}
           currentAvatar={profile.avatar_url || undefined}
+          profile={profile}
+          onSuccess={onProfileUpdate}
         />
       )}
     </>

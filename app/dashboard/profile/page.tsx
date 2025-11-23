@@ -15,7 +15,7 @@ export default function DashboardProfilePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const { profile, loading: profileLoading, error: profileError } = useUserProfile(user)
+  const { profile, loading: profileLoading, error: profileError, refetch } = useUserProfile(user)
 
   useEffect(() => {
     async function getUser() {
@@ -74,7 +74,7 @@ export default function DashboardProfilePage() {
   return (
     <main className="min-h-screen bg-sunroad-cream">
       {/* Hero Section */}
-      <ProfileHeader user={user} profile={profile} />
+      <ProfileHeader user={user} profile={profile} onProfileUpdate={refetch} />
       
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
