@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js'
 
 export interface UserProfile {
   id: string
+  handle: string
   display_name: string
   bio: string | null
   avatar_url: string | null
@@ -47,6 +48,7 @@ export function useUserProfile(user: User | null) {
         .from('artists_min')
         .select(`
           id,
+          handle,
           display_name,
           bio,
           avatar_url,
@@ -86,6 +88,7 @@ export function useUserProfile(user: User | null) {
 
       setProfile({
         id: profileData.id,
+        handle: profileData.handle,
         display_name: profileData.display_name,
         bio: profileData.bio,
         avatar_url: profileData.avatar_url,

@@ -203,6 +203,26 @@ export default function EditAvatarModal({
         throw new Error(`Failed to update profile: ${updateError.message}`)
       }
 
+      // Revalidate the artist profile page cache
+      if (profile.handle) {
+        try {
+          await fetch('/api/revalidate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              handle: profile.handle,
+              artistId: profile.id,
+              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+            }),
+          })
+        } catch (revalidateError) {
+          // Log but don't fail - revalidation is best effort
+          console.warn('Failed to revalidate cache:', revalidateError)
+        }
+      }
+
       // Success - trigger refetch and close
       if (onSuccess) {
         onSuccess()
