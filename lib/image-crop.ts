@@ -58,7 +58,10 @@ export async function getCroppedImg(
 function createImage(src: string | File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
-    image.crossOrigin = 'anonymous'
+    // Only set crossOrigin for non-data URLs (blob URLs or http/https)
+    if (typeof src === 'string' && !src.startsWith('data:')) {
+      image.crossOrigin = 'anonymous'
+    }
     
     image.onload = () => resolve(image)
     image.onerror = (error) => reject(error)

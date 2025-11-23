@@ -8,19 +8,17 @@ export async function POST(request: NextRequest) {
 
     // Support both tag-based and artist-specific revalidation
     if (tags && Array.isArray(tags)) {
-      tags.forEach((tag: string) => {
-        revalidateTag(tag)
-      })
+      await Promise.all(tags.map((tag: string) => revalidateTag(tag, 'default')))
     }
 
     // Artist-specific revalidation
     if (handle) {
-      revalidateTag(`artist:${handle}`)
-      revalidatePath(`/artists/${handle}`)
+      await revalidateTag(`artist:${handle}`, 'default')
+      await revalidatePath(`/artists/${handle}`)
     }
 
     if (artistId) {
-      revalidateTag(`artist-works:${artistId}`)
+      await revalidateTag(`artist-works:${artistId}`, 'default')
     }
 
     return NextResponse.json(
