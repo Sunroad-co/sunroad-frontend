@@ -98,6 +98,8 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
           isOpen={showBannerModal}
           onClose={() => setShowBannerModal(false)}
           currentBanner={profile.banner_url || undefined}
+          profile={profile}
+          onSuccess={onProfileUpdate}
         />
       )}
       

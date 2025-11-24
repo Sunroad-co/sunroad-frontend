@@ -1,17 +1,37 @@
 /**
- * Helper function to crop an image to a square based on crop parameters.
+ * Helper function to crop an image based on crop parameters.
  * 
- * @param imageSrc - The source image (URL or File)
+ * @param source - The source image (canvas, ImageBitmap, or data URL string for backward compatibility)
  * @param pixelCrop - Crop parameters from react-easy-crop (x, y, width, height)
- * @param outputSize - The desired output size (square, e.g. 600)
+ * @param outW - The desired output width
+ * @param outH - The desired output height
+ * @param opts - Options for output format and quality
  * @returns Promise<Blob> - The cropped image as a Blob
  */
 export async function getCroppedImg(
-  imageSrc: string,
+  source: HTMLCanvasElement | ImageBitmap | string,
   pixelCrop: { x: number; y: number; width: number; height: number },
-  outputSize: number = 600
+  outW: number,
+  outH: number,
+  opts?: {
+    mime?: 'image/jpeg' | 'image/webp' | 'image/png'
+    quality?: number
+    background?: string
+  }
 ): Promise<Blob> {
-  const image = await createImage(imageSrc)
+  const mime = opts?.mime ?? 'image/jpeg'
+  const quality = opts?.quality ?? 0.82
+  const background = opts?.background ?? '#fff'
+
+  // Handle string source (backward compatibility - convert to image first)
+  let imageSource: HTMLCanvasElement | ImageBitmap | HTMLImageElement
+
+  if (typeof source === 'string') {
+    imageSource = await createImageFromString(source)
+  } else {
+    imageSource = source
+  }
+
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
 
@@ -19,24 +39,45 @@ export async function getCroppedImg(
     throw new Error('Could not get canvas context')
   }
 
-  // Set canvas size to output size (square)
-  canvas.width = outputSize
-  canvas.height = outputSize
+  // Set canvas size to output dimensions
+  canvas.width = outW
+  canvas.height = outH
+
+  // For non-alpha formats (JPEG), fill with background color first to flatten transparency
+  if (mime === 'image/jpeg') {
+    ctx.fillStyle = background
+    ctx.fillRect(0, 0, outW, outH)
+  }
+
+  // Get source dimensions
+  let sourceWidth: number
+  let sourceHeight: number
+
+  if (imageSource instanceof HTMLCanvasElement) {
+    sourceWidth = imageSource.width
+    sourceHeight = imageSource.height
+  } else if (imageSource instanceof ImageBitmap) {
+    sourceWidth = imageSource.width
+    sourceHeight = imageSource.height
+  } else {
+    sourceWidth = imageSource.naturalWidth
+    sourceHeight = imageSource.naturalHeight
+  }
 
   // Draw the cropped image onto the canvas
   ctx.drawImage(
-    image,
+    imageSource,
     pixelCrop.x,
     pixelCrop.y,
     pixelCrop.width,
     pixelCrop.height,
     0,
     0,
-    outputSize,
-    outputSize
+    outW,
+    outH
   )
 
-  // Convert canvas to blob
+  // Convert canvas to blob with specified MIME type
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
@@ -46,38 +87,26 @@ export async function getCroppedImg(
         }
         resolve(blob)
       },
-      'image/jpeg',
-      0.92 // Quality (0-1)
+      mime,
+      quality
     )
   })
 }
 
 /**
- * Create an Image element from a source (URL or File)
+ * Create an Image element from a data URL string (for backward compatibility)
  */
-function createImage(src: string | File): Promise<HTMLImageElement> {
+function createImageFromString(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     // Only set crossOrigin for non-data URLs (blob URLs or http/https)
-    if (typeof src === 'string' && !src.startsWith('data:')) {
+    if (!src.startsWith('data:')) {
       image.crossOrigin = 'anonymous'
     }
     
     image.onload = () => resolve(image)
     image.onerror = (error) => reject(error)
-    
-    if (typeof src === 'string') {
-      image.src = src
-    } else {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          image.src = e.target.result as string
-        }
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(src)
-    }
+    image.src = src
   })
 }
 
@@ -102,4 +131,3 @@ export function getPixelCrop(
     height: (cropArea.height * scaleY),
   }
 }
-

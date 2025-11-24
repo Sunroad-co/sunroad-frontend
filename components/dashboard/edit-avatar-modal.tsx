@@ -1,14 +1,30 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import Image from 'next/image'
-import Cropper from 'react-easy-crop'
+import dynamic from 'next/dynamic'
 import type { Area, Point } from 'react-easy-crop'
 import { getMediaUrl } from '@/lib/media'
 import { createClient } from '@/lib/supabase/client'
 import { getCroppedImg } from '@/lib/image-crop'
+import { decodeAndDownscale } from '@/lib/utils/decode-and-downscale'
+import { validateImageFile } from '@/lib/utils/image-validation'
 import { UserProfile } from '@/hooks/use-user-profile'
 import Toast from '@/components/ui/toast'
+import styles from './EditAvatarModal.module.css'
+
+// Dynamically import Cropper to reduce initial bundle size
+const Cropper = dynamic(
+  () => import('react-easy-crop'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-64 sm:h-80 bg-gray-100 rounded-lg">
+        <div className="text-gray-400 text-sm">Loading cropper...</div>
+      </div>
+    )
+  }
+)
 
 interface EditAvatarModalProps {
   isOpen: boolean
@@ -30,22 +46,27 @@ export default function EditAvatarModal({
 }: EditAvatarModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null) // Stable data URL for cropping
+  const [decodedCanvas, setDecodedCanvas] = useState<HTMLCanvasElement | null>(null) // Decoded and downscaled canvas
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [croppedPreviewUrl, setCroppedPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const previewCleanupRef = useRef<string | null>(null)
   const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  
+  // Memoize Supabase client to avoid recreating on every render
+  const supabase = useMemo(() => createClient(), [])
 
-  // Cleanup object URLs on unmount
+  // Cleanup object URLs and abort controllers on unmount
   useEffect(() => {
     return () => {
-      if (previewUrl) {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
       }
       if (croppedPreviewUrl) {
@@ -57,6 +78,9 @@ export default function EditAvatarModal({
       if (previewTimeoutRef.current) {
         clearTimeout(previewTimeoutRef.current)
       }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
     }
   }, [previewUrl, croppedPreviewUrl])
 
@@ -66,54 +90,78 @@ export default function EditAvatarModal({
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file (PNG, JPG, etc.)')
-      return
-    }
-
-    // Validate file size
+    // Validate file size first
     if (file.size > MAX_FILE_SIZE) {
       setError('File size must be less than 5MB. Please choose a smaller image.')
       return
     }
 
+    // Validate MIME type and reject HEIC/HEIF
+    const validation = validateImageFile(file)
+    if (!validation.isValid) {
+      setError(validation.error || 'Please select a valid image file.')
+      return
+    }
+
     setError(null)
-    setSelectedFile(file)
-    
-    // Create blob URL for display in cropper
-    const url = URL.createObjectURL(file)
-    setPreviewUrl(url)
-    
-    // Create data URL for stable cropping operations
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setImageDataUrl(e.target.result as string)
+      setSelectedFile(file)
+
+    try {
+      // Decode and downscale the image (handles EXIF orientation)
+      const canvas = await decodeAndDownscale(file, { maxDim: 2000 })
+      setDecodedCanvas(canvas)
+
+      // Create data URL from canvas for the cropper
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+      setPreviewUrl(dataUrl)
+
+      setCrop({ x: 0, y: 0 })
+      setZoom(1)
+      setCroppedAreaPixels(null)
+      setCroppedPreviewUrl(null)
+      if (previewCleanupRef.current) {
+        URL.revokeObjectURL(previewCleanupRef.current)
+        previewCleanupRef.current = null
       }
-    }
-    reader.readAsDataURL(file)
-    
-    setCrop({ x: 0, y: 0 })
-    setZoom(1)
-    setCroppedAreaPixels(null)
-    setCroppedPreviewUrl(null)
-    if (previewCleanupRef.current) {
-      URL.revokeObjectURL(previewCleanupRef.current)
-      previewCleanupRef.current = null
-    }
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current)
-      previewTimeoutRef.current = null
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current)
+        previewTimeoutRef.current = null
+      }
+    } catch (err) {
+      console.error('Error decoding image:', err)
+      setError("We couldn't process that image. Please try JPEG/PNG/WebP and keep size reasonable (≤5MB).")
+      setSelectedFile(null)
     }
   }
 
-  const generateCroppedPreview = useCallback(async (imageSrc: string, pixelCrop: Area) => {
+  const generateCroppedPreview = useCallback(async (canvas: HTMLCanvasElement, pixelCrop: Area) => {
+    // Cancel any previous preview generation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
+
     try {
+      setIsGeneratingPreview(true)
       // Clean up previous preview URL (but wait until new one is ready)
       const prevUrl = previewCleanupRef.current
       
-      const blob = await getCroppedImg(imageSrc, pixelCrop, OUTPUT_SIZE)
+      const blob = await getCroppedImg(
+        canvas,
+        pixelCrop,
+        OUTPUT_SIZE,
+        OUTPUT_SIZE,
+        {
+          mime: 'image/jpeg',
+          quality: 0.82,
+          background: '#fff'
+        }
+      )
+
+      // Check if aborted
+      if (signal.aborted) return
+
       const url = URL.createObjectURL(blob)
       
       // Revoke the old URL now that we have a new one
@@ -121,10 +169,21 @@ export default function EditAvatarModal({
         URL.revokeObjectURL(prevUrl)
       }
       
+      // Check if aborted before setting state
+      if (signal.aborted) {
+        URL.revokeObjectURL(url)
+        return
+      }
+
       previewCleanupRef.current = url
       setCroppedPreviewUrl(url)
     } catch (err) {
+      if (signal.aborted) return
       console.error('Error generating preview:', err)
+    } finally {
+      if (!signal.aborted) {
+        setIsGeneratingPreview(false)
+      }
     }
   }, [])
 
@@ -137,19 +196,19 @@ export default function EditAvatarModal({
     }
     
     previewTimeoutRef.current = setTimeout(() => {
-      // Use data URL for stable cropping operations
-      if (imageDataUrl) {
-        generateCroppedPreview(imageDataUrl, croppedAreaPixels)
+      // Use decoded canvas for cropping
+      if (decodedCanvas) {
+        generateCroppedPreview(decodedCanvas, croppedAreaPixels)
       }
     }, 150) // 150ms debounce
-  }, [imageDataUrl, generateCroppedPreview])
+  }, [decodedCanvas, generateCroppedPreview])
 
   const handleZoomChange = (newZoom: number) => {
     setZoom(newZoom)
   }
 
   const handleSave = async () => {
-    if (!selectedFile || !imageDataUrl || !croppedAreaPixels) {
+    if (!selectedFile || !decodedCanvas || !croppedAreaPixels) {
       setError('Please upload an image and adjust the crop before saving.')
       return
     }
@@ -158,8 +217,18 @@ export default function EditAvatarModal({
       setSaving(true)
       setError(null)
 
-      // Generate cropped image blob using stable data URL
-      const croppedBlob = await getCroppedImg(imageDataUrl, croppedAreaPixels, OUTPUT_SIZE)
+      // Generate cropped image blob using decoded canvas
+      const croppedBlob = await getCroppedImg(
+        decodedCanvas,
+        croppedAreaPixels,
+        OUTPUT_SIZE,
+        OUTPUT_SIZE,
+        {
+          mime: 'image/jpeg',
+          quality: 0.82,
+          background: '#fff'
+        }
+      )
       
       // Use single timestamp for filename and path
       const timestamp = Date.now()
@@ -169,8 +238,6 @@ export default function EditAvatarModal({
       const croppedFile = new File([croppedBlob], fileName, {
         type: 'image/jpeg',
       })
-
-      const supabase = createClient()
 
       // Upload to Supabase Storage
       const storagePath = `avatars/${profile.id}/${fileName}`
@@ -261,8 +328,14 @@ export default function EditAvatarModal({
     
     setSelectedFile(null)
     setPreviewUrl(null)
-    setImageDataUrl(null)
+    setDecodedCanvas(null)
     setCroppedPreviewUrl(null)
+    
+    // Abort any ongoing preview generation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
     setCrop({ x: 0, y: 0 })
     setZoom(1)
     setCroppedAreaPixels(null)
@@ -278,55 +351,92 @@ export default function EditAvatarModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
         <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-          {/* Header */}
+        {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-            <h2 className="text-xl font-semibold text-gray-900">Edit Profile Picture</h2>
-            <button
-              onClick={handleCancel}
+          <h2 className="text-xl font-semibold text-gray-900">Edit Profile Picture</h2>
+          <button
+            onClick={handleCancel}
               disabled={saving}
               className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-          {/* Content */}
-          <div className="p-6">
-            {/* Current Avatar */}
-            <div className="mb-6 text-center">
-              <label className="block text-sm font-medium text-gray-700 mb-4">
-                Current Profile Picture
-              </label>
-              <div className="relative w-24 h-24 mx-auto rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
-                {(() => {
-                  const avatarSrc = getMediaUrl(currentAvatar);
-                  return avatarSrc ? (
+        {/* Content */}
+        <div className="p-6">
+            {/* Current Avatar + Preview Side by Side */}
+            <div className="mb-6">
+            
+              <div className="flex items-center justify-center gap-4 sm:gap-6">
+          {/* Current Avatar */}
+                <div className={`relative rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg transition-all duration-500 ${
+                  croppedPreviewUrl 
+                    ? 'w-16 h-16 sm:w-20 sm:h-20' 
+                    : 'w-24 h-24 sm:w-28 sm:h-28'
+                }`}>
+              {(() => {
+                const avatarSrc = getMediaUrl(currentAvatar);
+                return avatarSrc ? (
+                  <Image
+                    src={avatarSrc}
+                    alt="Current avatar"
+                        width={112}
+                        height={112}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                      <div className="w-full h-full bg-gray-300 flex items-center justify-center text-xl sm:text-2xl text-gray-600">
+                  ?
+                </div>
+                );
+              })()}
+                </div>
+
+                {/* Arrow (only shown when preview exists) */}
+                {croppedPreviewUrl && (
+                  <div className="flex-shrink-0 animate-in fade-in slide-in-from-left-5 duration-500">
+                    <svg 
+                      className="w-6 h-6 sm:w-8 sm:h-8 text-sunroad-amber-600" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M13 7l5 5m0 0l-5 5m5-5H6" 
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Preview */}
+                {croppedPreviewUrl && (
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg animate-in fade-in slide-in-from-right-5 duration-500">
                     <Image
-                      src={avatarSrc}
-                      alt="Current avatar"
-                      width={96}
-                      height={96}
+                      src={croppedPreviewUrl}
+                      alt="Avatar preview"
+                      width={112}
+                      height={112}
                       className="w-full h-full object-cover"
                     />
-                  ) : (
-                    <div className="w-full h-full bg-gray-300 flex items-center justify-center text-2xl text-gray-600">
-                      ?
-                    </div>
-                  );
-                })()}
-              </div>
+                  </div>
+                )}
             </div>
+          </div>
 
-            {/* File Upload */}
+          {/* File Upload */}
             {/* File input - always rendered but hidden, so ref is always available */}
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               onChange={handleFileChange}
               className="hidden"
               id="avatar-upload"
@@ -334,29 +444,29 @@ export default function EditAvatarModal({
             />
             
             {!previewUrl && (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload New Picture
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-sunroad-amber-400 transition-colors">
-                  <label
-                    htmlFor="avatar-upload"
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Upload New Picture
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-sunroad-amber-400 transition-colors">
+              <label
+                htmlFor="avatar-upload"
                     className={`cursor-pointer flex flex-col items-center ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <span className="text-sm text-gray-600">
-                      {selectedFile ? selectedFile.name : 'Click to upload or drag and drop'}
-                    </span>
-                    <span className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</span>
-                  </label>
-                </div>
-              </div>
+              >
+                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span className="text-sm text-gray-600">
+                  {selectedFile ? selectedFile.name : 'Click to upload or drag and drop'}
+                </span>
+                    <span className="text-xs text-gray-500 mt-1">JPEG, PNG, or WebP up to 5MB</span>
+              </label>
+            </div>
+          </div>
             )}
 
             {/* Cropper */}
-            {previewUrl && (
+          {previewUrl && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <label className="block text-sm font-medium text-gray-700">
@@ -372,6 +482,7 @@ export default function EditAvatarModal({
                   </button>
                 </div>
                 <div className="relative w-full h-64 sm:h-80 bg-gray-100 rounded-lg overflow-hidden">
+                  {/* @ts-expect-error - react-easy-crop props are correctly typed but dynamic import causes type issues */}
                   <Cropper
                     image={previewUrl}
                     crop={crop}
@@ -385,74 +496,64 @@ export default function EditAvatarModal({
                   />
                 </div>
                 
-                {/* Zoom Control */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Zoom: {Math.round(zoom * 100)}%
-                  </label>
-                  <input
-                    type="range"
-                    min={1}
-                    max={3}
-                    step={0.1}
-                    value={zoom}
-                    onChange={(e) => handleZoomChange(Number(e.target.value))}
-                    className="w-full"
-                    disabled={saving}
-                  />
+                {/* Zoom Control - Styled Slider */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium text-gray-700 tracking-wide">
+                      Zoom
+              </label>
+                    <span className="text-sm text-gray-500 font-mono tracking-tight">
+                      {Math.round(zoom * 100)}%
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="range"
+                      min={1}
+                      max={3}
+                      step={0.1}
+                      value={zoom}
+                      onChange={(e) => handleZoomChange(Number(e.target.value))}
+                      className={styles.zoomSlider}
+                      disabled={saving}
+                    />
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Preview */}
-            {croppedPreviewUrl && (
-              <div className="mb-6 text-center">
-                <label className="block text-sm font-medium text-gray-700 mb-4">
-                  Preview
-                </label>
-                <div className="relative w-24 h-24 mx-auto rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
-                  <Image
-                    src={croppedPreviewUrl}
-                    alt="Avatar preview"
-                    width={96}
-                    height={96}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            )}
 
             {/* Error Message */}
             {error && (
               <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-sm text-red-800">{error}</p>
-              </div>
-            )}
-
-            {/* Guidelines */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-amber-800 mb-2">Profile Picture Guidelines</h3>
-              <ul className="text-xs text-amber-700 space-y-1">
-                <li>• Recommended size: 400x400 pixels (square)</li>
-                <li>• Use a clear, well-lit photo of yourself</li>
-                <li>• Avoid group photos or images with text</li>
-                <li>• Make sure your face is clearly visible</li>
-              </ul>
             </div>
-          </div>
+          )}
 
-          {/* Footer */}
+          {/* Guidelines */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-amber-800 mb-2">Profile Picture Guidelines</h3>
+            <ul className="text-xs text-amber-700 space-y-1">
+              <li>• Recommended size: 400x400 pixels (square)</li>
+              <li>• Use a clear, well-lit photo of yourself</li>
+              <li>• Avoid group photos or images with text</li>
+              <li>• Make sure your face is clearly visible</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Footer */}
           <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 sticky bottom-0 bg-white">
-            <button
-              onClick={handleCancel}
+          <button
+            onClick={handleCancel}
               disabled={saving}
               className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!selectedFile || !imageDataUrl || !croppedAreaPixels || saving}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+              disabled={!selectedFile || !decodedCanvas || !croppedAreaPixels || saving || isGeneratingPreview}
               className="px-4 py-2 bg-sunroad-amber-600 text-white rounded-lg hover:bg-sunroad-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {saving ? (
@@ -466,10 +567,10 @@ export default function EditAvatarModal({
               ) : (
                 'Save Changes'
               )}
-            </button>
-          </div>
+          </button>
         </div>
       </div>
+    </div>
 
       <Toast
         message="Profile picture updated successfully!"
