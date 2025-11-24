@@ -8,7 +8,7 @@ import { useUserProfile } from '@/hooks/use-user-profile'
 import ProfileHeader from '@/components/dashboard/profile-header'
 import ProfileContent from '@/components/dashboard/profile-content'
 import WorksSection from '@/components/dashboard/works-section'
-import LoadingSpinner from '@/components/dashboard/loading-spinner'
+import ProfilePageSkeleton from '@/components/dashboard/profile-page-skeleton'
 
 export default function DashboardProfilePage() {
   const [user, setUser] = useState<User | null>(null)
@@ -47,7 +47,7 @@ export default function DashboardProfilePage() {
   }, [router])
 
   if (loading || profileLoading) {
-    return <LoadingSpinner />
+    return <ProfilePageSkeleton />
   }
 
   if (error || profileError) {

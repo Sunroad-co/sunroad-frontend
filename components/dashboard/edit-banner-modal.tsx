@@ -11,6 +11,7 @@ import { decodeAndDownscale } from '@/lib/utils/decode-and-downscale'
 import { validateImageFile } from '@/lib/utils/image-validation'
 import { UserProfile } from '@/hooks/use-user-profile'
 import Toast from '@/components/ui/toast'
+import CropperSkeleton from './cropper-skeleton'
 import styles from './EditAvatarModal.module.css'
 
 // Dynamically import Cropper to reduce initial bundle size
@@ -18,11 +19,7 @@ const Cropper = dynamic(
   () => import('react-easy-crop'),
   { 
     ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center h-64 sm:h-80 bg-gray-100 rounded-lg">
-        <div className="text-gray-400 text-sm">Loading cropper...</div>
-      </div>
-    )
+    loading: () => <CropperSkeleton aspectRatio="rectangular" />
   }
 )
 
