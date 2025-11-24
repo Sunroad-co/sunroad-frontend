@@ -78,7 +78,7 @@ export default function DashboardProfilePage() {
       
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
-        <ProfileContent user={user} profile={profile} />
+        <ProfileContent user={user} profile={profile} onProfileUpdate={refetch} />
         
         {/* Works Section */}
         <WorksSection user={user} profile={profile} />

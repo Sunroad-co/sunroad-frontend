@@ -1,28 +1,81 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { UserProfile } from '@/hooks/use-user-profile'
 
 interface EditBioModalProps {
   isOpen: boolean
   onClose: () => void
   currentBio: string
+  profile: UserProfile
+  onSuccess?: (nextBio: string) => void
 }
 
-export default function EditBioModal({ isOpen, onClose, currentBio }: EditBioModalProps) {
+export default function EditBioModal({ isOpen, onClose, currentBio, profile, onSuccess }: EditBioModalProps) {
   const [bio, setBio] = useState(currentBio)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Reset state when modal opens/closes or currentBio changes
+  useEffect(() => {
+    if (isOpen) {
+      setBio(currentBio)
+      setError(null)
+    }
+  }, [isOpen, currentBio])
 
   if (!isOpen) return null
 
-  const handleSave = () => {
-    // TODO: Implement save logic
-    console.log('Saving bio:', bio)
-    onClose()
+  const handleSave = async () => {
+    // Validation
+    if (bio.length > 800) {
+      setError('Bio must be 800 characters or less.')
+      return
+    }
+
+    // Check if unchanged
+    if (bio === currentBio) {
+      onClose()
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError(null)
+
+      const supabase = createClient()
+
+      const { error: updateError } = await supabase
+        .from('artists_min')
+        .update({ bio: bio.trim() || null })
+        .eq('id', profile.id)
+
+      if (updateError) {
+        throw new Error(updateError.message)
+      }
+
+      // Success - call onSuccess and close
+      if (onSuccess) {
+        onSuccess(bio.trim() || '')
+      }
+      onClose()
+    } catch (err) {
+      console.error('Error saving bio:', err)
+      setError(err instanceof Error ? err.message : 'Failed to save bio. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleCancel = () => {
     setBio(currentBio)
+    setError(null)
     onClose()
   }
+
+  const hasChanges = bio !== currentBio
+  const isValid = bio.length <= 800
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -55,14 +108,21 @@ export default function EditBioModal({ isOpen, onClose, currentBio }: EditBioMod
               placeholder="Tell people about yourself, your art, and what inspires you..."
             />
             <div className="flex justify-between items-center mt-2">
-              <p className="text-xs text-gray-500">
-                {bio.length}/500 characters
+              <p className={`text-xs ${bio.length > 800 ? 'text-red-600' : 'text-gray-500'}`}>
+                {bio.length}/800 characters
               </p>
-              <p className="text-xs text-gray-500">
-                {500 - bio.length} remaining
+              <p className={`text-xs ${bio.length > 800 ? 'text-red-600' : 'text-gray-500'}`}>
+                {800 - bio.length} remaining
               </p>
             </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
 
           {/* Tips */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -80,16 +140,27 @@ export default function EditBioModal({ isOpen, onClose, currentBio }: EditBioMod
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            disabled={saving}
+            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            disabled={bio.length > 500}
-            className="px-4 py-2 bg-sunroad-amber-600 text-white rounded-lg hover:bg-sunroad-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={!isValid || !hasChanges || saving}
+            className="px-4 py-2 bg-sunroad-amber-600 text-white rounded-lg hover:bg-sunroad-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
-            Save Changes
+            {saving ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Saving...</span>
+              </>
+            ) : (
+              'Save Changes'
+            )}
           </button>
         </div>
       </div>

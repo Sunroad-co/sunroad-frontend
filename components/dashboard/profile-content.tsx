@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 import EditButton from './edit-button'
 import EditBioModal from './edit-bio-modal'
 import EditLinksModal from './edit-links-modal'
@@ -11,12 +12,41 @@ import { UserProfile } from '@/hooks/use-user-profile'
 interface ProfileContentProps {
   user: User
   profile: UserProfile
+  onProfileUpdate?: () => void
 }
 
-export default function ProfileContent({ user, profile }: ProfileContentProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
+export default function ProfileContent({ user, profile, onProfileUpdate }: ProfileContentProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const [showBioModal, setShowBioModal] = useState(false)
   const [showLinksModal, setShowLinksModal] = useState(false)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
+  const [currentCategoryIds, setCurrentCategoryIds] = useState<number[]>([])
+
+  // Fetch category IDs when profile changes
+  useEffect(() => {
+    const fetchCategoryIds = async () => {
+      if (!profile?.id) return
+
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('artist_categories')
+          .select('category_id')
+          .eq('artist_id', profile.id)
+
+        if (error) {
+          console.error('Error fetching category IDs:', error)
+          return
+        }
+
+        const categoryIds = data?.map((ac: { category_id: number }) => ac.category_id) || []
+        setCurrentCategoryIds(categoryIds)
+      } catch (err) {
+        console.error('Unexpected error fetching category IDs:', err)
+      }
+    }
+
+    fetchCategoryIds()
+  }, [profile?.id])
 
   return (
     <>
@@ -146,6 +176,13 @@ export default function ProfileContent({ user, profile }: ProfileContentProps) {
           isOpen={showBioModal}
           onClose={() => setShowBioModal(false)}
           currentBio={profile.bio || ''}
+          profile={profile}
+          onSuccess={(nextBio) => {
+            // Update local state optimistically or trigger refetch
+            if (onProfileUpdate) {
+              onProfileUpdate()
+            }
+          }}
         />
       )}
       
@@ -165,7 +202,16 @@ export default function ProfileContent({ user, profile }: ProfileContentProps) {
         <EditCategoriesModal
           isOpen={showCategoriesModal}
           onClose={() => setShowCategoriesModal(false)}
-          currentCategories={profile.categories}
+          profile={profile}
+          currentCategoryIds={currentCategoryIds}
+          onSuccess={(nextCategoryIds) => {
+            // Update local state
+            setCurrentCategoryIds(nextCategoryIds)
+            // Trigger refetch to update profile
+            if (onProfileUpdate) {
+              onProfileUpdate()
+            }
+          }}
         />
       )}
     </>
