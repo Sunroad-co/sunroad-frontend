@@ -53,7 +53,7 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
       <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Artist Name */}
         <header className="mt-3 text-center sm:text-left relative group">
-          <h1 className="text-5xl sm:text-2xl font-bold text-gray-900 mb-2 drop-shadow-md">
+          <h1 className="text-5xl sm:text-2xl font-semibold text-gray-900 mb-2 drop-shadow-md">
             {profile.display_name}
           </h1>
           

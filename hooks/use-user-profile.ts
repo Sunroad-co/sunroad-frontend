@@ -18,11 +18,17 @@ export interface UserProfile {
   works: Work[]
 }
 
+export type MediaType = 'image' | 'video' | 'audio'
+export type MediaSource = 'upload' | 'youtube' | 'vimeo' | 'mux' | 'spotify' | 'soundcloud' | 'other_url'
+
 export interface Work {
   id: string
   title: string
-  thumb_url: string
-  description?: string
+  description: string
+  thumb_url: string | null
+  src_url: string | null
+  media_type: MediaType
+  media_source: MediaSource
 }
 
 export function useUserProfile(user: User | null) {
@@ -74,8 +80,9 @@ export function useUserProfile(user: User | null) {
       // Fetch user's works
       const { data: worksData, error: worksError } = await supabase
         .from('artworks_min')
-        .select('id, title, thumb_url, description')
+        .select('id, title, description, thumb_url, src_url, media_type, media_source')
         .eq('artist_id', profileData.id)
+        .order('created_at', { ascending: false })
 
       if (worksError) {
         console.error('Error fetching works:', worksError)

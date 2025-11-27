@@ -21,7 +21,7 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
 
   return (
     <>
-      <header className="relative max-w-6xl mx-auto">
+      <header className="relative max-w-6xl mx-auto font-display">
         {/* Banner */}
         <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden group">
           {(() => {
@@ -77,7 +77,7 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
-              <div className="w-full h-full bg-sunroad-amber-100 flex items-center justify-center text-2xl text-sunroad-brown-600 rounded-full">
+              <div className="w-full h-full font-display bg-sunroad-amber-100 flex items-center justify-center text-2xl text-sunroad-brown-600 rounded-full">
                 {profile.display_name?.charAt(0)}
               </div>
               );

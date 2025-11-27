@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Inter, Space_Grotesk, Outfit, Poppins } from "next/font/google";
+import { Inter, Space_Grotesk, Outfit, Poppins } from "next/font/google";
 // import { ThemeProvider } from "next-themes";
 import Navbar from "@/components/navbar";
 import "./globals.css";
@@ -14,12 +14,6 @@ export const metadata: Metadata = {
   description: "Join a community of local creatives. Connect with artists, photographers, musicians, and more in your area.",
 };
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  display: "swap",
-  subsets: ["latin"],
-});
-
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   display: "swap",
@@ -33,6 +27,7 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+// Keep these for potential future use but don't apply to body
 const outfit = Outfit({
   variable: "--font-outfit",
   display: "swap",
@@ -54,7 +49,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${spaceGrotesk.variable} ${inter.variable} ${outfit.variable} ${poppins.variable} antialiased bg-sunroad-cream`}>
+      <body className={`${spaceGrotesk.variable} ${inter.variable} ${outfit.variable} ${poppins.variable} font-body antialiased bg-sunroad-cream`}>
         {/* <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -6,6 +6,7 @@ import WorksGallery from '@/components/works-gallery'
 import ShareButton from '@/components/share-button'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getMediaUrl } from '@/lib/media'
+import { Work } from '@/hooks/use-user-profile'
 
 interface ArtistWithCategories {
   id: string
@@ -22,12 +23,6 @@ interface ArtistWithCategories {
       name: string
     }
   }>
-}
-
-interface Work {
-  id: string
-  title?: string
-  thumb_url: string
 }
 
 // Route config - Static until explicit revalidation
@@ -88,12 +83,12 @@ async function fetchArtist(handle: string) {
   }
 }
 
-async function fetchWorks(artistId: string) {
+async function fetchWorks(artistId: string): Promise<Work[]> {
   try {
     const supabase = createAnonClient()
     const { data: works, error } = await supabase
       .from('artworks_min')
-      .select('id, title, thumb_url')
+      .select('id, title, description, thumb_url, src_url, media_type, media_source')
       .eq('artist_id', artistId)
       .order('created_at', { ascending: false })
 
@@ -111,7 +106,8 @@ async function fetchWorks(artistId: string) {
 
     console.log(`Fetched ${works.length} works, ${uniqueWorks.length} unique works for artist ${artistId}`)
     
-    return uniqueWorks
+    // Cast to Work[] - the data should match the Work type from use-user-profile
+    return uniqueWorks as Work[]
   } catch (error) {
     console.error('Unexpected error fetching works:', error)
     return []

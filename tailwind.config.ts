@@ -96,8 +96,9 @@ export default {
       fontFamily: {
         'display': ['var(--font-space-grotesk)', 'system-ui', 'sans-serif'], // Modern, bold headings
         'body': ['var(--font-inter)', 'system-ui', 'sans-serif'], // Clean sans for body
-        'artistic': ['var(--font-outfit)', 'system-ui', 'sans-serif'], // Bold, artistic sans
-        'bold': ['var(--font-poppins)', 'system-ui', 'sans-serif'], // Bold, modern sans
+        'sans': ['var(--font-inter)', 'system-ui', 'sans-serif'], // Default sans uses Inter (same as body)
+        'artistic': ['var(--font-outfit)', 'system-ui', 'sans-serif'], // Bold, artistic sans (for future use)
+        'bold': ['var(--font-poppins)', 'system-ui', 'sans-serif'], // Bold, modern sans (for future use)
       },
       // Elegant, subtle animations
       animation: {
