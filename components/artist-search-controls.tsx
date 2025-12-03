@@ -336,6 +336,7 @@ export default function ArtistSearchControls({
                 showLabel={false}
                 disableDropdown={variant === 'page'}
                 value={variant === 'page' ? searchQuery : undefined}
+                onSearch={handleSearchClick}
               />
             </div>
 
@@ -526,6 +527,7 @@ export default function ArtistSearchControls({
                     showLabel={false}
                     disableDropdown={variant === 'page'}
                     value={variant === 'page' ? searchQuery : undefined}
+                    onSearch={handleSearchClick}
                   />
                 </div>
               </div>

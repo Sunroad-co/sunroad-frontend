@@ -19,6 +19,7 @@ interface SearchBarProps {
   showLabel?: boolean
   disableDropdown?: boolean
   value?: string
+  onSearch?: () => void
 }
 
 // Skeleton loader component - extracted outside to avoid recreation on every render
@@ -86,7 +87,8 @@ export default function SearchBar({
   onQueryChange,
   showLabel = true,
   disableDropdown = false,
-  value: controlledValue
+  value: controlledValue,
+  onSearch
 }: SearchBarProps) {
   const router = useRouter()
   const [isFocused, setIsFocused] = useState(false)
@@ -212,6 +214,30 @@ export default function SearchBar({
       return
     }
 
+    // Handle Enter key
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      
+      // If there's an active result selected in the dropdown, navigate to it
+      if (isOpen && activeIndex >= 0 && activeIndex < results.length) {
+        const selectedArtist = results[activeIndex]
+        if (selectedArtist) {
+          handleResultClick()
+          router.push(`/artists/${selectedArtist.handle}`)
+        }
+        return
+      }
+      
+      // Otherwise, trigger search if onSearch callback is provided
+      if (onSearch) {
+        setIsOpen(false)
+        inputRef.current?.blur()
+        onSearch()
+        return
+      }
+    }
+
+    // Only handle arrow keys if dropdown is open and has results
     if (!isOpen || results.length === 0) {
       return
     }
@@ -231,17 +257,6 @@ export default function SearchBar({
         const nextIndex = prev > 0 ? prev - 1 : results.length - 1
         return nextIndex
       })
-      return
-    }
-
-    if (e.key === 'Enter' && activeIndex >= 0 && activeIndex < results.length) {
-      e.preventDefault()
-      const selectedArtist = results[activeIndex]
-      if (selectedArtist) {
-        // Navigate to the selected artist using Next.js router
-        handleResultClick()
-        router.push(`/artists/${selectedArtist.handle}`)
-      }
       return
     }
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import ArtistSearchControls from '@/components/artist-search-controls'
 import ArtistResultCard from '@/components/artist-result-card'
@@ -65,7 +65,7 @@ function ResultsSkeleton() {
   )
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
@@ -246,5 +246,22 @@ export default function SearchPage() {
         </section>
       </div>
     </main>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-sunroad-cream font-body">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          <div className="text-center py-16">
+            <div className="animate-spin h-8 w-8 border-2 border-sunroad-amber-500 border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-sunroad-brown-600 font-body">Loading search...</p>
+          </div>
+        </div>
+      </main>
+    }>
+      <SearchPageContent />
+    </Suspense>
   )
 }

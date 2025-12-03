@@ -63,7 +63,7 @@ export function useArtistSearchResults({
 
     try {
       const searchResults = await searchArtists({
-        q: searchQuery.trim() || null,
+        q: searchQuery.trim() || undefined,
         category_ids: categoryIdsParam && categoryIdsParam.length > 0 ? categoryIdsParam : null,
         limit,
         offset: currentOffset
