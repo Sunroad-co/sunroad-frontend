@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useSearch } from '@/hooks/use-search'
 import { getMediaUrl } from '@/lib/media'
 
@@ -10,31 +11,143 @@ interface SearchBarProps {
   placeholder?: string
   className?: string
   onResultClick?: () => void
+  categoryIds?: number[]
+  embedded?: boolean
+  onFocusChange?: (isFocused: boolean) => void
+  isActive?: boolean
+  onQueryChange?: (query: string) => void
+  showLabel?: boolean
+  disableDropdown?: boolean
+  value?: string
+}
+
+// Skeleton loader component - extracted outside to avoid recreation on every render
+const SkeletonLoader: React.FC = () => (
+  <div className="py-2 w-full">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="px-4 py-3 border-b border-gray-100 last:border-b-0 w-full">
+        <div className="flex items-center space-x-3 w-full">
+          {/* Avatar skeleton */}
+          <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse flex-shrink-0" />
+          
+          {/* Content skeleton */}
+          <div className="flex-1 space-y-2 min-w-0">
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+            <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
+            <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+          </div>
+          
+          {/* Arrow skeleton */}
+          <div className="w-4 h-4 bg-gray-200 rounded animate-pulse flex-shrink-0" />
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
+// Artist Avatar component - extracted for better readability
+interface ArtistAvatarProps {
+  src: string | null
+  name: string
+}
+
+const ArtistAvatar: React.FC<ArtistAvatarProps> = ({ src, name }) => {
+  const avatarSrc = getMediaUrl(src)
+  
+  if (avatarSrc) {
+    return (
+      <Image
+        src={avatarSrc}
+        alt={name}
+        width={40}
+        height={40}
+        className="w-10 h-10 rounded-full object-cover"
+      />
+    )
+  }
+  
+  return (
+    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+      <span className="text-amber-600 font-medium text-sm">
+        {name.charAt(0)}
+      </span>
+    </div>
+  )
 }
 
 export default function SearchBar({ 
   placeholder = "Search for local creatives...",
   className = "",
-  onResultClick
+  onResultClick,
+  categoryIds,
+  embedded = false,
+  onFocusChange,
+  isActive = true,
+  onQueryChange,
+  showLabel = true,
+  disableDropdown = false,
+  value: controlledValue
 }: SearchBarProps) {
+  const router = useRouter()
   const [isFocused, setIsFocused] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1) // For keyboard navigation
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isMouseInDropdownRef = useRef(false)
+  const listboxId = 'artist-search-listbox'
   
-  const {
-    query,
-    setQuery,
-    results,
-    loading,
-    error,
-    isOpen,
-    setIsOpen,
-    hasSearched
-  } = useSearch({
+  // Local state for query when disableDropdown is true
+  const [localQuery, setLocalQuery] = useState(controlledValue || '')
+  
+  // Only use useSearch when dropdown is enabled
+  const searchHook = useSearch({
     debounceMs: 300,
     minQueryLength: 2,
-    limit: 8
+    limit: 8,
+    categoryIds,
+    enabled: !disableDropdown
   })
+  
+  // When dropdown is disabled, use local state and controlled value
+  const query = disableDropdown ? (controlledValue !== undefined ? controlledValue : localQuery) : searchHook.query
+  const setQuery = disableDropdown 
+    ? (q: string) => {
+        setLocalQuery(q)
+        onQueryChange?.(q)
+      }
+    : searchHook.setQuery
+  const results = disableDropdown ? [] : searchHook.results
+  const loading = disableDropdown ? false : searchHook.loading
+  const error = disableDropdown ? null : searchHook.error
+  const isOpen = disableDropdown ? false : searchHook.isOpen
+  const setIsOpen = disableDropdown ? () => {} : searchHook.setIsOpen
+  const hasSearched = disableDropdown ? false : searchHook.hasSearched
+  
+  // Sync controlled value when provided
+  useEffect(() => {
+    if (disableDropdown && controlledValue !== undefined && controlledValue !== localQuery) {
+      setLocalQuery(controlledValue)
+    }
+  }, [controlledValue, disableDropdown, localQuery])
+
+  // Update focus state when dropdown opens/closes or input focus changes
+  useEffect(() => {
+    if (onFocusChange) {
+      const isActiveState = isOpen || isFocused
+      onFocusChange(isActiveState)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, isFocused]) // onFocusChange is stable from parent's useCallback
+
+  // Close dropdown when segment becomes inactive (for embedded mode)
+  useEffect(() => {
+    if (embedded && !isActive && isOpen) {
+      setIsOpen(false)
+      // Don't call onFocusChange here to avoid loops - it will be called by the above effect
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded, isActive, isOpen]) // onFocusChange excluded to prevent loops
 
   // Show skeleton loader when dropdown is open but we haven't started loading yet
   const shouldShowSkeleton = isOpen && (loading || (!hasSearched && query.length >= 2))
@@ -49,6 +162,11 @@ export default function SearchBar({
         inputRef.current &&
         !inputRef.current.contains(event.target as Node)
       ) {
+        // Clear blur timeout when clicking outside
+        if (blurTimeoutRef.current) {
+          clearTimeout(blurTimeoutRef.current)
+          blurTimeoutRef.current = null
+        }
         setIsOpen(false)
       }
     }
@@ -65,31 +183,91 @@ export default function SearchBar({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.body.style.overflow = 'unset'
+      // Cleanup timeout on unmount
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current)
+      }
     }
   }, [setIsOpen, isOpen])
+
+  // Scroll active option into view when navigating with keyboard
+  useEffect(() => {
+    if (activeIndex >= 0 && dropdownRef.current) {
+      const activeElement = document.getElementById(`${listboxId}-option-${activeIndex}`)
+      if (activeElement) {
+        activeElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        })
+      }
+    }
+  }, [activeIndex, listboxId])
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setIsOpen(false)
+      setActiveIndex(-1)
       inputRef.current?.blur()
+      return
+    }
+
+    if (!isOpen || results.length === 0) {
+      return
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((prev) => {
+        const nextIndex = prev < results.length - 1 ? prev + 1 : 0
+        return nextIndex
+      })
+      return
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((prev) => {
+        const nextIndex = prev > 0 ? prev - 1 : results.length - 1
+        return nextIndex
+      })
+      return
+    }
+
+    if (e.key === 'Enter' && activeIndex >= 0 && activeIndex < results.length) {
+      e.preventDefault()
+      const selectedArtist = results[activeIndex]
+      if (selectedArtist) {
+        // Navigate to the selected artist using Next.js router
+        handleResultClick()
+        router.push(`/artists/${selectedArtist.handle}`)
+      }
+      return
     }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    setQuery(value)
-    
-    // Show dropdown with skeleton loader immediately when typing 2+ characters
-    if (value.length >= 2) {
-      setIsOpen(true)
+    if (disableDropdown) {
+      setLocalQuery(value)
+      onQueryChange?.(value)
     } else {
-      setIsOpen(false)
+      setQuery(value)
+      onQueryChange?.(value)
+      setActiveIndex(-1) // Reset active index when query changes
+      
+      // Show dropdown with skeleton loader immediately when typing 2+ characters
+      if (value.length >= 2) {
+        setIsOpen(true)
+      } else {
+        setIsOpen(false)
+      }
     }
   }
 
   const handleInputFocus = () => {
     setIsFocused(true)
+    onFocusChange?.(true)
     if (query.length >= 2) {
       setIsOpen(true)
     }
@@ -97,18 +275,63 @@ export default function SearchBar({
 
   const handleInputBlur = () => {
     setIsFocused(false)
-    // Delay closing to allow clicking on results
-    setTimeout(() => setIsOpen(false), 150)
+    // For embedded mode, rely on click-outside handler only
+    // For non-embedded mode, use timeout to allow clicking on results
+    if (!embedded) {
+      // Clear any existing timeout
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current)
+      }
+      // Delay closing to allow clicking on results
+      blurTimeoutRef.current = setTimeout(() => {
+        // Only close if mouse is not in dropdown and input is not focused
+        if (!isMouseInDropdownRef.current && document.activeElement !== inputRef.current) {
+          setIsOpen(false)
+          onFocusChange?.(false)
+        }
+        blurTimeoutRef.current = null
+      }, 200)
+    }
+  }
+
+  const handleResultMouseDown = (e: React.MouseEvent) => {
+    // Prevent blur event from firing when clicking on result
+    e.preventDefault()
   }
 
   const handleResultClick = () => {
+    // Clear blur timeout since we're navigating
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current)
+      blurTimeoutRef.current = null
+    }
+    isMouseInDropdownRef.current = false
+    setActiveIndex(-1)
     setIsOpen(false)
+    onFocusChange?.(false)
     onResultClick?.()
+  }
+
+  // Reset active index when mouse enters dropdown (user is using mouse, not keyboard)
+  const handleDropdownMouseEnter = () => {
+    isMouseInDropdownRef.current = true
+    setActiveIndex(-1) // Clear keyboard selection when using mouse
+  }
+
+  const handleDropdownMouseLeave = () => {
+    isMouseInDropdownRef.current = false
+  }
+
+  // Track mouse hover on individual results
+  const handleResultMouseEnter = (index: number) => {
+    setActiveIndex(index)
   }
 
   const handleClearSearch = () => {
     setQuery('')
+    onQueryChange?.('')
     setIsOpen(false)
+    onFocusChange?.(false)
   }
 
   const formatLocation = (city: string | null, state: string | null) => {
@@ -121,29 +344,147 @@ export default function SearchBar({
     return categories.split(',').slice(0, 2).join(', ')
   }
 
-  // Skeleton loader component
-  const SkeletonLoader = () => (
-    <div className="py-2">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="px-4 py-3 border-b border-gray-100 last:border-b-0">
-          <div className="flex items-center space-x-3">
-            {/* Avatar skeleton */}
-            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
-            
-            {/* Content skeleton */}
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
-              <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
-              <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
-            </div>
-            
-            {/* Arrow skeleton */}
-            <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+  // When showLabel is false, render just the input for embedded mode with label/subtitle structure
+  if (!showLabel && embedded) {
+    return (
+      <div className={className}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={isOpen}
+          aria-controls={listboxId}
+          aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
+          className={`w-full bg-transparent focus:outline-none text-sm p-0 border-0 h-auto ${
+            query ? 'text-gray-900' : 'text-gray-500'
+          }`}
+        />
+        {/* Dropdown Results */}
+        {isOpen && (
+          <div
+            ref={dropdownRef}
+            onMouseEnter={handleDropdownMouseEnter}
+            onMouseLeave={handleDropdownMouseLeave}
+            role="listbox"
+            id={listboxId}
+            className={`absolute top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-y-auto transition-all duration-200 ease-out opacity-100 translate-y-0 ${
+              embedded 
+                ? 'left-0 right-0 w-full md:left-0 md:right-auto md:min-w-[480px] md:max-w-[480px] md:w-full' 
+                : 'left-0 right-0 w-full'
+            }`}
+          >
+            {error ? (
+              <div className="p-4 text-center text-red-600">
+                <p className="text-sm">Failed to search artists</p>
+                <button
+                  onClick={() => setQuery(query)}
+                  className="mt-2 text-xs text-amber-600 hover:text-amber-700"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : shouldShowSkeleton ? (
+              <SkeletonLoader />
+            ) : results.length > 0 ? (
+              <div className="py-2">
+                {results.map((artist, index) => {
+                  const location = formatLocation(artist.city, artist.state)
+                  const categories = formatCategories(artist.categories)
+                  const isActive = activeIndex === index
+                  
+                  return (
+                    <Link
+                      key={artist.id}
+                      href={`/artists/${artist.handle}`}
+                      prefetch={false}
+                      onMouseDown={handleResultMouseDown}
+                      onMouseEnter={() => handleResultMouseEnter(index)}
+                      onClick={handleResultClick}
+                      role="option"
+                      aria-selected={isActive}
+                      id={`${listboxId}-option-${index}`}
+                      className={`block px-4 py-3 transition-all duration-150 border-b border-gray-100 last:border-b-0 
+                                 hover:shadow-sm hover:scale-[1.01] ${
+                                   isActive 
+                                     ? 'bg-amber-50 hover:bg-amber-50' 
+                                     : 'hover:bg-gray-50'
+                                 }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <ArtistAvatar src={artist.avatar_url} name={artist.display_name} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <h4 className="text-sm font-medium text-gray-900 truncate">
+                              {artist.display_name}
+                            </h4>
+                            {artist.rank > 0 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                Match
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1 space-y-1">
+                            {location && (
+                              <p className="text-xs text-gray-500 truncate">
+                                📍 {location}
+                              </p>
+                            )}
+                            {categories && (
+                              <p className="text-xs text-amber-600 truncate">
+                                🎨 {categories}
+                              </p>
+                            )}
+                            {artist.bio && (
+                              <p className="text-xs text-gray-600 truncate">
+                                {artist.bio.length > 60 ? `${artist.bio.substring(0, 60)}...` : artist.bio}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                })}
+                {results.length >= 8 && (
+                  <div className="px-4 py-2 border-t border-gray-100">
+                    <Link
+                      href={`/search?q=${encodeURIComponent(query)}`}
+                      prefetch={false}
+                      onMouseDown={handleResultMouseDown}
+                      onClick={handleResultClick}
+                      className="block text-center text-sm text-amber-600 hover:text-amber-700 font-medium 
+                                 transition-colors duration-150 hover:bg-amber-50 py-2 rounded-lg"
+                    >
+                      View all results for &quot;{query}&quot;
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : query.length >= 2 && !loading && hasSearched && results.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                <p className="text-sm">No artists found for &quot;{query}&quot;</p>
+                <p className="text-xs mt-1">Try a different search term</p>
+              </div>
+            ) : null}
           </div>
-        </div>
-      ))}
-    </div>
-  )
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className={`relative ${className}`}>
@@ -158,51 +499,60 @@ export default function SearchBar({
           onBlur={handleInputBlur}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className={`w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-full 
-                     focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent 
-                     shadow-sm transition-all duration-200 ${
-                       isFocused ? 'shadow-md' : ''
-                     }`}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={isOpen}
+          aria-controls={listboxId}
+          aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
+          className={`w-full py-3 text-gray-900 transition-all duration-200 min-w-0 ${
+            embedded
+              ? 'bg-transparent focus:outline-none px-4 pr-10'
+              : `bg-white border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent shadow-sm px-4 pr-10 ${
+                  isFocused ? 'shadow-md' : ''
+                }`
+          }`}
         />
         
-        {/* Search Icon */}
-        <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-          {loading ? (
+        {/* Search Icon / Loading Spinner / Clear Button */}
+        <div className={`absolute inset-y-0 right-0 flex items-center ${embedded ? 'pr-3' : 'pr-4'}`}>
+          {query ? (
+            // Clear Button when there's a query
+            <button
+              onClick={handleClearSearch}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ) : loading ? (
+            // Loading spinner
             <div className="animate-spin h-5 w-5 border-2 border-amber-500 border-t-transparent rounded-full" />
           ) : (
+            // Search Icon when no query (show in both embedded and non-embedded)
             <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           )}
         </div>
-
-        {/* Clear Button */}
-        {query && (
-          <button
-            onClick={handleClearSearch}
-            className="absolute inset-y-0 right-8 pr-2 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
       </div>
 
-      {/* Backdrop - positioned below navbar on both desktop and mobile */}
-      {isOpen && (
-        <div 
-          className="fixed left-0 right-0 bottom-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-200 md:top-20 top-32"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {/* Backdrop removed per user request */}
 
       {/* Dropdown Results */}
-      {isOpen && (
+      {!disableDropdown && isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto
-                     animate-in slide-in-from-top-2 fade-in duration-200"
+          onMouseEnter={handleDropdownMouseEnter}
+          onMouseLeave={handleDropdownMouseLeave}
+          role="listbox"
+          id={listboxId}
+          className={`absolute top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-y-auto
+                     transition-all duration-200 ease-out ${
+                       embedded 
+                         ? 'left-0 right-0 w-full md:left-0 md:right-auto md:min-w-[480px] md:max-w-[480px] md:w-full' 
+                         : 'left-0 right-0 w-full'
+                     } opacity-100 translate-y-0`}
         >
           {error ? (
             <div className="p-4 text-center text-red-600">
@@ -218,79 +568,78 @@ export default function SearchBar({
             <SkeletonLoader />
           ) : results.length > 0 ? (
             <div className="py-2">
-              {results.map((artist) => (
-                <Link
-                  key={artist.id}
-                  href={`/artists/${artist.handle}`}
-                  prefetch={false}
-                  onClick={handleResultClick}
-                  className="block px-4 py-3 hover:bg-gray-50 transition-all duration-150 border-b border-gray-100 last:border-b-0 
-                             hover:shadow-sm hover:scale-[1.01]"
-                >
-                  <div className="flex items-center space-x-3">
-                    {/* Avatar */}
-                    <div className="flex-shrink-0">
-                      {(() => {
-                        const avatarSrc = getMediaUrl(artist.avatar_url);
-                        return avatarSrc ? (
-                          <Image
-                            src={avatarSrc}
-                            alt={artist.display_name}
-                            width={40}
-                            height={40}
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
-                            <span className="text-amber-600 font-medium text-sm">
-                              {artist.display_name.charAt(0)}
+              {results.map((artist, index) => {
+                // Pre-compute formatted strings to avoid double computation
+                const location = formatLocation(artist.city, artist.state)
+                const categories = formatCategories(artist.categories)
+                const isActive = activeIndex === index
+                
+                return (
+                  <Link
+                    key={artist.id}
+                    href={`/artists/${artist.handle}`}
+                    prefetch={false}
+                    onMouseDown={handleResultMouseDown}
+                    onMouseEnter={() => handleResultMouseEnter(index)}
+                    onClick={handleResultClick}
+                    role="option"
+                    aria-selected={isActive}
+                    id={`${listboxId}-option-${index}`}
+                    className={`block px-4 py-3 transition-all duration-150 border-b border-gray-100 last:border-b-0 
+                               hover:shadow-sm hover:scale-[1.01] ${
+                                 isActive 
+                                   ? 'bg-amber-50 hover:bg-amber-50' 
+                                   : 'hover:bg-gray-50'
+                               }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      {/* Avatar */}
+                      <div className="flex-shrink-0">
+                        <ArtistAvatar src={artist.avatar_url} name={artist.display_name} />
+                      </div>
+
+                      {/* Artist Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="text-sm font-medium text-gray-900 truncate">
+                            {artist.display_name}
+                          </h4>
+                          {artist.rank > 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                              Match
                             </span>
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    {/* Artist Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <h4 className="text-sm font-medium text-gray-900 truncate">
-                          {artist.display_name}
-                        </h4>
-                        {artist.rank > 0 && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            Match
-                          </span>
-                        )}
+                          )}
+                        </div>
+                        
+                        <div className="mt-1 space-y-1">
+                          {location && (
+                            <p className="text-xs text-gray-500 truncate">
+                              📍 {location}
+                            </p>
+                          )}
+                          {categories && (
+                            <p className="text-xs text-amber-600 truncate">
+                              🎨 {categories}
+                            </p>
+                          )}
+                          {artist.bio && (
+                            <p className="text-xs text-gray-600 truncate">
+                              {artist.bio.length > 60 ? `${artist.bio.substring(0, 60)}...` : artist.bio}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      
-                      <div className="mt-1 space-y-1">
-                        {formatLocation(artist.city, artist.state) && (
-                          <p className="text-xs text-gray-500 truncate">
-                            📍 {formatLocation(artist.city, artist.state)}
-                          </p>
-                        )}
-                        {formatCategories(artist.categories) && (
-                          <p className="text-xs text-amber-600 truncate">
-                            🎨 {formatCategories(artist.categories)}
-                          </p>
-                        )}
-                        {artist.bio && (
-                          <p className="text-xs text-gray-600 truncate">
-                            {artist.bio.length > 60 ? `${artist.bio.substring(0, 60)}...` : artist.bio}
-                          </p>
-                        )}
+
+                      {/* Arrow */}
+                      <div className="flex-shrink-0">
+                        <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
                     </div>
-
-                    {/* Arrow */}
-                    <div className="flex-shrink-0">
-                      <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
               
               {/* View All Results */}
               {results.length >= 8 && (
@@ -298,6 +647,7 @@ export default function SearchBar({
                   <Link
                     href={`/search?q=${encodeURIComponent(query)}`}
                     prefetch={false}
+                    onMouseDown={handleResultMouseDown}
                     onClick={handleResultClick}
                     className="block text-center text-sm text-amber-600 hover:text-amber-700 font-medium 
                                transition-colors duration-150 hover:bg-amber-50 py-2 rounded-lg"

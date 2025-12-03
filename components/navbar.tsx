@@ -1,19 +1,22 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import NavbarAuth from './navbar-auth'
-import SearchBar from './search-bar'
+import ArtistSearchControls from './artist-search-controls'
 import Link from 'next/link'
 import Image from 'next/image'
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
+  const hideSearchControls = pathname?.startsWith('/search') ?? false
 
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-br from-slate-50/98 via-amber-50/30/98 to-orange-50/20/98 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Desktop Layout */}
-        <div className="hidden md:flex justify-between items-center h-16">
+        <div className="hidden md:flex justify-between items-center py-3">
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center space-x-2">
@@ -28,25 +31,17 @@ export default function Navbar() {
           </div>
           
           {/* Search Bar */}
-          <div className="flex-1 max-w-lg mx-8">
-            <SearchBar 
-              placeholder="Search for local creatives..."
-              onResultClick={() => setIsMobileMenuOpen(false)}
-            />
-          </div>
+          {!hideSearchControls && (
+            <div className="flex-1 max-w-2xl mx-8">
+              <ArtistSearchControls 
+                placeholder="Search for local creatives..."
+                onResultClick={() => setIsMobileMenuOpen(false)}
+              />
+            </div>
+          )}
           
-          {/* Right side - Help, Home, Auth */}
-          <div className="flex items-center space-x-4">
-            <button className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50">
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-            <button className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50">
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-            </button>
+          {/* Right side - Auth */}
+          <div className="flex items-center">
             <NavbarAuth />
           </div>
         </div>
@@ -77,33 +72,19 @@ export default function Navbar() {
           </div>
           
           {/* Search Bar */}
-          <div className="mb-4">
-            <SearchBar 
-              placeholder="Search for local creatives"
-              onResultClick={() => setIsMobileMenuOpen(false)}
-            />
-          </div>
+          {!hideSearchControls && (
+            <div className="mb-4">
+              <ArtistSearchControls 
+                placeholder="Search for local creatives"
+                onResultClick={() => setIsMobileMenuOpen(false)}
+              />
+            </div>
+          )}
 
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
             <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 space-y-4 border border-sunroad-amber-100/50">
-              <div className="flex items-center space-x-4">
-                <button className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </button>
-                <span className="text-sm text-sunroad-brown-600 font-body">Help</span>
-              </div>
-              <div className="flex items-center space-x-4">
-                <button className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                </button>
-                <span className="text-sm text-sunroad-brown-600 font-body">Home</span>
-              </div>
-              <div className="pt-2 border-t border-sunroad-amber-100/50">
+              <div className="pt-2">
                 <NavbarAuth />
               </div>
             </div>

@@ -55,6 +55,26 @@ export default function EditBioModal({ isOpen, onClose, currentBio, profile, onS
         throw new Error(updateError.message)
       }
 
+      // Revalidate the artist profile page cache
+      if (profile.handle) {
+        try {
+          await fetch('/api/revalidate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              handle: profile.handle,
+              artistId: profile.id,
+              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+            }),
+          })
+        } catch (revalidateError) {
+          // Log but don't fail - revalidation is best effort
+          console.warn('Failed to revalidate cache:', revalidateError)
+        }
+      }
+
       // Success - call onSuccess and close
       if (onSuccess) {
         onSuccess(bio.trim() || '')

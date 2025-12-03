@@ -195,6 +195,13 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
             instagram: profile.instagram_url || undefined,
             facebook: profile.facebook_url || undefined
           }}
+          profile={profile}
+          onSuccess={() => {
+            // Trigger refetch to update profile
+            if (onProfileUpdate) {
+              onProfileUpdate()
+            }
+          }}
         />
       )}
       

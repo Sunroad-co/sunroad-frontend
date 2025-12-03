@@ -5,6 +5,8 @@ interface UseSearchOptions {
   debounceMs?: number
   minQueryLength?: number
   limit?: number
+  categoryIds?: number[]
+  enabled?: boolean
 }
 
 interface UseSearchReturn {
@@ -22,7 +24,9 @@ interface UseSearchReturn {
 export function useSearch({
   debounceMs = 300,
   minQueryLength = 2,
-  limit = 10
+  limit = 10,
+  categoryIds,
+  enabled = true
 }: UseSearchOptions = {}): UseSearchReturn {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -33,7 +37,7 @@ export function useSearch({
 
   // Debounced search function
   const debouncedSearch = useCallback(
-    debounce(async (searchQuery: string) => {
+    debounce(async (searchQuery: string, categoryIdsParam?: number[]) => {
       if (searchQuery.length < minQueryLength) {
         setResults([])
         setLoading(false)
@@ -47,6 +51,7 @@ export function useSearch({
       try {
         const searchResults = await searchArtists({
           q: searchQuery,
+          category_ids: categoryIdsParam && categoryIdsParam.length > 0 ? categoryIdsParam : null,
           limit
         })
         setResults(searchResults)
@@ -63,18 +68,26 @@ export function useSearch({
     [debounceMs, minQueryLength, limit]
   )
 
-  // Effect to trigger search when query changes
+  // Effect to trigger search when query or categoryIds changes
   useEffect(() => {
+    if (!enabled) {
+      setResults([])
+      setLoading(false)
+      setError(null)
+      setHasSearched(false)
+      return
+    }
+
     if (query.trim() && query.trim().length >= minQueryLength) {
       setHasSearched(false) // Reset search completion flag when starting new search
-      debouncedSearch(query.trim())
+      debouncedSearch(query.trim(), categoryIds)
     } else {
       setResults([])
       setLoading(false)
       setError(null)
       setHasSearched(false)
     }
-  }, [query, debouncedSearch, minQueryLength])
+  }, [query, categoryIds, debouncedSearch, minQueryLength, enabled])
 
   // Clear search function
   const clearSearch = useCallback(() => {

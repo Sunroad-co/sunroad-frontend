@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 export type SearchParams = {
   q?: string
   category?: string
+  category_ids?: number[] | null
   city?: string
   state?: string
   limit?: number
@@ -24,6 +25,7 @@ export type SearchResult = {
 export async function searchArtists({
   q,
   category,
+  category_ids,
   city,
   state,
   limit = 20,
@@ -33,9 +35,7 @@ export async function searchArtists({
   
   const rpcParams = {
     q: q ?? null,
-    category_name: category ?? null,
-    city_name: city ?? null,
-    state_name: state ?? null,
+    category_ids: category_ids && category_ids.length > 0 ? category_ids : null,
     lim: limit,
     off: offset,
   }

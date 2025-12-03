@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { UserProfile } from '@/hooks/use-user-profile'
 
 interface EditLinksModalProps {
   isOpen: boolean
@@ -10,21 +12,110 @@ interface EditLinksModalProps {
     instagram?: string
     facebook?: string
   }
+  profile: UserProfile
+  onSuccess?: () => void
 }
 
-export default function EditLinksModal({ isOpen, onClose, currentLinks }: EditLinksModalProps) {
+export default function EditLinksModal({ isOpen, onClose, currentLinks, profile, onSuccess }: EditLinksModalProps) {
   const [links, setLinks] = useState({
     website: currentLinks.website || '',
     instagram: currentLinks.instagram || '',
     facebook: currentLinks.facebook || ''
   })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Reset state when modal opens/closes or currentLinks changes
+  useEffect(() => {
+    if (isOpen) {
+      setLinks({
+        website: currentLinks.website || '',
+        instagram: currentLinks.instagram || '',
+        facebook: currentLinks.facebook || ''
+      })
+      setError(null)
+    }
+  }, [isOpen, currentLinks])
 
   if (!isOpen) return null
 
-  const handleSave = () => {
-    // TODO: Implement save logic
-    console.log('Saving links:', links)
-    onClose()
+  const handleSave = async () => {
+    // Check if unchanged
+    const hasChanges = 
+      links.website !== (currentLinks.website || '') ||
+      links.instagram !== (currentLinks.instagram || '') ||
+      links.facebook !== (currentLinks.facebook || '')
+
+    if (!hasChanges) {
+      onClose()
+      return
+    }
+
+    // Validate URLs if provided
+    const urlPattern = /^https?:\/\/.+/i
+    if (links.website && !urlPattern.test(links.website)) {
+      setError('Website URL must start with http:// or https://')
+      return
+    }
+    if (links.instagram && !urlPattern.test(links.instagram)) {
+      setError('Instagram URL must start with http:// or https://')
+      return
+    }
+    if (links.facebook && !urlPattern.test(links.facebook)) {
+      setError('Facebook URL must start with http:// or https://')
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError(null)
+
+      const supabase = createClient()
+
+      const { error: updateError } = await supabase
+        .from('artists_min')
+        .update({
+          website_url: links.website.trim() || null,
+          instagram_url: links.instagram.trim() || null,
+          facebook_url: links.facebook.trim() || null,
+        })
+        .eq('id', profile.id)
+
+      if (updateError) {
+        throw new Error(updateError.message)
+      }
+
+      // Revalidate the artist profile page cache
+      if (profile.handle) {
+        try {
+          await fetch('/api/revalidate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              handle: profile.handle,
+              artistId: profile.id,
+              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+            }),
+          })
+        } catch (revalidateError) {
+          // Log but don't fail - revalidation is best effort
+          console.warn('Failed to revalidate cache:', revalidateError)
+        }
+      }
+
+      // Success - call onSuccess and close
+      if (onSuccess) {
+        onSuccess()
+      }
+      onClose()
+    } catch (err) {
+      console.error('Error saving links:', err)
+      setError(err instanceof Error ? err.message : 'Failed to save links. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleCancel = () => {
@@ -33,8 +124,14 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks }: EditLi
       instagram: currentLinks.instagram || '',
       facebook: currentLinks.facebook || ''
     })
+    setError(null)
     onClose()
   }
+
+  const hasChanges = 
+    links.website !== (currentLinks.website || '') ||
+    links.instagram !== (currentLinks.instagram || '') ||
+    links.facebook !== (currentLinks.facebook || '')
 
   const handleLinkChange = (platform: keyof typeof links, value: string) => {
     setLinks(prev => ({
@@ -129,6 +226,13 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks }: EditLi
             </div>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
           {/* Tips */}
           <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
             <h3 className="text-sm font-medium text-green-800 mb-2">Link Tips</h3>
@@ -145,15 +249,27 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks }: EditLi
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            disabled={saving}
+            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-sunroad-amber-600 text-white rounded-lg hover:bg-sunroad-amber-700 transition-colors"
+            disabled={!hasChanges || saving}
+            className="px-4 py-2 bg-sunroad-amber-600 text-white rounded-lg hover:bg-sunroad-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
-            Save Changes
+            {saving ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Saving...</span>
+              </>
+            ) : (
+              'Save Changes'
+            )}
           </button>
         </div>
       </div>
