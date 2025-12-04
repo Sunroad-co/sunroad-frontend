@@ -10,7 +10,7 @@ export default function ProfilePageSkeleton() {
       {/* Header Section */}
       <header className="relative max-w-6xl mx-auto">
         {/* Banner Skeleton */}
-        <div className="relative h-40 sm:h-60 md:h-80 rounded-2xl overflow-hidden">
+        <div className="relative h-48 sm:h-72 md:h-88 rounded-2xl overflow-hidden">
           <Skeleton className="w-full h-full" />
           <div className="absolute inset-0 bg-gradient-to-t from-sunroad-brown-900/30 via-sunroad-amber-600/20 to-transparent" />
         </div>

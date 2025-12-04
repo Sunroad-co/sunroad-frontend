@@ -23,7 +23,7 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
     <>
       <header className="relative max-w-6xl mx-auto font-display">
         {/* Banner */}
-        <div className="relative h-40 sm:h-60 md:h-80 rounded-2xl overflow-hidden group">
+        <div className="relative h-48 sm:h-72 md:h-88 rounded-2xl overflow-hidden group">
           {(() => {
             const bannerSrc = getMediaUrl(profile.banner_url);
             return bannerSrc ? (

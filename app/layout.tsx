@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk, Outfit, Poppins } from "next/font/google";
 // import { ThemeProvider } from "next-themes";
 import Navbar from "@/components/navbar";
+import { UserProvider } from "@/contexts/user-context";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -56,8 +57,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         > */}
+        <UserProvider>
           <Navbar />
           {children}
+        </UserProvider>
         {/* </ThemeProvider> */}
       </body>
     </html>

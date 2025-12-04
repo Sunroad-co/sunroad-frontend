@@ -5,6 +5,7 @@ import SimilarArtists from '@/components/similar-artists'
 import WorksGallery from '@/components/works-gallery'
 import ShareButton from '@/components/share-button'
 import TruncatedBio from '@/components/truncated-bio'
+import ArtistSocialLinks from '@/components/artist-social-links'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getMediaUrl } from '@/lib/media'
 import { Work } from '@/hooks/use-user-profile'
@@ -244,7 +245,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
         {/* Hero Section */}
         <header className="relative max-w-6xl mx-auto">
           {/* Banner */}
-          <div className="relative h-40 sm:h-60 md:h-80 rounded-2xl overflow-hidden">
+          <div className="relative h-48 sm:h-72 md:h-88 rounded-2xl overflow-hidden">
             {(() => {
               const bannerSrc = getMediaUrl(artist.banner_url);
               return bannerSrc ? (
@@ -259,15 +260,6 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
             })()}
             {/* Dark overlay for readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            
-            {/* Share Button - Top Right (Mobile Only) */}
-            <div className="absolute top-4 right-4 z-10 md:hidden">
-              <ShareButton 
-                artistName={artist.display_name}
-                artistHandle={artist.handle}
-                className="border border-sunroad-amber-700/30 shadow-[0_0_10px_rgba(217,119,6,0.3)] px-5 py-2.5"
-              />
-            </div>
           </div>
 
           {/* Avatar - Centered on mobile, left-aligned on desktop */}
@@ -295,17 +287,28 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
         </header>
 
         {/* Content */}
-        <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-14">
+        <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-8">
           {/* Artist Info Section - Centered on mobile, left-aligned on desktop */}
-          <header className="mt-2 md:mt-0 md:flex md:items-start md:gap-6 text-center md:text-left relative">
+          <header className="mt-0 md:mt-0 md:flex md:items-start md:gap-6 text-center md:text-left relative">
             {/* Spacer for avatar on desktop - matches avatar width + gap */}
-            <div className="hidden md:block w-40 flex-shrink-0" />
+            <div className="hidden md:block w-40 flex-shrink-0 relative">
+              {/* Social Links - Desktop Only, aligned with location */}
+              <div className="absolute top-[3.5rem]">
+                <ArtistSocialLinks
+                  websiteUrl={artist.website_url}
+                  instagramUrl={artist.instagram_url}
+                  facebookUrl={artist.facebook_url}
+                  artistName={artist.display_name}
+                  alignment="side"
+                />
+              </div>
+            </div>
             
             {/* Name and Info Section */}
             <div className="flex-1 min-w-0">
               {/* Name with Share Button (Desktop) */}
               <div className="flex items-center justify-between w-full mb-3 flex-col md:flex-row gap-3 md:gap-0">
-                <h1 className="text-3xl md:text-5xl font-display font-bold text-sunroad-brown-900">
+                <h1 className="text-2xl md:text-4xl font-display font-bold text-sunroad-brown-900">
                   {artist.display_name}
                 </h1>
                 {/* Share Button - Desktop Only */}
@@ -350,13 +353,55 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           
           {artist.bio && (
             <section className="mb-8 md:flex md:items-start md:gap-6">
+              {/* Spacer for alignment */}
               <div className="hidden md:block w-40 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 
                 <TruncatedBio bio={artist.bio} />
+                
+                {/* Share Button - Mobile Only, Below Bio */}
+                <div className="flex justify-center mt-4 md:hidden">
+                  <ShareButton 
+                    artistName={artist.display_name}
+                    artistHandle={artist.handle}
+                    className="border border-sunroad-amber-700/30 shadow-[0_0_10px_rgba(217,119,6,0.3)] px-5 py-2.5"
+                  />
+                </div>
+                
+                {/* Social Links - Mobile Only, Below Share Button */}
+                <div className="flex justify-center mt-4 md:hidden">
+                  <ArtistSocialLinks
+                    websiteUrl={artist.website_url}
+                    instagramUrl={artist.instagram_url}
+                    facebookUrl={artist.facebook_url}
+                    artistName={artist.display_name}
+                    alignment="center"
+                  />
+                </div>
               </div>
             </section>
           )}
+          
+          {/* Share Button + Social Links - Mobile Only, Below Bio (when no bio) */}
+          {!artist.bio && (
+            <section className="mb-8 md:hidden">
+              <div className="flex flex-col items-center gap-4">
+                <ShareButton 
+                  artistName={artist.display_name}
+                  artistHandle={artist.handle}
+                  className="border border-sunroad-amber-700/30 shadow-[0_0_10px_rgba(217,119,6,0.3)] px-5 py-2.5"
+                />
+                <ArtistSocialLinks
+                  websiteUrl={artist.website_url}
+                  instagramUrl={artist.instagram_url}
+                  facebookUrl={artist.facebook_url}
+                  artistName={artist.display_name}
+                  alignment="center"
+                />
+              </div>
+            </section>
+          )}
+          
 
 
 
@@ -365,50 +410,6 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
             <h2 className="text-xl font-display font-semibold text-sunroad-brown-900 mb-4">Work</h2>
             <WorksGallery works={works} />
           </section>
-          
-          {/* Social links */}
-          <nav className="mb-8 flex flex-wrap gap-3" aria-label="Social media links">
-  {artist.website_url && (
-    <a
-      href={artist.website_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Website"
-      className="w-10 h-10 flex items-center justify-center rounded-full bg-sunroad-amber-800 text-white hover:bg-sunroad-amber-900 transition-colors"
-    >
-      {/* Globe */}
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
-        <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472" />
-      </svg>
-    </a>
-  )}
-  {artist.instagram_url && (
-    <a
-      href={artist.instagram_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Instagram"
-      className="w-10 h-10 flex items-center justify-center rounded-full bg-sunroad-amber-800 text-white hover:bg-sunroad-amber-900 transition-colors"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M7 2C4.2 2 2 4.2 2 7v10c0 2.8 2.2 5 5 5h10c2.8 0 5-2.2 5-5V7c0-2.8-2.2-5-5-5H7zm10 2c1.6 0 3 1.4 3 3v10c0 1.6-1.4 3-3 3H7c-1.6 0-3-1.4-3-3V7c0-1.6 1.4-3 3-3h10zm-5 3a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6zm4.8-2.9a1.1 1.1 0 100 2.2 1.1 1.1 0 000-2.2z"/>
-      </svg>
-    </a>
-  )}
-  {artist.facebook_url && (
-    <a
-      href={artist.facebook_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Facebook"
-      className="w-10 h-10 flex items-center justify-center rounded-full bg-sunroad-amber-800 text-white hover:bg-sunroad-amber-900 transition-colors"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M22 12a10 10 0 10-11.5 9.9v-7h-2v-3h2v-2.3c0-2 1.2-3.1 3-3.1.9 0 1.8.1 1.8.1v2h-1c-1 0-1.3.6-1.3 1.2V12h2.2l-.4 3h-1.8v7A10 10 0 0022 12"/>
-      </svg>
-    </a>
-  )}
-          </nav>
 
           {/* Similar Artists */}
           <section>

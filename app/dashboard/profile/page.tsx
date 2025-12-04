@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { User } from '@supabase/supabase-js'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useUser } from '@/hooks/use-user'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import ProfileHeader from '@/components/dashboard/profile-header'
 import ProfileContent from '@/components/dashboard/profile-content'
@@ -11,45 +10,24 @@ import WorksSection from '@/components/dashboard/works-section'
 import ProfilePageSkeleton from '@/components/dashboard/profile-page-skeleton'
 
 export default function DashboardProfilePage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  // Use centralized user hook (cached, no duplicate API calls)
+  const { user, loading, error } = useUser()
   const { profile, loading: profileLoading, error: profileError, refetch } = useUserProfile(user)
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    async function getUser() {
-      try {
-        const supabase = createClient()
-        const { data: { user }, error } = await supabase.auth.getUser()
-        
-        if (error) {
-          console.error('Error fetching user:', error)
-          setError('Failed to load user data')
-          return
-        }
-
-        if (!user) {
-          router.push('/auth/login')
-          return
-        }
-
-        setUser(user)
-      } catch (err) {
-        console.error('Unexpected error:', err)
-        setError('An unexpected error occurred')
-      } finally {
-        setLoading(false)
-      }
+    if (!loading && !user) {
+      router.push('/auth/login')
     }
+  }, [user, loading, router])
 
-    getUser()
-  }, [router])
-
+  // Show loading while fetching user or profile
   if (loading || profileLoading) {
     return <ProfilePageSkeleton />
   }
 
+  // Show error if any
   if (error || profileError) {
     return (
       <div className="min-h-screen bg-sunroad-cream flex items-center justify-center">
@@ -77,7 +55,7 @@ export default function DashboardProfilePage() {
       <ProfileHeader user={user} profile={profile} onProfileUpdate={refetch} />
       
       {/* Content */}
-      <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-14">
+      <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-8">
         <ProfileContent user={user} profile={profile} onProfileUpdate={refetch} />
         
         {/* Works Section */}
