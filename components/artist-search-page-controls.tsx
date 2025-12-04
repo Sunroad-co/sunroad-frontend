@@ -165,7 +165,7 @@ export default function ArtistSearchPageControls({
                 isActive={activeSegment === 'category'}
                 onActiveChange={handleCategoryActiveChange}
                 showLabel={false}
-                subtitle="Category filter"
+                subtitle="Category"
               />
             </div>
           </div>
@@ -292,7 +292,7 @@ export default function ArtistSearchPageControls({
                     isActive={activeSegment === 'category'}
                     onActiveChange={handleCategoryActiveChange}
                     showLabel={false}
-                    subtitle="Category filter"
+                    subtitle="Category"
                   />
                 </div>
               </div>
@@ -303,3 +303,4 @@ export default function ArtistSearchPageControls({
     </div>
   )
 }
+

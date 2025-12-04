@@ -10,22 +10,22 @@ export default function ProfilePageSkeleton() {
       {/* Header Section */}
       <header className="relative max-w-6xl mx-auto">
         {/* Banner Skeleton */}
-        <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden">
+        <div className="relative h-40 sm:h-60 md:h-80 rounded-2xl overflow-hidden">
           <Skeleton className="w-full h-full" />
           <div className="absolute inset-0 bg-gradient-to-t from-sunroad-brown-900/30 via-sunroad-amber-600/20 to-transparent" />
         </div>
 
         {/* Avatar + Name Section Skeleton */}
-        <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center sm:items-start sm:left-6 sm:transform-none">
+        <div className="absolute -bottom-12 md:-bottom-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center md:items-start md:left-6 md:transform-none">
           {/* Avatar Skeleton */}
-          <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
+          <div className="relative w-24 h-24 md:w-40 md:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
             <Skeleton className="w-full h-full rounded-full" />
           </div>
         </div>
       </header>
 
       {/* Content Section */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-20">
         {/* Name Skeleton */}
         <div className="mb-6">
           <Skeleton className="h-8 w-48 sm:w-64 mb-2 rounded-md" />

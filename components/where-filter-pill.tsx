@@ -10,7 +10,7 @@ export default function WhereFilterPill({ embedded = false, onActiveChange, show
   if (!showLabel && embedded) {
     return (
       <div className="text-sm text-gray-500 min-w-0">
-        Location filter
+        Location
       </div>
     )
   }

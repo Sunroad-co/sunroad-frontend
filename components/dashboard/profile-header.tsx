@@ -23,7 +23,7 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
     <>
       <header className="relative max-w-6xl mx-auto font-display">
         {/* Banner */}
-        <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden group">
+        <div className="relative h-40 sm:h-60 md:h-80 rounded-2xl overflow-hidden group">
           {(() => {
             const bannerSrc = getMediaUrl(profile.banner_url);
             return bannerSrc ? (
@@ -63,9 +63,9 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
         </div>
 
         {/* Avatar + Name Section */}
-        <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center sm:items-start sm:left-6 sm:transform-none">
+        <div className="absolute -bottom-12 md:-bottom-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center md:items-start md:left-6 md:transform-none">
           {/* Avatar */}
-          <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white group">
+          <div className="relative w-24 h-24 md:w-40 md:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white group">
             {(() => {
               const avatarSrc = getMediaUrl(profile.avatar_url);
               return avatarSrc ? (

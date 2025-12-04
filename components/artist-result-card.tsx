@@ -104,3 +104,4 @@ export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
     </Link>
   )
 }
+

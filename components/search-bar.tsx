@@ -267,15 +267,15 @@ export default function SearchBar({
       setLocalQuery(value)
       onQueryChange?.(value)
     } else {
-      setQuery(value)
+    setQuery(value)
       onQueryChange?.(value)
-      setActiveIndex(-1) // Reset active index when query changes
-      
-      // Show dropdown with skeleton loader immediately when typing 2+ characters
-      if (value.length >= 2) {
-        setIsOpen(true)
-      } else {
-        setIsOpen(false)
+    setActiveIndex(-1) // Reset active index when query changes
+    
+    // Show dropdown with skeleton loader immediately when typing 2+ characters
+    if (value.length >= 2) {
+      setIsOpen(true)
+    } else {
+      setIsOpen(false)
       }
     }
   }
@@ -293,19 +293,19 @@ export default function SearchBar({
     // For embedded mode, rely on click-outside handler only
     // For non-embedded mode, use timeout to allow clicking on results
     if (!embedded) {
-      // Clear any existing timeout
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current)
+    // Clear any existing timeout
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current)
+    }
+    // Delay closing to allow clicking on results
+    blurTimeoutRef.current = setTimeout(() => {
+      // Only close if mouse is not in dropdown and input is not focused
+      if (!isMouseInDropdownRef.current && document.activeElement !== inputRef.current) {
+        setIsOpen(false)
+        onFocusChange?.(false)
       }
-      // Delay closing to allow clicking on results
-      blurTimeoutRef.current = setTimeout(() => {
-        // Only close if mouse is not in dropdown and input is not focused
-        if (!isMouseInDropdownRef.current && document.activeElement !== inputRef.current) {
-          setIsOpen(false)
-          onFocusChange?.(false)
-        }
-        blurTimeoutRef.current = null
-      }, 200)
+      blurTimeoutRef.current = null
+    }, 200)
     }
   }
 
@@ -532,14 +532,14 @@ export default function SearchBar({
         <div className={`absolute inset-y-0 right-0 flex items-center ${embedded ? 'pr-3' : 'pr-4'}`}>
           {query ? (
             // Clear Button when there's a query
-            <button
-              onClick={handleClearSearch}
+          <button
+            onClick={handleClearSearch}
               className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           ) : loading ? (
             // Loading spinner
             <div className="animate-spin h-5 w-5 border-2 border-amber-500 border-t-transparent rounded-full" />
@@ -548,7 +548,7 @@ export default function SearchBar({
             <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-          )}
+        )}
         </div>
       </div>
 

@@ -33,11 +33,11 @@ export default function Navbar() {
           {/* Search Bar */}
           {!hideSearchControls && (
             <div className="flex-1 max-w-2xl mx-8">
-              <ArtistSearchControls 
-                placeholder="Search for local creatives..."
-                onResultClick={() => setIsMobileMenuOpen(false)}
-              />
-            </div>
+            <ArtistSearchControls 
+              placeholder="Search for local creatives..."
+              onResultClick={() => setIsMobileMenuOpen(false)}
+            />
+          </div>
           )}
           
           {/* Right side - Auth */}
@@ -73,12 +73,12 @@ export default function Navbar() {
           
           {/* Search Bar */}
           {!hideSearchControls && (
-            <div className="mb-4">
-              <ArtistSearchControls 
-                placeholder="Search for local creatives"
-                onResultClick={() => setIsMobileMenuOpen(false)}
-              />
-            </div>
+          <div className="mb-4">
+            <ArtistSearchControls 
+              placeholder="Search for local creatives"
+              onResultClick={() => setIsMobileMenuOpen(false)}
+            />
+          </div>
           )}
 
           {/* Mobile Menu */}

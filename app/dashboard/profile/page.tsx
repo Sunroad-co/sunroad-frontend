@@ -77,12 +77,12 @@ export default function DashboardProfilePage() {
       <ProfileHeader user={user} profile={profile} onProfileUpdate={refetch} />
       
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 font-display">
+      <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-14">
         <ProfileContent user={user} profile={profile} onProfileUpdate={refetch} />
         
         {/* Works Section */}
         <WorksSection user={user} profile={profile} onRefreshProfile={refetch} />
-      </div>
+      </article>
     </main>
   )
 }

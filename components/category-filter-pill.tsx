@@ -22,7 +22,7 @@ export default function CategoryFilterPill({
   onActiveChange,
   isActive = true,
   showLabel = true,
-  subtitle = "Category filter"
+  subtitle = "Category"
 }: CategoryFilterPillProps) {
   const { categories, loading, error, retry } = useCategories()
   const [isOpen, setIsOpen] = useState(false)
@@ -199,7 +199,7 @@ export default function CategoryFilterPill({
             'absolute top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-hidden flex flex-col',
             'transition-all duration-200 ease-out',
             embedded 
-              ? 'left-0 right-0 w-full md:left-0 md:right-auto md:w-[480px] md:min-w-[480px]' 
+              ? 'left-0 right-0 w-full md:left-auto md:right-0 md:min-w-[420px] md:max-w-[560px] md:w-auto' 
               : 'left-1/2 -translate-x-1/2 w-[calc(100vw-1rem)] max-w-64',
             'opacity-100 translate-y-0'
           )}

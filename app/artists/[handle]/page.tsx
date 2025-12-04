@@ -4,6 +4,7 @@ import Image from 'next/image'
 import SimilarArtists from '@/components/similar-artists'
 import WorksGallery from '@/components/works-gallery'
 import ShareButton from '@/components/share-button'
+import TruncatedBio from '@/components/truncated-bio'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getMediaUrl } from '@/lib/media'
 import { Work } from '@/hooks/use-user-profile'
@@ -18,6 +19,11 @@ interface ArtistWithCategories {
   website_url?: string
   instagram_url?: string
   facebook_url?: string
+  locations?: {
+    city?: string
+    state?: string
+    country?: string
+  }
   artist_categories?: Array<{
     categories?: {
       name: string
@@ -49,6 +55,11 @@ async function fetchArtist(handle: string) {
       .from('artists_min')
       .select(`
         *,
+        locations:location_id (
+          city,
+          state,
+          country
+        ),
         artist_categories (
           categories (
             name
@@ -222,12 +233,18 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
     if (!artist) notFound()
     const works = await fetchWorks(artist.id)
 
+    // Extract location data
+    const location = artist.locations
+    const city = location?.city
+    const state = location?.state
+    const locationText = city && state ? `${city}, ${state}` : city || state || null
+
     return (
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-sunroad-cream">
         {/* Hero Section */}
         <header className="relative max-w-6xl mx-auto">
           {/* Banner */}
-          <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden">
+          <div className="relative h-40 sm:h-60 md:h-80 rounded-2xl overflow-hidden">
             {(() => {
               const bannerSrc = getMediaUrl(artist.banner_url);
               return bannerSrc ? (
@@ -242,12 +259,21 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
             })()}
             {/* Dark overlay for readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            
+            {/* Share Button - Top Right (Mobile Only) */}
+            <div className="absolute top-4 right-4 z-10 md:hidden">
+              <ShareButton 
+                artistName={artist.display_name}
+                artistHandle={artist.handle}
+                className="border border-sunroad-amber-700/30 shadow-[0_0_10px_rgba(217,119,6,0.3)] px-5 py-2.5"
+              />
+            </div>
           </div>
 
-          {/* Avatar + Name Section */}
-          <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center sm:items-start sm:left-6 sm:transform-none">
+          {/* Avatar - Centered on mobile, left-aligned on desktop */}
+          <div className="absolute -bottom-12 md:-bottom-16 left-1/2 transform -translate-x-1/2 md:left-6 md:transform-none flex flex-col items-center md:items-start">
             {/* Avatar */}
-            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
+            <div className="w-24 h-24 md:w-40 md:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
               {(() => {
                 const avatarSrc = getMediaUrl(artist.avatar_url);
                 return avatarSrc ? (
@@ -259,7 +285,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
                     className="w-full h-full object-cover rounded-full"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gray-300 flex items-center justify-center text-2xl text-gray-600 rounded-full" aria-label={`${artist.display_name} profile picture`}>
+                  <div className="w-full h-full bg-gray-300 flex items-center justify-center text-xl md:text-2xl text-gray-600 rounded-full" aria-label={`${artist.display_name} profile picture`}>
                     {artist.display_name?.charAt(0)}
                   </div>
                 );
@@ -269,48 +295,77 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
         </header>
 
         {/* Content */}
-        <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
-          {/* Artist Name */}
-          <header className="mt-3 text-center sm:text-left relative">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h1 className="text-5xl sm:text-2xl font-bold text-gray-900 mb-2 drop-shadow-md">
-                {artist.display_name}
-              </h1>
-              <ShareButton 
-                artistName={artist.display_name}
-                artistHandle={artist.handle}
-                className="self-center sm:self-auto"
-              />
+        <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-14">
+          {/* Artist Info Section - Centered on mobile, left-aligned on desktop */}
+          <header className="mt-2 md:mt-0 md:flex md:items-start md:gap-6 text-center md:text-left relative">
+            {/* Spacer for avatar on desktop - matches avatar width + gap */}
+            <div className="hidden md:block w-40 flex-shrink-0" />
+            
+            {/* Name and Info Section */}
+            <div className="flex-1 min-w-0">
+              {/* Name with Share Button (Desktop) */}
+              <div className="flex items-center justify-between w-full mb-3 flex-col md:flex-row gap-3 md:gap-0">
+                <h1 className="text-3xl md:text-5xl font-display font-bold text-sunroad-brown-900">
+                  {artist.display_name}
+                </h1>
+                {/* Share Button - Desktop Only */}
+                <div className="hidden md:block">
+                  <ShareButton 
+                    artistName={artist.display_name}
+                    artistHandle={artist.handle}
+                    className="!bg-gradient-to-b !from-sunroad-amber-500 !to-sunroad-amber-600 hover:!from-sunroad-amber-600 hover:!to-sunroad-amber-700 !shadow-md !shadow-amber-200/40"
+                  />
+                </div>
+              </div>
+
+              {/* Location */}
+              {locationText && (
+                <div className="flex items-center justify-center md:justify-start gap-1.5 mb-3 text-sunroad-brown-600">
+                  <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="text-sm font-body">{locationText}</span>
+                </div>
+              )}
+
+              {/* Categories */}
+              {artist.artist_categories && artist.artist_categories.length > 0 && (
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-4" role="list" aria-label="Artist categories">
+                  {artist.artist_categories.map((ac: { categories?: { name: string } }, i: number) => (
+                    <span
+                      key={i}
+                      role="listitem"
+                      className="inline-block bg-sunroad-amber-50 text-sunroad-amber-700 text-xs font-medium px-3 py-1 rounded-full"
+                    >
+                      {ac.categories?.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </header>
 
-          {/* About */}
-          <section className="mb-8">
-            {artist.artist_categories && artist.artist_categories.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3" role="list" aria-label="Artist categories">
-                {artist.artist_categories.map((ac: { categories?: { name: string } }, i: number) => (
-                  <span
-                    key={i}
-                    role="listitem"
-                    className="inline-block mb-2 bg-amber-50 text-amber-700 text-xs font-medium px-3 py-1 rounded-full"
-                  >
-                    {ac.categories?.name}
-                  </span>
-                ))}
+          {/* Bio Section - Aligned with name section on desktop */}
+          
+          {artist.bio && (
+            <section className="mb-8 md:flex md:items-start md:gap-6">
+              <div className="hidden md:block w-40 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                
+                <TruncatedBio bio={artist.bio} />
               </div>
-            )}
-            <p className="text-gray-700">
-              {artist.bio || "I'm an artist. I create beautiful work in my local area."}
-            </p>
-          </section>
+            </section>
+          )}
 
 
 
           {/* Works */}
           <section className="mb-12">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Work</h2>
+            <h2 className="text-xl font-display font-semibold text-sunroad-brown-900 mb-4">Work</h2>
             <WorksGallery works={works} />
           </section>
+          
           {/* Social links */}
           <nav className="mb-8 flex flex-wrap gap-3" aria-label="Social media links">
   {artist.website_url && (
@@ -319,7 +374,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Website"
-      className="w-10 h-10 flex items-center justify-center rounded-full bg-amber-800 text-white hover:bg-amber-900 transition-colors"
+      className="w-10 h-10 flex items-center justify-center rounded-full bg-sunroad-amber-800 text-white hover:bg-sunroad-amber-900 transition-colors"
     >
       {/* Globe */}
       <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
@@ -333,7 +388,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Instagram"
-      className="w-10 h-10 flex items-center justify-center rounded-full bg-amber-800 text-white hover:bg-amber-900 transition-colors"
+      className="w-10 h-10 flex items-center justify-center rounded-full bg-sunroad-amber-800 text-white hover:bg-sunroad-amber-900 transition-colors"
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
         <path d="M7 2C4.2 2 2 4.2 2 7v10c0 2.8 2.2 5 5 5h10c2.8 0 5-2.2 5-5V7c0-2.8-2.2-5-5-5H7zm10 2c1.6 0 3 1.4 3 3v10c0 1.6-1.4 3-3 3H7c-1.6 0-3-1.4-3-3V7c0-1.6 1.4-3 3-3h10zm-5 3a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6zm4.8-2.9a1.1 1.1 0 100 2.2 1.1 1.1 0 000-2.2z"/>
@@ -346,7 +401,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Facebook"
-      className="w-10 h-10 flex items-center justify-center rounded-full bg-amber-800 text-white hover:bg-amber-900 transition-colors"
+      className="w-10 h-10 flex items-center justify-center rounded-full bg-sunroad-amber-800 text-white hover:bg-sunroad-amber-900 transition-colors"
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
         <path d="M22 12a10 10 0 10-11.5 9.9v-7h-2v-3h2v-2.3c0-2 1.2-3.1 3-3.1.9 0 1.8.1 1.8.1v2h-1c-1 0-1.3.6-1.3 1.2V12h2.2l-.4 3h-1.8v7A10 10 0 0022 12"/>
