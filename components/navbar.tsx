@@ -84,15 +84,15 @@ export default function Navbar({ variant }: NavbarProps = {}) {
                   showMobileAvatar={true}
                 />
               ) : (
-                <button
+            <button
                   onClick={() => setIsMobileMenuOpen(true)}
-                  className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50"
+              className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50"
                   aria-label="Open menu"
-                >
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
               )
             )}
           </div>
@@ -104,7 +104,7 @@ export default function Navbar({ variant }: NavbarProps = {}) {
               placeholder="Search for local creatives"
               onResultClick={() => setIsMobileMenuOpen(false)}
             />
-          </div>
+            </div>
           )}
         </div>
       </div>

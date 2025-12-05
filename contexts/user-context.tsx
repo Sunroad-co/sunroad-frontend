@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 
@@ -22,20 +22,11 @@ const UserContext = createContext<UserContextType | undefined>(undefined)
 /**
  * UserProvider - Centralized user authentication and profile state management.
  * 
- * This provider:
+ * Simple, industry-standard implementation:
  * - Fetches user session ONCE on mount
- * - Fetches basic profile data (display_name, avatar_url) ONCE when user is authenticated
- * - Subscribes to auth state changes (login/logout)
- * - Caches ALL user data in React state (no duplicate API calls)
- * - Can be used throughout the app via useUser() hook
- * 
- * Benefits:
- * - Single source of truth for user AND profile data
- * - No duplicate getSession()/getUser() calls
- * - No duplicate profile fetches (cached in context)
- * - Automatic updates when auth state changes
- * - Efficient caching in memory
- * - Available throughout the entire app
+ * - Fetches profile data when user.id changes
+ * - Ignores TOKEN_REFRESHED events to prevent unnecessary refetches on tab focus
+ * - Caches user and profile data in React state
  */
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -44,7 +35,56 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch basic profile data when user is authenticated
+  // Track previous user ID to only clear profile when user actually changes
+  const prevUserIdRef = useRef<string | null>(null)
+
+  // 1. Get session once on mount
+  // 2. Listen to auth state changes (ignore TOKEN_REFRESHED to prevent refetch on tab focus)
+  useEffect(() => {
+    const supabase = createClient()
+
+    supabase.auth.getSession().then((result) => {
+      const { data, error: sessionError } = result as { data: { session: Session | null }, error: Error | null }
+      if (sessionError) {
+        console.error('Error getting session:', sessionError)
+        setError('Failed to load session')
+        setLoading(false)
+        return
+      }
+
+      const initialUser = data.session?.user ?? null
+      setUser(initialUser)
+      prevUserIdRef.current = initialUser?.id ?? null
+      setLoading(false)
+    })
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event: AuthChangeEvent, session: Session | null) => {
+        // Ignore token refresh so tab-switching doesn't trigger profile refetch
+        if (event === 'TOKEN_REFRESHED') return
+
+        const newUser = session?.user ?? null
+        const prevUserId = prevUserIdRef.current
+
+        // Only update user and clear profile if user ID actually changed
+        // This prevents clearing profile on tab restore when Supabase fires SIGNED_IN/INITIAL_SESSION
+        // but the user hasn't actually changed
+        if (newUser?.id !== prevUserId) {
+          setUser(newUser)
+          prevUserIdRef.current = newUser?.id ?? null
+          setProfile(null) // Only clear profile when user actually changes
+        }
+
+        setLoading(false)
+        setError(null)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // 3. Fetch profile when user.id changes
   useEffect(() => {
     if (!user) {
       setProfile(null)
@@ -52,30 +92,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Capture user.id to avoid closure issues
-    const userId = user.id
-
-    async function fetchBasicProfile() {
+    const fetchProfile = async () => {
+      setProfileLoading(true)
       try {
-        setProfileLoading(true)
         const supabase = createClient()
-        
-        const { data, error } = await supabase
+        const { data, error: profileError } = await supabase
           .from('artists_min')
           .select('display_name, avatar_url')
-          .eq('auth_user_id', userId)
+          .eq('auth_user_id', user.id)
           .single()
 
-        if (error) {
+        if (profileError) {
           // Profile might not exist yet, that's okay
-          console.error('Error fetching basic profile:', error)
+          console.error('Error fetching basic profile:', profileError)
           setProfile(null)
           return
         }
 
         setProfile({
-          display_name: data?.display_name || null,
-          avatar_url: data?.avatar_url || null
+          display_name: data?.display_name ?? null,
+          avatar_url: data?.avatar_url ?? null,
         })
       } catch (err) {
         console.error('Unexpected error fetching basic profile:', err)
@@ -85,49 +121,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    fetchBasicProfile()
-  }, [user])
-
-  useEffect(() => {
-    const supabase = createClient()
-
-    // Get initial session (fast, uses cached session)
-    // getSession() is faster than getUser() because it uses cached session data
-    supabase.auth.getSession().then(({ data, error: sessionError }: { data: { session: Session | null }, error: Error | null }) => {
-      if (sessionError) {
-        console.error('Error getting session:', sessionError)
-        setError('Failed to load session')
-        setLoading(false)
-        return
-      }
-
-      setUser(data.session?.user || null)
-      setLoading(false)
-    })
-
-    // Subscribe to auth state changes (login, logout, token refresh, etc.)
-    // This ensures all components using useUser() get updated automatically
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        // Update user state when auth changes
-        setUser(session?.user || null)
-        setLoading(false)
-        setError(null)
-
-        // Log auth events for debugging (optional)
-        if (event === 'SIGNED_OUT') {
-          // Clear any cached data if needed
-          setUser(null)
-          setProfile(null)
-        }
-      }
-    )
-
-    // Cleanup subscription on unmount
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+    fetchProfile()
+  }, [user?.id])
 
   return (
     <UserContext.Provider value={{ user, profile, loading, profileLoading, error }}>

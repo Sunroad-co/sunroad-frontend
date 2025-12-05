@@ -80,14 +80,14 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
           className="flex items-center space-x-2 p-1.5 rounded-full hover:bg-sunroad-amber-50 transition-all duration-200 group"
         >
           {avatarSrc ? (
-            <Image
-              src={avatarSrc}
-              alt="Profile"
+              <Image
+                src={avatarSrc}
+                alt="Profile"
               width={36}
               height={36}
               className="w-9 h-9 rounded-full object-cover ring-2 ring-sunroad-amber-200 group-hover:ring-sunroad-amber-300 transition-all"
-            />
-          ) : (
+              />
+            ) : (
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sunroad-amber-500 to-sunroad-amber-600 flex items-center justify-center ring-2 ring-sunroad-amber-200 group-hover:ring-sunroad-amber-300 transition-all shadow-sm">
               <span className="text-white text-sm font-semibold">
                 {displayName[0]?.toUpperCase() || 'U'}
@@ -96,8 +96,8 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
           )}
           {!showMobileAvatar && (
             <svg className="w-4 h-4 text-sunroad-brown-500 group-hover:text-sunroad-amber-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
           )}
         </button>
 
@@ -138,20 +138,20 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
                   Account
                 </p>
               </div>
-              <Link
-                href="/dashboard/profile"
+            <Link
+              href="/dashboard/profile"
                 className="block px-4 py-2 text-sm text-sunroad-brown-900 hover:bg-sunroad-amber-50 transition-colors"
-                onClick={() => setShowDropdown(false)}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/settings"
+              onClick={() => setShowDropdown(false)}
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/settings"
                 className="block px-4 py-2 text-sm text-sunroad-brown-900 hover:bg-sunroad-amber-50 transition-colors"
-                onClick={() => setShowDropdown(false)}
-              >
-                Settings
-              </Link>
+              onClick={() => setShowDropdown(false)}
+            >
+              Settings
+            </Link>
             </div>
 
             {/* Divider */}
