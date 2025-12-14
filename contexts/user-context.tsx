@@ -43,8 +43,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const supabase = createClient()
 
-    supabase.auth.getSession().then((result) => {
-      const { data, error: sessionError } = result as { data: { session: Session | null }, error: Error | null }
+    supabase.auth.getSession().then((result: { data: { session: Session | null }, error: Error | null }) => {
+      const { data, error: sessionError } = result
       if (sessionError) {
         console.error('Error getting session:', sessionError)
         setError('Failed to load session')
