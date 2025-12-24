@@ -2,10 +2,9 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import SRImage from '@/components/media/SRImage'
 import { useNavbarUser } from '@/hooks/use-navbar-user'
 import { useUser } from '@/hooks/use-user'
-import { getMediaUrl } from '@/lib/media'
 
 interface NavbarAuthProps {
   onMobileMenuOpen?: () => void
@@ -70,7 +69,7 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
     // Get display name - prefer profile display_name, then full_name from metadata, fallback to email username
     const displayName = profile?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
     // Get avatar - prefer profile avatar_url, then user_metadata avatar_url
-    const avatarSrc = profile?.avatar_url ? getMediaUrl(profile.avatar_url) : getMediaUrl(user.user_metadata?.avatar_url)
+    const avatarSrc = profile?.avatar_url || user.user_metadata?.avatar_url
     
     // Authenticated view
     return (
@@ -80,12 +79,14 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
           className="flex items-center space-x-2 p-1.5 rounded-full hover:bg-sunroad-amber-50 transition-all duration-200 group"
         >
           {avatarSrc ? (
-              <Image
+              <SRImage
                 src={avatarSrc}
                 alt="Profile"
               width={36}
               height={36}
               className="w-9 h-9 rounded-full object-cover ring-2 ring-sunroad-amber-200 group-hover:ring-sunroad-amber-300 transition-all"
+              mode="raw"
+              sizes="36px"
               />
             ) : (
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sunroad-amber-500 to-sunroad-amber-600 flex items-center justify-center ring-2 ring-sunroad-amber-200 group-hover:ring-sunroad-amber-300 transition-all shadow-sm">
@@ -107,12 +108,14 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
             {/* User header */}
             <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-sunroad-amber-50/50 to-transparent border-b border-sunroad-amber-100/50">
               {avatarSrc ? (
-                <Image
+                <SRImage
                   src={avatarSrc}
                   alt="Profile"
                   width={44}
                   height={44}
                   className="w-11 h-11 rounded-full object-cover ring-2 ring-sunroad-amber-200 shadow-sm"
+                  mode="raw"
+                  sizes="44px"
                 />
               ) : (
                 <div className="w-11 h-11 rounded-full bg-gradient-to-br from-sunroad-amber-500 to-sunroad-amber-600 flex items-center justify-center flex-shrink-0 ring-2 ring-sunroad-amber-200 shadow-sm">

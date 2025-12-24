@@ -3,9 +3,9 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import SRImage from '@/components/media/SRImage'
 import type { User } from '@supabase/supabase-js'
 import { useUser } from '@/hooks/use-user'
-import { getMediaUrl } from '@/lib/media'
 
 interface MobileMenuOverlayProps {
   isOpen: boolean
@@ -104,14 +104,16 @@ export default function MobileMenuOverlay({ isOpen, onClose, user, onLogout }: M
                   // Get display name - prefer profile display_name, then full_name from metadata, fallback to email username
                   const displayName = profile?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
                   // Get avatar - prefer profile avatar_url, then user_metadata avatar_url
-                  const avatarSrc = profile?.avatar_url ? getMediaUrl(profile.avatar_url) : getMediaUrl(user.user_metadata?.avatar_url)
+                  const avatarSrc = profile?.avatar_url || user.user_metadata?.avatar_url
                   return avatarSrc ? (
-                    <Image
+                    <SRImage
                       src={avatarSrc}
                       alt="Profile"
                       width={48}
                       height={48}
                       className="w-12 h-12 rounded-full object-cover ring-2 ring-sunroad-amber-600/50 shadow-lg"
+                      mode="raw"
+                      sizes="48px"
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-sunroad-amber-500 to-sunroad-amber-600 flex items-center justify-center flex-shrink-0 ring-2 ring-sunroad-amber-500/50 shadow-lg">

@@ -26,6 +26,9 @@ const nextConfig: NextConfig = {
         pathname: '/upload/uploads/**',
       },
     ],
+    minimumCacheTTL: 2678400, // 31 days
+    deviceSizes: [640, 1200], // Mobile + desktop widths only
+    imageSizes: [64, 96, 128, 256, 384], // Small set of sizes
   },
   reactStrictMode: false,
 };

@@ -147,24 +147,19 @@ export const AudioWorkFields = forwardRef<AudioWorkFieldsHandle, AudioWorkFields
     }
 
     // Update parent validity when states change
+    // We rely on URL pattern validation only - don't invalidate due to network/CORS issues
     useEffect(() => {
-      if (audioError || previewError) {
+      // Only invalidate if URL pattern validation failed (audioError)
+      // Don't invalidate due to preview errors (previewError) as these can be caused by CORS/network issues
+      if (audioError) {
         onChangeValidity(false)
         return
       }
 
-      // For audio, we need validation, preview ready, AND content loaded
-      // For Spotify, we use onStart to detect when content loads
-      // For SoundCloud, we use iframe onLoad + timeout to detect if content exists
-      // This ensures the save button only activates when preview is actually working
-      if (audioMediaSource === 'spotify') {
-        // Spotify needs ready + started (content loaded)
-        onChangeValidity(audioValid && audioReady && audioStarted && !!audioUrl.trim())
-      } else {
-        // SoundCloud needs ready + started (iframe loaded + content verified)
-        onChangeValidity(audioValid && audioReady && audioStarted && !!audioUrl.trim())
-      }
-    }, [audioValid, audioReady, audioStarted, audioError, previewError, audioUrl, audioMediaSource, onChangeValidity])
+      // For audio, we only need valid URL pattern - preview loading is optional
+      // This allows saving even if preview fails due to CORS/network restrictions
+      onChangeValidity(audioValid && !!audioUrl.trim())
+    }, [audioValid, audioError, audioUrl, onChangeValidity])
 
     // Set up timeout fallback for skeleton - hide after 3 seconds if audioReady never fires
     useEffect(() => {
@@ -272,8 +267,8 @@ export const AudioWorkFields = forwardRef<AudioWorkFieldsHandle, AudioWorkFields
             disabled={saving}
           />
           {audioError && <p className="text-xs text-red-600 mt-1">{audioError}</p>}
-          {previewError && <p className="text-xs text-red-600 mt-1">{previewError}</p>}
-          {audioValid && !audioError && !previewError && audioReady && (
+          {previewError && <p className="text-xs text-amber-600 mt-1">{previewError}</p>}
+          {audioValid && !audioError && (
             <p className="text-xs text-green-600 mt-1">Valid {audioMediaSource} URL</p>
           )}
         </div>
@@ -315,64 +310,27 @@ export const AudioWorkFields = forwardRef<AudioWorkFieldsHandle, AudioWorkFields
                       }
                       setAudioReady(true)
                       setPreviewError(null)
-                      
-                      // For Spotify, start a timeout to check if content actually loads
-                      // If content doesn't start within 5 seconds, it likely doesn't exist
-                      if (!audioStarted) {
-                        console.log('[AudioWorkFields] Setting up Spotify content load timeout')
-                        audioStartTimeoutRef.current = setTimeout(() => {
-                          if (!audioStarted) {
-                            console.warn('[AudioWorkFields] Spotify content did not load within 5 seconds, marking as invalid. URL:', audioUrl.trim())
-                            setPreviewError('This audio does not exist or cannot be played. Please check the URL and try again.')
-                            setAudioValid(false)
-                            setAudioReady(false)
-                            onChangeValidity(false)
-                          }
-                        }, 5000)
-                      }
+                      // Don't set audioStarted or validate here - URL pattern validation is sufficient
                     }}
                     onStart={() => {
                       console.log('[AudioWorkFields] onStart fired for Spotify URL:', audioUrl.trim())
-                      // Clear timeout if content starts
-                      if (audioStartTimeoutRef.current) {
-                        clearTimeout(audioStartTimeoutRef.current)
-                        audioStartTimeoutRef.current = null
-                      }
                       setAudioStarted(true)
-                      // Now that content has started, we can mark as valid
-                      if (audioValid && !audioError && !previewError) {
-                        onChangeValidity(true)
-                      }
+                      setPreviewError(null)
                     }}
                     onProgress={(state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
-                      // For Spotify, onProgress fires when content metadata is loaded (even if not playing)
-                      // This is more reliable than waiting for onStart (which requires user interaction)
+                      // For Spotify, onProgress fires when content metadata is loaded
                       if (!audioStarted && state.loadedSeconds > 0) {
                         console.log('[AudioWorkFields] onProgress fired for Spotify, content metadata loaded:', state.loadedSeconds)
-                        // Clear timeout if content metadata loaded
-                        if (audioStartTimeoutRef.current) {
-                          clearTimeout(audioStartTimeoutRef.current)
-                          audioStartTimeoutRef.current = null
-                        }
                         setAudioStarted(true)
-                        // Now that content metadata is loaded, we can mark as valid
-                        if (audioValid && !audioError && !previewError) {
-                          onChangeValidity(true)
-                        }
+                        setPreviewError(null)
                       }
                     }}
                     onError={(error: unknown) => {
-                      console.error('[AudioWorkFields] onError fired for Spotify:', error, 'URL:', audioUrl.trim())
-                      // Clear timeouts on error
-                      if (audioStartTimeoutRef.current) {
-                        clearTimeout(audioStartTimeoutRef.current)
-                        audioStartTimeoutRef.current = null
-                      }
-                      setPreviewError('Could not preview this audio. Please check the URL and try again.')
-                      setAudioValid(false)
-                      setAudioReady(false)
-                      setAudioStarted(false)
-                      onChangeValidity(false)
+                      console.warn('[AudioWorkFields] Preview error for Spotify (non-blocking):', error, 'URL:', audioUrl.trim())
+                      // Don't invalidate URL on preview errors - these can be caused by CORS/network issues
+                      // URL pattern validation is sufficient - user can still save if URL pattern is valid
+                      setPreviewError('Preview unavailable (URL may still be valid). You can still save if the URL is correct.')
+                      // Keep audioValid true if URL pattern is valid - don't block saving
                     }}
                     config={{
                       spotify: {
@@ -393,12 +351,11 @@ export const AudioWorkFields = forwardRef<AudioWorkFieldsHandle, AudioWorkFields
                   )}
                   <ErrorBoundary
                     onError={(error) => {
-                      console.error('[AudioWorkFields] ErrorBoundary caught error:', error)
-                      setPreviewError('An error occurred while loading the audio. Please try again.')
-                      setAudioValid(false)
-                      setAudioReady(false)
-                      setAudioStarted(false)
-                      onChangeValidity(false)
+                      console.warn('[AudioWorkFields] ErrorBoundary caught error (non-blocking):', error)
+                      // Don't invalidate URL on ErrorBoundary errors - these can be caused by CORS/network issues
+                      // URL pattern validation is sufficient
+                      setPreviewError('Preview unavailable (URL may still be valid). You can still save if the URL is correct.')
+                      // Keep audioValid true if URL pattern is valid - don't block saving
                     }}
                   >
                     <iframe
@@ -418,36 +375,15 @@ export const AudioWorkFields = forwardRef<AudioWorkFieldsHandle, AudioWorkFields
                       }
                       setAudioReady(true)
                       setPreviewError(null)
-                      
-                      // For SoundCloud, start a timeout to check if content actually exists
-                      // SoundCloud iframe loads even for invalid URLs, so we need to verify content
-                      // We'll mark as valid after a short delay, but if there's an error message in the iframe,
-                      // we can't easily detect it, so we use a shorter timeout (3 seconds)
-                      if (!audioStarted) {
-                        console.log('[AudioWorkFields] Setting up SoundCloud content verification timeout')
-                        iframeLoadTimeoutRef.current = setTimeout(() => {
-                          // SoundCloud iframe loads even for invalid tracks, but we can't easily detect errors
-                          // So we'll mark as started after a short delay - if the track is invalid,
-                          // the user will see an error message in the embed itself
-                          setAudioStarted(true)
-                          if (audioValid && !audioError && !previewError) {
-                            onChangeValidity(true)
-                          }
-                        }, 3000)
-                      }
+                      setAudioStarted(true)
+                      // Don't validate here - URL pattern validation is sufficient
                     }}
                     onError={() => {
-                      console.error('[AudioWorkFields] iframe onError fired for SoundCloud URL:', audioUrl.trim())
-                      // Clear timeout on error
-                      if (iframeLoadTimeoutRef.current) {
-                        clearTimeout(iframeLoadTimeoutRef.current)
-                        iframeLoadTimeoutRef.current = null
-                      }
-                      setPreviewError('Could not load SoundCloud embed. Please check the URL and try again.')
-                      setAudioValid(false)
-                      setAudioReady(false)
-                      setAudioStarted(false)
-                      onChangeValidity(false)
+                      console.warn('[AudioWorkFields] Preview error for SoundCloud (non-blocking):', audioUrl.trim())
+                      // Don't invalidate URL on preview errors - these can be caused by CORS/network issues
+                      // URL pattern validation is sufficient - user can still save if URL pattern is valid
+                      setPreviewError('Preview unavailable (URL may still be valid). You can still save if the URL is correct.')
+                      // Keep audioValid true if URL pattern is valid - don't block saving
                     }}
                     className="w-full h-full"
                   />

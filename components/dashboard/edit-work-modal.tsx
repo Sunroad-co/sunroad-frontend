@@ -144,6 +144,7 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
             .upload(imageData.storagePath, imageData.file, {
               contentType: 'image/jpeg',
               upsert: false,
+              cacheControl: '31536000',
             })
 
           if (uploadError) {

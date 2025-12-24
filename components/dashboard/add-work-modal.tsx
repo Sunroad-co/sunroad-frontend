@@ -79,6 +79,7 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
           .upload(imageData.storagePath, imageData.file, {
             contentType: 'image/jpeg',
             upsert: false,
+            cacheControl: '31536000',
           })
 
         if (uploadError) {

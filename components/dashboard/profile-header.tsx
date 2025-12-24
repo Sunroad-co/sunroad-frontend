@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 import { User } from '@supabase/supabase-js'
-import Image from 'next/image'
+import SRImage from '@/components/media/SRImage'
 import EditButton from './edit-button'
 import EditBannerModal from './edit-banner-modal'
 import EditAvatarModal from './edit-avatar-modal'
 import { UserProfile } from '@/hooks/use-user-profile'
-import { getMediaUrl } from '@/lib/media'
 
 interface ProfileHeaderProps {
   user: User
@@ -25,14 +24,16 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
         {/* Banner */}
         <div className="relative h-48 sm:h-72 md:h-88 rounded-2xl overflow-hidden group">
           {(() => {
-            const bannerSrc = getMediaUrl(profile.banner_url);
+            const bannerSrc = profile.banner_url;
             return bannerSrc ? (
-              <Image
+              <SRImage
                 src={bannerSrc}
                 alt={`${profile.display_name} banner`}
                 fill
                 className="object-cover"
                 priority
+                mode="raw"
+                sizes="(max-width: 768px) 100vw, 1152px"
               />
             ) : (
             <div className="w-full h-full bg-gradient-to-br from-sunroad-amber-200 to-sunroad-amber-300 flex items-center justify-center">
@@ -67,14 +68,16 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
           {/* Avatar */}
           <div className="relative w-24 h-24 md:w-40 md:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white group">
             {(() => {
-              const avatarSrc = getMediaUrl(profile.avatar_url);
+              const avatarSrc = profile.avatar_url;
               return avatarSrc ? (
-                <Image
+                <SRImage
                   src={avatarSrc}
                   alt={`${profile.display_name} profile picture`}
                   width={200}
                   height={200}
                   className="w-full h-full object-cover rounded-full"
+                  mode="raw"
+                  sizes="(max-width: 768px) 96px, 160px"
                 />
               ) : (
               <div className="w-full h-full font-display bg-sunroad-amber-100 flex items-center justify-center text-2xl text-sunroad-brown-600 rounded-full">

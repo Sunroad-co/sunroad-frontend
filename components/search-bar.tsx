@@ -2,10 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import SRImage from '@/components/media/SRImage'
 import { useRouter } from 'next/navigation'
 import { useSearch } from '@/hooks/use-search'
-import { getMediaUrl } from '@/lib/media'
 
 interface SearchBarProps {
   placeholder?: string
@@ -53,16 +52,16 @@ interface ArtistAvatarProps {
 }
 
 const ArtistAvatar: React.FC<ArtistAvatarProps> = ({ src, name }) => {
-  const avatarSrc = getMediaUrl(src)
-  
-  if (avatarSrc) {
+  if (src) {
     return (
-      <Image
-        src={avatarSrc}
+      <SRImage
+        src={src}
         alt={name}
         width={40}
         height={40}
         className="w-10 h-10 rounded-full object-cover"
+        mode="raw"
+        sizes="40px"
       />
     )
   }

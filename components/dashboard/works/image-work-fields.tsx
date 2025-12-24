@@ -19,9 +19,52 @@ const Cropper = dynamic(
 )
 
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024 // 8MB
-const WORK_IMAGE_WIDTH = 1200
-const WORK_IMAGE_HEIGHT = 900
-const WORK_IMAGE_ASPECT = WORK_IMAGE_WIDTH / WORK_IMAGE_HEIGHT // 4:3
+
+type CropMode = 'landscape' | 'portrait' | 'square'
+
+interface CropModeConfig {
+  label: string
+  aspect: number
+  outputWidth: number
+  outputHeight: number
+  icon: React.ReactNode
+}
+
+const CROP_MODES: Record<CropMode, CropModeConfig> = {
+  landscape: {
+    label: 'Landscape',
+    aspect: 4 / 3,
+    outputWidth: 1200,
+    outputHeight: 900,
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+      </svg>
+    ),
+  },
+  portrait: {
+    label: 'Portrait',
+    aspect: 3 / 4,
+    outputWidth: 900,
+    outputHeight: 1200,
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h2a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM9 5a1 1 0 011-1h6a1 1 0 011 1v14a1 1 0 01-1 1h-6a1 1 0 01-1-1V5zM18 5a1 1 0 011-1h2a1 1 0 011 1v14a1 1 0 01-1 1h-2a1 1 0 01-1-1V5z" />
+      </svg>
+    ),
+  },
+  square: {
+    label: 'Square',
+    aspect: 1,
+    outputWidth: 1200,
+    outputHeight: 1200,
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
+      </svg>
+    ),
+  },
+}
 
 export interface ImageWorkFieldsProps {
   saving: boolean
@@ -45,6 +88,7 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
     const [zoom, setZoom] = useState(1)
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
     const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
+    const [cropMode, setCropMode] = useState<CropMode>('landscape')
     
     const fileInputRef = useRef<HTMLInputElement>(null)
     const previewCleanupRef = useRef<string | null>(null)
@@ -61,11 +105,16 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
         return null
       }
 
+      const modeConfig = CROP_MODES[cropMode]
+      // Use predefined output dimensions for fixed aspect modes
+      const outputWidth = modeConfig.outputWidth
+      const outputHeight = modeConfig.outputHeight
+
       const croppedBlob = await getCroppedImg(
         decodedCanvas,
         croppedAreaPixels,
-        WORK_IMAGE_WIDTH,
-        WORK_IMAGE_HEIGHT,
+        outputWidth,
+        outputHeight,
         {
           mime: 'image/jpeg',
           quality: 0.82,
@@ -82,7 +131,7 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
       })
 
       return { storagePath, file: croppedFile }
-    }, [selectedFile, decodedCanvas, croppedAreaPixels, profileId])
+    }, [selectedFile, decodedCanvas, croppedAreaPixels, cropMode, profileId])
 
     const clear = useCallback(() => {
       setSelectedFile(null)
@@ -91,6 +140,7 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
       setCrop({ x: 0, y: 0 })
       setZoom(1)
       setCroppedAreaPixels(null)
+      setCropMode('landscape')
       if (previewCleanupRef.current) {
         URL.revokeObjectURL(previewCleanupRef.current)
         previewCleanupRef.current = null
@@ -162,6 +212,7 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
         setCrop({ x: 0, y: 0 })
         setZoom(1)
         setCroppedAreaPixels(null)
+        setCropMode('landscape') // Reset to default mode when new file is selected
         if (previewCleanupRef.current) {
           URL.revokeObjectURL(previewCleanupRef.current)
           previewCleanupRef.current = null
@@ -190,11 +241,28 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
         setIsGeneratingPreview(true)
         const prevUrl = previewCleanupRef.current
         
+        // Calculate output dimensions preserving crop aspect ratio
+        // For preview, use a reasonable max dimension (smaller than final output for performance)
+        const previewMaxDim = 800
+        const cropAspect = pixelCrop.width / pixelCrop.height
+        let outputWidth: number
+        let outputHeight: number
+
+        if (pixelCrop.width >= pixelCrop.height) {
+          // Landscape or square: constrain width
+          outputWidth = Math.min(pixelCrop.width, previewMaxDim)
+          outputHeight = Math.round(outputWidth / cropAspect)
+        } else {
+          // Portrait: constrain height
+          outputHeight = Math.min(pixelCrop.height, previewMaxDim)
+          outputWidth = Math.round(outputHeight * cropAspect)
+        }
+        
         const blob = await getCroppedImg(
           canvas,
           pixelCrop,
-          WORK_IMAGE_WIDTH,
-          WORK_IMAGE_HEIGHT,
+          outputWidth,
+          outputHeight,
           {
             mime: 'image/jpeg',
             quality: 0.82,
@@ -239,6 +307,20 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
         }
       }, 150)
     }, [decodedCanvas, generateCroppedPreview])
+
+    // Handle crop mode change - reset crop position but keep zoom reasonable
+    const handleCropModeChange = useCallback((newMode: CropMode) => {
+      setCropMode(newMode)
+      // Reset crop position to center, keep zoom if reasonable (between 1 and 2)
+      setCrop({ x: 0, y: 0 })
+      if (zoom > 2) {
+        setZoom(2)
+      } else if (zoom < 1) {
+        setZoom(1)
+      }
+      // Clear cropped area pixels so user must crop again
+      setCroppedAreaPixels(null)
+    }, [zoom])
 
     return (
       <div className="space-y-6">
@@ -289,13 +371,47 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
                 Choose a different image
               </button>
             </div>
+
+            {/* Crop Mode Selector */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Aspect Ratio
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(CROP_MODES) as CropMode[]).map((mode) => {
+                  const modeConfig = CROP_MODES[mode]
+                  const isActive = cropMode === mode
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleCropModeChange(mode)}
+                      disabled={saving}
+                      className={`
+                        flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
+                        ${
+                          isActive
+                            ? 'bg-sunroad-amber-100 text-sunroad-amber-800 border-2 border-sunroad-amber-400 shadow-sm'
+                            : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-sunroad-amber-300 hover:bg-sunroad-amber-50'
+                        }
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                      `}
+                    >
+                      {modeConfig.icon}
+                      <span>{modeConfig.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             <div className="relative w-full h-64 sm:h-80 bg-gray-100 rounded-lg overflow-hidden">
               {/* @ts-expect-error - react-easy-crop props are correctly typed but dynamic import causes type issues */}
               <Cropper
                 image={previewUrl}
                 crop={crop}
                 zoom={zoom}
-                aspect={WORK_IMAGE_ASPECT}
+                aspect={CROP_MODES[cropMode].aspect}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}

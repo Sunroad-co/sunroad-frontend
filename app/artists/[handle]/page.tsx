@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
-import Image from 'next/image'
+import SRImage from '@/components/media/SRImage'
 import SimilarArtists from '@/components/similar-artists'
 import WorksGallery from '@/components/works-gallery'
 import ShareButton from '@/components/share-button'
@@ -247,14 +247,16 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           {/* Banner */}
           <div className="relative h-48 sm:h-72 md:h-88 rounded-2xl overflow-hidden">
             {(() => {
-              const bannerSrc = getMediaUrl(artist.banner_url);
+              const bannerSrc = artist.banner_url;
               return bannerSrc ? (
-                <Image
+                <SRImage
                   src={bannerSrc}
                   alt={`${artist.display_name} banner`}
                   fill
                   className="object-cover"
                   priority
+                  mode="optimized"
+                  sizes="(max-width: 768px) 100vw, 1152px"
                 />
               ) : null;
             })()}
@@ -267,14 +269,16 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
             {/* Avatar */}
             <div className="w-24 h-24 md:w-40 md:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
               {(() => {
-                const avatarSrc = getMediaUrl(artist.avatar_url);
+                const avatarSrc = artist.avatar_url;
                 return avatarSrc ? (
-                  <Image
+                  <SRImage
                     src={avatarSrc}
                     alt={`${artist.display_name} profile picture`}
                     width={200}
                     height={200}
                     className="w-full h-full object-cover rounded-full"
+                    mode="raw"
+                    sizes="(max-width: 768px) 96px, 160px"
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-300 flex items-center justify-center text-xl md:text-2xl text-gray-600 rounded-full" aria-label={`${artist.display_name} profile picture`}>

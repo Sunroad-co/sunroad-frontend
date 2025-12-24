@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Image from 'next/image'
+import SRImage from '@/components/media/SRImage'
 import ReactPlayer from 'react-player'
 import { Work } from '@/hooks/use-user-profile'
 import { getMediaUrl } from '@/lib/media'
@@ -162,11 +162,11 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
       work.media_type === 'audio')
 
   const aspectClass = isModal
-    ? 'aspect-video'
+    ? '' // No forced aspect for modal - let images display naturally
     : usesCardAspect
       ? 'aspect-[5/4]'
       : ''
-  const roundedClass = isModal ? 'rounded-lg' : 'rounded-2xl'
+  const roundedClass = isModal ? 'rounded-xl' : 'rounded-2xl'
 
   // Check if image is already cached when work changes (for image media type)
   useEffect(() => {
@@ -243,27 +243,74 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
     }
 
     return (
-      <div className={`relative w-full ${aspectClass} bg-gray-100 ${roundedClass} overflow-hidden`}>
-        <div className="relative w-full h-full">
-          <Image
-            src={imageSrc}
-            alt={work.title}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-            className="object-cover transition-transform duration-300 group-hover/work:scale-105"
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-          />
-        </div>
-        {isLoading && (
-          <div className="absolute inset-0 z-10 pointer-events-none">
-            <Skeleton className={`w-full h-full ${roundedClass}`} />
+      <div className={`relative w-full ${aspectClass} ${isModal ? 'bg-white' : 'bg-gray-100'} ${roundedClass} ${isModal ? '' : 'overflow-hidden'}`}>
+        {isModal ? (
+          // Modal: Photograph-like effect with off-white border and shadow
+          <div className="relative w-full flex items-center justify-center p-3 sm:p-4 md:p-12 min-h-[300px] sm:min-h-[400px] max-h-[60vh] sm:max-h-[75vh]">
+            <div className="relative w-full h-full flex items-center justify-center">
+              <div className="relative inline-block" style={{
+                borderLeft: '8px solid #faf9f6',
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                backgroundColor: '#fff'
+              }}>
+                <SRImage
+                  src={work.thumb_url}
+                  alt={work.title}
+                  width={1600}
+                  height={1600}
+                  className="object-contain max-w-full max-h-full block"
+                  style={{ width: 'auto', height: 'auto', display: 'block' }}
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                  mode="raw"
+                  sizes="(max-width: 768px) 100vw, 66vw"
+                />
+              </div>
+            </div>
+            {isLoading && (
+              <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                <div className="w-64 h-64 bg-gray-100 rounded-lg animate-pulse" />
+              </div>
+            )}
+            {hasError && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                <div className="text-center p-6">
+                  <svg className="w-16 h-16 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-sm text-gray-400 font-body">Could not load image</p>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-        {hasError && (
-          <div className={`absolute inset-0 z-10 flex items-center justify-center bg-gray-50 pointer-events-none`}>
-            <p className="text-xs text-gray-500 text-center px-4 font-body">Could not load this media. Please check the original URL.</p>
-          </div>
+        ) : (
+          // Card: Original behavior with aspect ratio
+          <>
+            <div className="relative w-full h-full">
+              <SRImage
+                src={work.thumb_url}
+                alt={work.title}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+                className="object-cover transition-transform duration-300 group-hover/work:scale-105"
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                mode="raw"
+              />
+            </div>
+            {isLoading && (
+              <div className="absolute inset-0 z-10 pointer-events-none">
+                <Skeleton className={`w-full h-full ${roundedClass}`} />
+              </div>
+            )}
+            {hasError && (
+              <div className={`absolute inset-0 z-10 flex items-center justify-center bg-gray-50 pointer-events-none`}>
+                <p className="text-xs text-gray-500 text-center px-4 font-body">Could not load this media. Please check the original URL.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     )
@@ -282,66 +329,131 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
     }
 
     return (
-      <div className={`relative w-full ${aspectClass} bg-gray-100 ${roundedClass} overflow-hidden`}>
-        {isLoading && !hasError && (
-          <div className="absolute inset-0 z-10 pointer-events-none">
-            <Skeleton className={`w-full h-full ${roundedClass}`} />
-          </div>
-        )}
-        {hasError ? (
-          <div className={`absolute inset-0 z-10 flex items-center justify-center bg-gray-50 pointer-events-none`}>
-            <p className="text-xs text-gray-500 text-center px-4 font-body">
-              Could not load this media. Please check the original URL.
-            </p>
+      <div className={`relative w-full ${aspectClass} ${isModal ? 'bg-white' : 'bg-gray-100'} ${roundedClass} ${isModal ? '' : 'overflow-hidden'}`}>
+        {isModal ? (
+          // Modal: Clean centered video player
+          <div className="relative w-full flex items-center justify-center p-3 sm:p-4 md:p-12 min-h-[300px] sm:min-h-[400px] max-h-[60vh] sm:max-h-[75vh]">
+            <div className="relative w-full max-w-4xl" style={{ aspectRatio: '16/9' }}>
+              {isLoading && !hasError && (
+                <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                  <div className="w-full h-full bg-gray-100 rounded-xl animate-pulse" />
+                </div>
+              )}
+              {hasError ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50 rounded-xl pointer-events-none">
+                  <p className="text-sm text-gray-500 text-center px-4 font-body">
+                    Could not load this media. Please check the original URL.
+                  </p>
+                </div>
+              ) : (
+                <TypedReactPlayer
+                  key={work.src_url}
+                  src={work.src_url}
+                  width="100%"
+                  height="100%"
+                  controls={true}
+                  playing={false}
+                  config={{
+                    youtube: {
+                      playerVars: {
+                        autoplay: 0,
+                        controls: 1,
+                        rel: 0,
+                        modestbranding: 1,
+                        enablejsapi: 1,
+                      },
+                    },
+                    vimeo: {
+                      playerOptions: {
+                        autoplay: false,
+                        controls: true,
+                      },
+                    },
+                  } as any}
+                  onReady={() => {
+                    if (readyTimeoutRef.current) {
+                      clearTimeout(readyTimeoutRef.current)
+                      readyTimeoutRef.current = null
+                    }
+                    readyRef.current = true
+                    setIsLoading(false)
+                    setHasError(false)
+                  }}
+                  onError={(error: unknown) => {
+                    console.error('[ReactPlayer] Video error:', error, 'URL:', work.src_url)
+                    if (readyTimeoutRef.current) {
+                      clearTimeout(readyTimeoutRef.current)
+                      readyTimeoutRef.current = null
+                    }
+                    setIsLoading(false)
+                    setHasError(true)
+                  }}
+                />
+              )}
+            </div>
           </div>
         ) : (
+          // Card: Original behavior
           <>
-            <TypedReactPlayer
-              key={work.src_url}
-              src={work.src_url}
-              width="100%"
-              height="100%"
-              controls={isModal}
-              playing={false}
-              config={{
-                youtube: {
-                  playerVars: {
-                    autoplay: 0,
-                    controls: isModal ? 1 : 0,
-                    rel: 0,
-                    modestbranding: 1,
-                    enablejsapi: 1,
-                  },
-                },
-                vimeo: {
-                  playerOptions: {
-                    autoplay: false,
-                    controls: isModal,
-                  },
-                },
-              } as any}
-              onReady={() => {
-                if (readyTimeoutRef.current) {
-                  clearTimeout(readyTimeoutRef.current)
-                  readyTimeoutRef.current = null
-                }
-                readyRef.current = true
-                setIsLoading(false)
-                setHasError(false)
-              }}
-              onError={(error: unknown) => {
-                console.error('[ReactPlayer] Video error:', error, 'URL:', work.src_url)
-                if (readyTimeoutRef.current) {
-                  clearTimeout(readyTimeoutRef.current)
-                  readyTimeoutRef.current = null
-                }
-                setIsLoading(false)
-                setHasError(true)
-              }}
-            />
-            {/* Click overlay for cards - prevents interaction with player */}
-            {!isModal && (
-              <div className="absolute inset-0 z-20 cursor-pointer" aria-hidden="true" />
+            {isLoading && !hasError && (
+              <div className="absolute inset-0 z-10 pointer-events-none">
+                <Skeleton className={`w-full h-full ${roundedClass}`} />
+              </div>
+            )}
+            {hasError ? (
+              <div className={`absolute inset-0 z-10 flex items-center justify-center bg-gray-50 pointer-events-none`}>
+                <p className="text-xs text-gray-500 text-center px-4 font-body">
+                  Could not load this media. Please check the original URL.
+                </p>
+              </div>
+            ) : (
+              <>
+                <TypedReactPlayer
+                  key={work.src_url}
+                  src={work.src_url}
+                  width="100%"
+                  height="100%"
+                  controls={false}
+                  playing={false}
+                  config={{
+                    youtube: {
+                      playerVars: {
+                        autoplay: 0,
+                        controls: 0,
+                        rel: 0,
+                        modestbranding: 1,
+                        enablejsapi: 1,
+                      },
+                    },
+                    vimeo: {
+                      playerOptions: {
+                        autoplay: false,
+                        controls: false,
+                      },
+                    },
+                  } as any}
+                  onReady={() => {
+                    if (readyTimeoutRef.current) {
+                      clearTimeout(readyTimeoutRef.current)
+                      readyTimeoutRef.current = null
+                    }
+                    readyRef.current = true
+                    setIsLoading(false)
+                    setHasError(false)
+                  }}
+                  onError={(error: unknown) => {
+                    console.error('[ReactPlayer] Video error:', error, 'URL:', work.src_url)
+                    if (readyTimeoutRef.current) {
+                      clearTimeout(readyTimeoutRef.current)
+                      readyTimeoutRef.current = null
+                    }
+                    setIsLoading(false)
+                    setHasError(true)
+                  }}
+                />
+                {/* Click overlay for cards - prevents interaction with player */}
+                <div className="absolute inset-0 z-20 cursor-pointer" aria-hidden="true" />
+              </>
             )}
           </>
         )}
@@ -407,11 +519,15 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
       )
 
       // For card variant, return without wrapper (will be handled by WorkCard)
-      // For modal variant, wrap it
+      // For modal variant, wrap it with clean styling
       if (isModal) {
         return (
-          <div className="relative w-full bg-black-100 rounded-lg overflow-hidden">
-            {spotifyContent}
+          <div className="relative w-full flex items-center justify-center p-3 sm:p-4 md:p-12 min-h-[150px] sm:min-h-[200px]">
+            <div className="w-full max-w-2xl">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                {spotifyContent}
+              </div>
+            </div>
           </div>
         )
       }
@@ -428,49 +544,99 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
     // We've already handled spotify and soundcloud above, so this is for other audio sources
     if (work.media_source !== 'soundcloud') {
       return (
-        <div className={`relative w-full ${aspectClass} bg-gray-100 ${roundedClass} overflow-hidden`}>
-          {isLoading && !hasError && (
-            <div className="absolute inset-0 z-10 pointer-events-none">
-              <Skeleton className={`w-full h-full ${roundedClass}`} />
-            </div>
-          )}
-          {hasError ? (
-            <div className={`absolute inset-0 z-10 flex items-center justify-center bg-gray-50 pointer-events-none`}>
-              <p className="text-xs text-gray-500 text-center px-4 font-body">
-                Could not load this media. Please check the original URL.
-              </p>
+        <div className={`relative w-full ${aspectClass} ${isModal ? 'bg-white' : 'bg-gray-100'} ${roundedClass} ${isModal ? '' : 'overflow-hidden'}`}>
+          {isModal ? (
+          // Modal: Clean centered audio player
+          <div className="relative w-full flex items-center justify-center p-3 sm:p-4 md:p-12 min-h-[150px] sm:min-h-[200px]">
+              <div className="relative w-full max-w-2xl">
+                {isLoading && !hasError && (
+                  <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                    <div className="w-full h-32 bg-gray-100 rounded-xl animate-pulse" />
+                  </div>
+                )}
+                {hasError ? (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50 rounded-xl pointer-events-none">
+                    <p className="text-sm text-gray-500 text-center px-4 font-body">
+                      Could not load this media. Please check the original URL.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <TypedReactPlayer
+                      key={work.src_url}
+                      src={work.src_url}
+                      width="100%"
+                      height="100%"
+                      controls={true}
+                      playing={false}
+                      onReady={() => {
+                        if (readyTimeoutRef.current) {
+                          clearTimeout(readyTimeoutRef.current)
+                          readyTimeoutRef.current = null
+                        }
+                        readyRef.current = true
+                        setIsLoading(false)
+                        setHasError(false)
+                      }}
+                      onError={(error: unknown) => {
+                        console.error('[ReactPlayer] Audio error:', error, 'URL:', work.src_url)
+                        if (readyTimeoutRef.current) {
+                          clearTimeout(readyTimeoutRef.current)
+                          readyTimeoutRef.current = null
+                        }
+                        setIsLoading(false)
+                        setHasError(true)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
+            // Card: Original behavior
             <>
-              <TypedReactPlayer
-                key={work.src_url}
-                src={work.src_url}
-                width="100%"
-                height="100%"
-                controls={isModal}
-                playing={false}
-                onReady={() => {
-                  if (readyTimeoutRef.current) {
-                    clearTimeout(readyTimeoutRef.current)
-                    readyTimeoutRef.current = null
-                  }
-                  readyRef.current = true
-                  setIsLoading(false)
-                  setHasError(false)
-                }}
-                onError={(error: unknown) => {
-                  console.error('[ReactPlayer] Audio error:', error, 'URL:', work.src_url)
-                  if (readyTimeoutRef.current) {
-                    clearTimeout(readyTimeoutRef.current)
-                    readyTimeoutRef.current = null
-                  }
-                  setIsLoading(false)
-                  setHasError(true)
-                }}
-              />
-              {/* Click overlay for cards - prevents interaction with player */}
-              {!isModal && (
-                <div className="absolute inset-0 z-20 cursor-pointer" aria-hidden="true" />
+              {isLoading && !hasError && (
+                <div className="absolute inset-0 z-10 pointer-events-none">
+                  <Skeleton className={`w-full h-full ${roundedClass}`} />
+                </div>
+              )}
+              {hasError ? (
+                <div className={`absolute inset-0 z-10 flex items-center justify-center bg-gray-50 pointer-events-none`}>
+                  <p className="text-xs text-gray-500 text-center px-4 font-body">
+                    Could not load this media. Please check the original URL.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <TypedReactPlayer
+                    key={work.src_url}
+                    src={work.src_url}
+                    width="100%"
+                    height="100%"
+                    controls={false}
+                    playing={false}
+                    onReady={() => {
+                      if (readyTimeoutRef.current) {
+                        clearTimeout(readyTimeoutRef.current)
+                        readyTimeoutRef.current = null
+                      }
+                      readyRef.current = true
+                      setIsLoading(false)
+                      setHasError(false)
+                    }}
+                    onError={(error: unknown) => {
+                      console.error('[ReactPlayer] Audio error:', error, 'URL:', work.src_url)
+                      if (readyTimeoutRef.current) {
+                        clearTimeout(readyTimeoutRef.current)
+                        readyTimeoutRef.current = null
+                      }
+                      setIsLoading(false)
+                      setHasError(true)
+                    }}
+                  />
+                  {/* Click overlay for cards - prevents interaction with player */}
+                  <div className="absolute inset-0 z-20 cursor-pointer" aria-hidden="true" />
+                </>
               )}
             </>
           )}
@@ -525,11 +691,15 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
       )
 
       // For card variant, return without wrapper (will be handled by WorkCard)
-      // For modal variant, wrap it
+      // For modal variant, wrap it with clean styling
       if (isModal) {
         return (
-          <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden">
-            {soundcloudContent}
+          <div className="relative w-full flex items-center justify-center p-3 sm:p-4 md:p-12 min-h-[150px] sm:min-h-[200px]">
+            <div className="w-full max-w-2xl">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                {soundcloudContent}
+              </div>
+            </div>
           </div>
         )
       }

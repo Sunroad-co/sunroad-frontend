@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { UserProfile } from '@/hooks/use-user-profile'
+import { sanitizeAndTrim } from '@/lib/utils/sanitize'
 
 interface EditBioModalProps {
   isOpen: boolean
@@ -48,7 +49,7 @@ export default function EditBioModal({ isOpen, onClose, currentBio, profile, onS
 
       const { error: updateError } = await supabase
         .from('artists_min')
-        .update({ bio: bio.trim() || null })
+        .update({ bio: sanitizeAndTrim(bio) || null })
         .eq('id', profile.id)
 
       if (updateError) {
@@ -77,7 +78,7 @@ export default function EditBioModal({ isOpen, onClose, currentBio, profile, onS
 
       // Success - call onSuccess and close
       if (onSuccess) {
-        onSuccess(bio.trim() || '')
+        onSuccess(sanitizeAndTrim(bio) || '')
       }
       onClose()
     } catch (err) {

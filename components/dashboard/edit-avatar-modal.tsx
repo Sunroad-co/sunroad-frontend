@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import type { Area, Point } from 'react-easy-crop'
-import { getMediaUrl } from '@/lib/media'
+import SRImage from '@/components/media/SRImage'
 import { createClient } from '@/lib/supabase/client'
 import { getCroppedImg } from '@/lib/image-crop'
 import { decodeAndDownscale } from '@/lib/utils/decode-and-downscale'
@@ -243,6 +243,7 @@ export default function EditAvatarModal({
         .upload(storagePath, croppedFile, {
           contentType: 'image/jpeg',
           upsert: false,
+          cacheControl: '31536000',
         })
 
       if (uploadError) {
@@ -376,22 +377,21 @@ export default function EditAvatarModal({
                     ? 'w-16 h-16 sm:w-20 sm:h-20' 
                     : 'w-24 h-24 sm:w-28 sm:h-28'
                 }`}>
-              {(() => {
-                const avatarSrc = getMediaUrl(currentAvatar);
-                return avatarSrc ? (
-                  <Image
-                    src={avatarSrc}
-                    alt="Current avatar"
-                        width={112}
-                        height={112}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                      <div className="w-full h-full bg-gray-300 flex items-center justify-center text-xl sm:text-2xl text-gray-600">
+              {currentAvatar ? (
+                <SRImage
+                  src={currentAvatar}
+                  alt="Current avatar"
+                  width={112}
+                  height={112}
+                  className="w-full h-full object-cover"
+                  mode="raw"
+                  sizes="(max-width: 640px) 64px, 80px"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-300 flex items-center justify-center text-xl sm:text-2xl text-gray-600">
                   ?
                 </div>
-                );
-              })()}
+              )}
                 </div>
 
                 {/* Arrow (only shown when preview exists) */}

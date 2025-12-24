@@ -1,8 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
-import { getMediaUrl } from '@/lib/media'
+import SRImage from '@/components/media/SRImage'
 import type { SearchResult } from '@/lib/search-artists'
 
 interface ArtistResultCardProps {
@@ -24,7 +23,6 @@ function formatCategories(categories: string | null): string | null {
 export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
   const location = formatLocation(artist.city, artist.state)
   const categories = formatCategories(artist.categories)
-  const avatarSrc = getMediaUrl(artist.avatar_url)
 
   return (
     <Link
@@ -34,13 +32,15 @@ export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
       <div className="flex items-start space-x-4 min-w-0">
         {/* Avatar */}
         <div className="flex-shrink-0">
-          {avatarSrc ? (
-            <Image
-              src={avatarSrc}
+          {artist.avatar_url ? (
+            <SRImage
+              src={artist.avatar_url}
               alt={artist.display_name}
               width={64}
               height={64}
               className="w-16 h-16 rounded-full object-cover"
+              mode="raw"
+              sizes="64px"
             />
           ) : (
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-sunroad-amber-100 to-sunroad-amber-200 flex items-center justify-center">

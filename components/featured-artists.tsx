@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
+import SRImage from '@/components/media/SRImage'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
-import { getMediaUrl } from '@/lib/media'
 
 interface Artist {
   id: string
@@ -121,23 +120,22 @@ export default function FeaturedArtists() {
   >
     {/* Image */}
     <div className="aspect-square relative bg-gray-100 overflow-hidden">
-      {(() => {
-        const avatarSrc = getMediaUrl(artist.avatar_url);
-        return avatarSrc ? (
-          <Image
-            src={avatarSrc}
-            alt={artist.display_name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
-          />
-        ) : (
+      {artist.avatar_url ? (
+        <SRImage
+          src={artist.avatar_url}
+          alt={artist.display_name}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
+          mode="raw"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 20vw"
+        />
+      ) : (
         <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
           <span className="text-amber-600 font-bold text-2xl">
             {artist.display_name.charAt(0)}
           </span>
         </div>
-        );
-      })()}
+      )}
     </div>
   
     {/* Text */}

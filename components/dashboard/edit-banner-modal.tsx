@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import type { Area, Point } from 'react-easy-crop'
-import { getMediaUrl } from '@/lib/media'
+import SRImage from '@/components/media/SRImage'
 import { createClient } from '@/lib/supabase/client'
 import { getCroppedImg } from '@/lib/image-crop'
 import { decodeAndDownscale } from '@/lib/utils/decode-and-downscale'
@@ -245,6 +245,7 @@ export default function EditBannerModal({
         .upload(storagePath, croppedFile, {
           contentType: 'image/jpeg',
           upsert: false,
+          cacheControl: '31536000',
         })
 
       if (uploadError) {
@@ -377,21 +378,20 @@ export default function EditBannerModal({
                     ? 'w-32 h-11 sm:w-40 sm:h-14' 
                     : 'w-48 h-16 sm:w-64 sm:h-20'
                 }`}>
-              {(() => {
-                const bannerSrc = getMediaUrl(currentBanner);
-                return bannerSrc ? (
-                  <Image
-                    src={bannerSrc}
-                    alt="Current banner"
-                    fill
-                    className="object-cover"
-                  />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-sunroad-amber-200 to-sunroad-amber-300 flex items-center justify-center">
-                        <div className="text-center text-sunroad-brown-700 text-xs">No banner</div>
-                      </div>
-                    );
-              })()}
+              {currentBanner ? (
+                <SRImage
+                  src={currentBanner}
+                  alt="Current banner"
+                  fill
+                  className="object-cover"
+                  mode="raw"
+                  sizes="(max-width: 640px) 128px, 256px"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-sunroad-amber-200 to-sunroad-amber-300 flex items-center justify-center">
+                  <div className="text-center text-sunroad-brown-700 text-xs">No banner</div>
+                </div>
+              )}
                 </div>
 
                 {/* Arrow (only shown when preview exists) */}

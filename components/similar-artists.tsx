@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
+import SRImage from '@/components/media/SRImage'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
-import { getMediaUrl } from '@/lib/media'
 
 interface Artist {
   id: string
@@ -227,18 +226,23 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategorie
             className="group block"
           >
             <div className="relative overflow-hidden rounded-lg mb-2">
-              {(() => {
-                const bannerSrc = getMediaUrl(artist.banner_url) || '/api/placeholder/400/300';
-                return (
-                  <Image
-                    src={bannerSrc}
-                    alt={artist.display_name}
-                    width={400}
-                    height={300}
-                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                );
-              })()}
+              {artist.banner_url ? (
+                <SRImage
+                  src={artist.banner_url}
+                  alt={artist.display_name}
+                  width={400}
+                  height={300}
+                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                  mode="raw"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                />
+              ) : (
+                <div className="w-full h-48 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                  <span className="text-amber-600 font-bold text-xl">
+                    {artist.display_name.charAt(0)}
+                  </span>
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
             <div className="space-y-1">
