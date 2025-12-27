@@ -4,12 +4,15 @@ import { useRef, useEffect } from 'react'
 import SearchBar from './search-bar'
 import WhereFilterPill from './where-filter-pill'
 import CategoryFilterPill from './category-filter-pill'
+import type { Location } from '@/hooks/use-location-search'
 
 interface ArtistSearchPageControlsProps {
   query: string
   onQueryChange: (query: string) => void
   selectedCategoryIds: number[]
   onCategoryChange: (ids: number[]) => void
+  selectedLocation: Location | null
+  onLocationChange: (location: Location | null) => void
   activeSegment: 'search' | 'where' | 'category' | null
   onSegmentActivate: (segment: 'search' | 'where' | 'category' | null) => void
 }
@@ -19,6 +22,8 @@ export default function ArtistSearchPageControls({
   onQueryChange,
   selectedCategoryIds,
   onCategoryChange,
+  selectedLocation,
+  onLocationChange,
   activeSegment,
   onSegmentActivate
 }: ArtistSearchPageControlsProps) {
@@ -137,6 +142,8 @@ export default function ArtistSearchPageControls({
             </div>
             <div className="text-sm text-gray-500 min-w-0">
               <WhereFilterPill 
+                selectedLocation={selectedLocation}
+                onChange={onLocationChange}
                 embedded={true}
                 onActiveChange={handleWhereActiveChange}
                 showLabel={false}
@@ -256,6 +263,8 @@ export default function ArtistSearchPageControls({
                 </div>
                 <div className="text-sm text-gray-500 min-w-0">
                   <WhereFilterPill 
+                    selectedLocation={selectedLocation}
+                    onChange={onLocationChange}
                     embedded={true}
                     onActiveChange={handleWhereActiveChange}
                     showLabel={false}
