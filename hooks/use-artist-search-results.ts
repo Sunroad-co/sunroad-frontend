@@ -4,6 +4,7 @@ import { searchArtists, type SearchResult } from '@/lib/search-artists'
 interface UseArtistSearchResultsParams {
   query: string
   categoryIds?: number[]
+  locationIds?: number[]
   limit?: number
   enabled?: boolean
 }
@@ -21,6 +22,7 @@ interface UseArtistSearchResultsReturn {
 export function useArtistSearchResults({
   query,
   categoryIds,
+  locationIds,
   limit = 20,
   enabled = true
 }: UseArtistSearchResultsParams): UseArtistSearchResultsReturn {
@@ -36,16 +38,19 @@ export function useArtistSearchResults({
   const fetchingRef = useRef(false)
   const currentQueryRef = useRef(query)
   const currentCategoryIdsRef = useRef(categoryIds)
+  const currentLocationIdsRef = useRef(locationIds)
 
   // Update refs when params change
   useEffect(() => {
     currentQueryRef.current = query
     currentCategoryIdsRef.current = categoryIds
-  }, [query, categoryIds])
+    currentLocationIdsRef.current = locationIds
+  }, [query, categoryIds, locationIds])
 
   const performSearch = useCallback(async (
     searchQuery: string,
     categoryIdsParam: number[] | undefined,
+    locationIdsParam: number[] | undefined,
     currentOffset: number,
     append: boolean = false
   ) => {
@@ -65,6 +70,7 @@ export function useArtistSearchResults({
       const searchResults = await searchArtists({
         q: searchQuery.trim() || undefined,
         category_ids: categoryIdsParam && categoryIdsParam.length > 0 ? categoryIdsParam : null,
+        location_ids: locationIdsParam && locationIdsParam.length > 0 ? locationIdsParam : null,
         limit,
         offset: currentOffset
       })
@@ -97,7 +103,12 @@ export function useArtistSearchResults({
     }
   }, [limit])
 
-  // Initial search when query or categoryIds change
+  // Create stable string keys for comparison to prevent unnecessary re-fetches
+  const categoryIdsKey = categoryIds ? categoryIds.sort().join(',') : ''
+  const locationIdsKey = locationIds ? locationIds.sort().join(',') : ''
+  const searchKey = `${query}|${categoryIdsKey}|${locationIdsKey}`
+
+  // Initial search when query, categoryIds, or locationIds change
   useEffect(() => {
     if (!enabled) {
       setResults([])
@@ -113,8 +124,9 @@ export function useArtistSearchResults({
     setHasMore(true)
     
     // Perform search with no delay (no debounce for page results)
-    performSearch(query, categoryIds, 0, false)
-  }, [query, categoryIds, enabled, performSearch])
+    performSearch(query, categoryIds, locationIds, 0, false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKey, enabled, performSearch])
 
   const loadMore = useCallback(() => {
     if (!enabled || loading || isLoadingMore || !hasMore || fetchingRef.current) {
@@ -124,6 +136,7 @@ export function useArtistSearchResults({
     performSearch(
       currentQueryRef.current,
       currentCategoryIdsRef.current,
+      currentLocationIdsRef.current,
       offset,
       true // append mode
     )
@@ -132,8 +145,8 @@ export function useArtistSearchResults({
   const refetch = useCallback(() => {
     setOffset(0)
     setHasMore(true)
-    performSearch(query, categoryIds, 0, false)
-  }, [query, categoryIds, performSearch])
+    performSearch(query, categoryIds, locationIds, 0, false)
+  }, [query, categoryIds, locationIds, performSearch])
 
   return {
     results,

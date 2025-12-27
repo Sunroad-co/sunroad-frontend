@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import SearchBar from './search-bar'
 import CategoryFilterPill from './category-filter-pill'
 import WhereFilterPill from './where-filter-pill'
+import type { Location } from '@/hooks/use-location-search'
 
 interface ArtistSearchControlsProps {
   placeholder?: string
@@ -17,6 +18,8 @@ interface ArtistSearchControlsProps {
   onQueryChange?: (query: string) => void
   selectedCategoryIds?: number[]
   onCategoryChange?: (ids: number[]) => void
+  selectedLocation?: Location | null
+  onLocationChange?: (location: Location | null) => void
 }
 
 export default function ArtistSearchControls({
@@ -28,17 +31,22 @@ export default function ArtistSearchControls({
   query: controlledQuery,
   onQueryChange,
   selectedCategoryIds: controlledCategoryIds,
-  onCategoryChange
+  onCategoryChange,
+  selectedLocation: controlledLocation,
+  onLocationChange
 }: ArtistSearchControlsProps) {
   const router = useRouter()
   const [internalCategoryIds, setInternalCategoryIds] = useState<number[]>([])
   const [internalSearchQuery, setInternalSearchQuery] = useState('')
+  const [internalLocation, setInternalLocation] = useState<Location | null>(null)
   
   // Use controlled props if provided (for variant="page"), otherwise use internal state
   const selectedCategoryIds = controlledCategoryIds ?? internalCategoryIds
   const searchQuery = controlledQuery ?? internalSearchQuery
+  const selectedLocation = controlledLocation !== undefined ? controlledLocation : internalLocation
   const setSelectedCategoryIds = onCategoryChange ?? setInternalCategoryIds
   const setSearchQuery = onQueryChange ?? setInternalSearchQuery
+  const setSelectedLocation = onLocationChange ?? setInternalLocation
   
   const [activeSegment, setActiveSegment] = useState<'search' | 'where' | 'category' | null>(null)
   // For 'page' variant, always expanded; for 'default', use state
@@ -105,7 +113,7 @@ export default function ArtistSearchControls({
 
   // Update pill position when active segment changes
   useEffect(() => {
-    if (!isExpanded || isAnimatingOut || !desktopContainerRef.current || !pillRef.current) return
+    if ((!isExpanded && variant !== 'page') || isAnimatingOut || !desktopContainerRef.current || !pillRef.current) return
 
     const updatePillPosition = () => {
       if (!desktopContainerRef.current || !pillRef.current) return
@@ -143,7 +151,7 @@ export default function ArtistSearchControls({
       clearTimeout(timer)
       window.removeEventListener('resize', updatePillPosition)
     }
-  }, [activeSegment, isExpanded, isAnimatingOut])
+  }, [activeSegment, isExpanded, isAnimatingOut, variant])
 
   // Handle blur on search input to collapse if conditions are met
   const handleSearchBlur = useCallback(() => {
@@ -157,6 +165,8 @@ export default function ArtistSearchControls({
         !justExpandedRef.current &&
         !activeSegment &&
         !searchQuery.trim() &&
+        !selectedLocation && // Don't collapse if location is selected
+        !selectedCategoryIds.length && // Don't collapse if categories are selected
         !isAnimatingOut &&
         containerRef.current &&
         !containerRef.current.contains(document.activeElement)
@@ -164,7 +174,7 @@ export default function ArtistSearchControls({
         handleCollapse()
       }
     }, 150)
-  }, [activeSegment, searchQuery, isAnimatingOut, handleCollapse])
+  }, [activeSegment, searchQuery, selectedLocation, selectedCategoryIds, isAnimatingOut, handleCollapse])
 
   // Collapse when clicking outside (only if no active segment and no query)
   useEffect(() => {
@@ -183,6 +193,8 @@ export default function ArtistSearchControls({
         (isBackdrop || isOutside) &&
         !activeSegment &&
         !searchQuery.trim() &&
+        !selectedLocation && // Don't collapse if location is selected
+        !selectedCategoryIds.length && // Don't collapse if categories are selected
         !isAnimatingOut &&
         !justExpandedRef.current
       ) {
@@ -207,12 +219,13 @@ export default function ArtistSearchControls({
 
   // Memoized callbacks to prevent infinite loops
   const handleSearchFocusChange = useCallback((isFocused: boolean) => {
-    handleSegmentActivate(isFocused ? 'search' : null)
+    // Only activate search if no other segment is active or if search is explicitly focused
     if (isFocused) {
       setIsExpanded(true)
       setIsAnimatingOut(false)
-      // Ensure search segment is active when focused
-      if (!activeSegment) {
+      // Only activate search if no other segment is currently active
+      // This prevents search from stealing focus when clicking category/location
+      if (!activeSegment || activeSegment === 'search') {
         handleSegmentActivate('search')
       }
     } else {
@@ -238,9 +251,19 @@ export default function ArtistSearchControls({
     if (selectedCategoryIds.length > 0) {
       params.set('categories', selectedCategoryIds.join(','))
     }
+    if (selectedLocation) {
+      // Pass location data directly in URL to avoid extra API call
+      params.set('location_id', selectedLocation.id.toString())
+      params.set('location_formatted', selectedLocation.formatted)
+      if (selectedLocation.city) params.set('location_city', selectedLocation.city)
+      if (selectedLocation.state_code) params.set('location_state_code', selectedLocation.state_code)
+      if (selectedLocation.state) params.set('location_state', selectedLocation.state)
+      if (selectedLocation.country_code) params.set('location_country_code', selectedLocation.country_code)
+      if (selectedLocation.artist_count !== undefined) params.set('location_artist_count', selectedLocation.artist_count.toString())
+    }
     const queryString = params.toString()
     router.push(`/search${queryString ? `?${queryString}` : ''}`)
-  }, [searchQuery, selectedCategoryIds, router])
+  }, [searchQuery, selectedCategoryIds, selectedLocation, router])
 
   return (
     <div ref={containerRef} className={`w-full ${className}`}>
@@ -313,8 +336,12 @@ export default function ArtistSearchControls({
             {/* First Row: Search Input */}
             <div 
               ref={searchRef}
-              className={`px-4 py-3 border-b border-gray-100 transition-colors ${
-                activeSegment === 'search' ? 'bg-gray-50' : ''
+              className={`px-4 py-3 border-b border-gray-100 transition-colors relative ${
+                activeSegment === 'search' && variant === 'page'
+                  ? 'bg-white rounded-t-xl'
+                  : activeSegment === 'search'
+                  ? 'bg-gray-50'
+                  : ''
               }`}
               onClick={(e) => {
                 if (activeSegment !== 'search') {
@@ -328,6 +355,7 @@ export default function ArtistSearchControls({
                 placeholder={placeholder}
                 className="w-full"
                 categoryIds={selectedCategoryIds}
+                locationIds={selectedLocation ? [selectedLocation.id] : undefined}
                 onResultClick={onResultClick}
                 embedded={true}
                 isActive={activeSegment === 'search'}
@@ -341,12 +369,16 @@ export default function ArtistSearchControls({
             </div>
 
             {/* Second Row: Where and Category Filters */}
-            <div className="flex items-center divide-x divide-gray-200">
+            <div className="flex items-center divide-x divide-gray-200 relative overflow-visible">
               {/* Where Filter */}
               <div 
                 ref={whereRef}
-                className={`flex-1 px-4 py-3 transition-colors cursor-pointer ${
-                  activeSegment === 'where' ? 'bg-gray-50' : 'hover:bg-gray-50/50'
+                className={`flex-1 px-4 py-3 transition-colors cursor-pointer relative ${
+                  activeSegment === 'where' && variant === 'page'
+                    ? 'bg-white rounded-l-xl'
+                    : activeSegment === 'where'
+                    ? 'bg-gray-50'
+                    : 'hover:bg-gray-50/50'
                 }`}
                 onClick={(e) => {
                   if (activeSegment !== 'where') {
@@ -363,6 +395,8 @@ export default function ArtistSearchControls({
                 </div>
                 <div className="text-sm text-gray-500 min-w-0">
                   <WhereFilterPill 
+                    selectedLocation={selectedLocation}
+                    onChange={setSelectedLocation}
                     embedded={true}
                     onActiveChange={handleWhereActiveChange}
                     showLabel={false}
@@ -373,9 +407,18 @@ export default function ArtistSearchControls({
               {/* Category Filter */}
               <div 
                 ref={categoryRef}
-                className={`flex-1 px-4 py-3 transition-colors cursor-pointer ${
-                  activeSegment === 'category' ? 'bg-gray-50' : 'hover:bg-gray-50/50'
+                className={`flex-1 px-4 py-3 transition-colors cursor-pointer relative ${
+                  activeSegment === 'category' && variant === 'page'
+                    ? 'bg-white rounded-r-xl'
+                    : activeSegment === 'category'
+                    ? 'bg-gray-50'
+                    : 'hover:bg-gray-50/50'
                 }`}
+                onClick={(e) => {
+                  if (activeSegment !== 'category') {
+                    handleSegmentActivate('category')
+                  }
+                }}
               >
                 <div className="text-xs font-semibold text-gray-900 mb-0.5 flex items-center gap-1.5">
                   <svg className="h-3.5 w-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,7 +484,7 @@ export default function ArtistSearchControls({
           aria-label={!isExpanded && variant !== 'page' ? "Open search" : undefined}
           className={`absolute inset-x-0 top-0 ${
             variant === 'page' 
-              ? 'bg-white border border-sunroad-brown-200/60 shadow-[0_8px_24px_rgba(67,48,43,0.08)] max-w-full mx-0'
+              ? 'bg-gray-100 border border-sunroad-brown-200/60 shadow-[0_8px_24px_rgba(67,48,43,0.08)] max-w-full mx-0'
               : 'bg-gray-100 border border-gray-200 shadow-lg hover:shadow-xl cursor-pointer max-w-2xl mx-auto'
           } transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-sunroad-amber-500 focus:ring-offset-2 ${
             variant === 'page'
@@ -459,7 +502,7 @@ export default function ArtistSearchControls({
           }}
         >
           {/* Moving Pill - Highlights active segment */}
-          {isExpanded && !isAnimatingOut && (
+          {(isExpanded && !isAnimatingOut) || variant === 'page' ? (
             <div
               ref={pillRef}
               className="absolute top-2 bottom-2 bg-white rounded-full shadow-sm z-0"
@@ -470,7 +513,7 @@ export default function ArtistSearchControls({
                 transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             />
-          )}
+          ) : null}
           {/* Collapsed State Content - Only show for default variant */}
           {!isExpanded && variant !== 'page' ? (
             <div className="px-6 py-3 flex items-center h-full">
@@ -492,7 +535,7 @@ export default function ArtistSearchControls({
                 ref={searchRef}
                 className={`flex-[2] min-w-0 relative transition-colors duration-200 rounded-l-full cursor-pointer z-10 ${
                   activeSegment === 'search' 
-                    ? 'bg-transparent' 
+                    ? 'bg-transparent'
                     : 'hover:bg-gray-50/30'
                 }`}
                 onClick={(e) => {
@@ -519,6 +562,7 @@ export default function ArtistSearchControls({
                     placeholder="Find local creatives"
                     className="w-full"
                     categoryIds={selectedCategoryIds}
+                    locationIds={selectedLocation ? [selectedLocation.id] : undefined}
                     onResultClick={onResultClick}
                     embedded={true}
                     isActive={activeSegment === 'search'}
@@ -540,7 +584,7 @@ export default function ArtistSearchControls({
                 ref={whereRef}
                 className={`flex-[1] min-w-0 relative transition-colors duration-200 cursor-pointer z-10 ${
                   activeSegment === 'where' 
-                    ? 'bg-transparent' 
+                    ? 'bg-transparent'
                     : 'hover:bg-gray-50/30'
                 }`}
                 onClick={(e) => {
@@ -562,13 +606,15 @@ export default function ArtistSearchControls({
                     </svg>
                     Where
                   </div>
-                  <div className="text-sm text-gray-500 min-w-0">
-                    <WhereFilterPill 
-                      embedded={true}
-                      onActiveChange={handleWhereActiveChange}
-                      showLabel={false}
-                    />
-                  </div>
+                <div className="text-sm text-gray-500 min-w-0">
+                  <WhereFilterPill 
+                    selectedLocation={selectedLocation}
+                    onChange={setSelectedLocation}
+                    embedded={true}
+                    onActiveChange={handleWhereActiveChange}
+                    showLabel={false}
+                  />
+                </div>
                 </div>
               </div>
 
@@ -580,10 +626,15 @@ export default function ArtistSearchControls({
                 ref={categoryRef}
                 className={`flex-[1] min-w-0 relative transition-colors duration-200 cursor-pointer z-10 ${
                   activeSegment === 'category' 
-                    ? 'bg-transparent' 
+                    ? 'bg-transparent'
                     : 'hover:bg-gray-50/30'
                 }`}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (activeSegment !== 'category') {
+                    handleSegmentActivate('category')
+                  }
+                }}
               >
                 <div className="px-6 py-4 h-full flex flex-col justify-center min-w-0 relative z-10">
                   <div className={`text-xs font-semibold mb-0.5 flex items-center gap-1.5 ${

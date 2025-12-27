@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import ArtistSearchControls from '@/components/artist-search-controls'
 import ArtistResultCard from '@/components/artist-result-card'
 import { useArtistSearchResults } from '@/hooks/use-artist-search-results'
+import type { Location } from '@/hooks/use-location-search'
+import { createClient } from '@/lib/supabase/client'
 
 // Infinite scroll sentinel component
 function InfiniteScrollSentinel({ 
@@ -72,13 +74,42 @@ function SearchPageContent() {
   // Read initial values from URL
   const initialQuery = searchParams.get('q') || ''
   const initialCategories = searchParams.get('categories')?.split(',').map(Number).filter(Boolean) || []
+  
+  // Reconstruct location from URL params (no API call needed!)
+  const initialLocation: Location | null = useMemo(() => {
+    const locationId = searchParams.get('location_id')
+    if (!locationId) return null
+    
+    return {
+      id: Number(locationId),
+      formatted: searchParams.get('location_formatted') || '',
+      city: searchParams.get('location_city') || null,
+      state: searchParams.get('location_state') || null,
+      state_code: searchParams.get('location_state_code') || null,
+      country_code: searchParams.get('location_country_code') || null,
+      artist_count: searchParams.get('location_artist_count') ? Number(searchParams.get('location_artist_count')) : 0
+    }
+  }, [searchParams])
 
   // Local state
   const [query, setQuery] = useState(initialQuery)
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(initialCategories)
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(initialLocation)
   const [activeSegment, setActiveSegment] = useState<'search' | 'where' | 'category' | null>(null)
 
-  // Sync URL when state changes
+  // Update location if URL params change
+  useEffect(() => {
+    if (initialLocation) {
+      setSelectedLocation(initialLocation)
+    }
+  }, [initialLocation])
+
+  // Memoize locationIds array to prevent infinite loops
+  const locationIds = useMemo(() => {
+    return selectedLocation ? [selectedLocation.id] : undefined
+  }, [selectedLocation?.id])
+
+  // Sync URL when state changes (only if different from current URL)
   useEffect(() => {
     const params = new URLSearchParams()
     if (query.trim()) {
@@ -87,12 +118,30 @@ function SearchPageContent() {
     if (selectedCategoryIds.length > 0) {
       params.set('categories', selectedCategoryIds.join(','))
     }
+    if (selectedLocation) {
+      // Pass location data directly in URL to avoid extra API call
+      params.set('location_id', selectedLocation.id.toString())
+      params.set('location_formatted', selectedLocation.formatted)
+      if (selectedLocation.city) params.set('location_city', selectedLocation.city)
+      if (selectedLocation.state_code) params.set('location_state_code', selectedLocation.state_code)
+      if (selectedLocation.state) params.set('location_state', selectedLocation.state)
+      if (selectedLocation.country_code) params.set('location_country_code', selectedLocation.country_code)
+      if (selectedLocation.artist_count !== undefined) params.set('location_artist_count', selectedLocation.artist_count.toString())
+    }
     const queryString = params.toString()
     const newUrl = `/search${queryString ? `?${queryString}` : ''}`
     
-    // Use replace to avoid adding to history on every keystroke
-    router.replace(newUrl, { scroll: false })
-  }, [query, selectedCategoryIds, router])
+    // Only update URL if it's different from current
+    const currentUrl = window.location.pathname + window.location.search
+    if (newUrl !== currentUrl) {
+      router.replace(newUrl, { scroll: false })
+    }
+  }, [query, selectedCategoryIds, selectedLocation, router])
+
+  // Memoize categoryIds to prevent unnecessary re-renders
+  const categoryIds = useMemo(() => {
+    return selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined
+  }, [selectedCategoryIds.join(',')])
 
   // Use search results hook
   const {
@@ -104,7 +153,8 @@ function SearchPageContent() {
     refetch
   } = useArtistSearchResults({
     query,
-    categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
+    categoryIds,
+    locationIds,
     limit: 20,
     enabled: true
   })
@@ -116,7 +166,7 @@ function SearchPageContent() {
   }, [loading, hasMore, loadMore])
 
   // Check if we have any search criteria
-  const hasSearchCriteria = query.trim().length > 0 || selectedCategoryIds.length > 0
+  const hasSearchCriteria = query.trim().length > 0 || selectedCategoryIds.length > 0 || selectedLocation !== null
 
   return (
     <main className="min-h-screen bg-sunroad-cream font-body">
@@ -134,6 +184,8 @@ function SearchPageContent() {
             onQueryChange={setQuery}
             selectedCategoryIds={selectedCategoryIds}
             onCategoryChange={setSelectedCategoryIds}
+            selectedLocation={selectedLocation}
+            onLocationChange={setSelectedLocation}
           />
         </section>
 

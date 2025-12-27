@@ -6,6 +6,7 @@ interface UseSearchOptions {
   minQueryLength?: number
   limit?: number
   categoryIds?: number[]
+  locationIds?: number[]
   enabled?: boolean
 }
 
@@ -26,6 +27,7 @@ export function useSearch({
   minQueryLength = 2,
   limit = 10,
   categoryIds,
+  locationIds,
   enabled = true
 }: UseSearchOptions = {}): UseSearchReturn {
   const [query, setQuery] = useState('')
@@ -37,7 +39,7 @@ export function useSearch({
 
   // Debounced search function
   const debouncedSearch = useCallback(
-    debounce(async (searchQuery: string, categoryIdsParam?: number[]) => {
+    debounce(async (searchQuery: string, categoryIdsParam?: number[], locationIdsParam?: number[]) => {
       if (searchQuery.length < minQueryLength) {
         setResults([])
         setLoading(false)
@@ -52,6 +54,7 @@ export function useSearch({
         const searchResults = await searchArtists({
           q: searchQuery,
           category_ids: categoryIdsParam && categoryIdsParam.length > 0 ? categoryIdsParam : null,
+          location_ids: locationIdsParam && locationIdsParam.length > 0 ? locationIdsParam : null,
           limit
         })
         setResults(searchResults)
@@ -68,7 +71,7 @@ export function useSearch({
     [debounceMs, minQueryLength, limit]
   )
 
-  // Effect to trigger search when query or categoryIds changes
+  // Effect to trigger search when query, categoryIds, or locationIds changes
   useEffect(() => {
     if (!enabled) {
       setResults([])
@@ -80,14 +83,14 @@ export function useSearch({
 
     if (query.trim() && query.trim().length >= minQueryLength) {
       setHasSearched(false) // Reset search completion flag when starting new search
-      debouncedSearch(query.trim(), categoryIds)
+      debouncedSearch(query.trim(), categoryIds, locationIds)
     } else {
       setResults([])
       setLoading(false)
       setError(null)
       setHasSearched(false)
     }
-  }, [query, categoryIds, debouncedSearch, minQueryLength, enabled])
+  }, [query, categoryIds, locationIds, debouncedSearch, minQueryLength, enabled])
 
   // Clear search function
   const clearSearch = useCallback(() => {

@@ -19,6 +19,7 @@ export interface VideoWorkFieldsProps {
 
 export interface VideoWorkFieldsHandle {
   getVideoData: () => { url: string; mediaSource: 'youtube' | 'vimeo' | 'mux' | 'other_url' } | null
+  getCurrentUrl: () => string
   clear: () => void
 }
 
@@ -55,14 +56,14 @@ export const VideoWorkFields = forwardRef<VideoWorkFieldsHandle, VideoWorkFields
         )
         
         if (isVideoError) {
-          console.error('[VideoWorkFields] Uncaught error detected:', event.error, event.message)
-          // Only handle if we have an active video URL
+          console.warn('[VideoWorkFields] Preview error detected (non-blocking):', event.error, event.message)
+          // Only set preview error - don't invalidate URL as it may still be valid
+          // Validity is based on URL pattern validation, not preview loading
           if (videoUrl && videoValid && !previewError) {
-            setPreviewError('This video does not exist or cannot be played. Please check the URL and try again.')
-            setVideoValid(false)
+            setPreviewError('Preview unavailable (URL may still be valid). You can still save if the URL is correct.')
+            // Don't set videoValid to false - keep validity based on URL pattern
             setVideoReady(false)
             setVideoStarted(false)
-            onChangeValidity(false)
           }
         }
       }
@@ -80,14 +81,14 @@ export const VideoWorkFields = forwardRef<VideoWorkFieldsHandle, VideoWorkFields
         )
         
         if (isVideoError) {
-          console.error('[VideoWorkFields] Unhandled promise rejection:', reason)
-          // Only handle if we have an active video URL
+          console.warn('[VideoWorkFields] Preview error detected (non-blocking):', reason)
+          // Only set preview error - don't invalidate URL as it may still be valid
+          // Validity is based on URL pattern validation, not preview loading
           if (videoUrl && videoValid && !previewError) {
-            setPreviewError('This video does not exist or cannot be played. Please check the URL and try again.')
-            setVideoValid(false)
+            setPreviewError('Preview unavailable (URL may still be valid). You can still save if the URL is correct.')
+            // Don't set videoValid to false - keep validity based on URL pattern
             setVideoReady(false)
             setVideoStarted(false)
-            onChangeValidity(false)
           }
         }
       }
@@ -107,6 +108,10 @@ export const VideoWorkFields = forwardRef<VideoWorkFieldsHandle, VideoWorkFields
       }
       return { url: videoUrl.trim(), mediaSource: videoMediaSource }
     }, [videoValid, videoUrl, videoMediaSource])
+
+    const getCurrentUrl = useCallback(() => {
+      return videoUrl.trim()
+    }, [videoUrl])
 
     const clear = useCallback(() => {
       setVideoUrl('')
@@ -130,26 +135,31 @@ export const VideoWorkFields = forwardRef<VideoWorkFieldsHandle, VideoWorkFields
 
     useImperativeHandle(ref, () => ({
       getVideoData,
+      getCurrentUrl,
       clear
     }))
 
     // Initialize validation on mount if initialUrl is provided
     useEffect(() => {
       if (initialUrl) {
+        setVideoUrl(initialUrl)
         const validation = validateVideoUrl(initialUrl)
         if (validation.isValid && validation.mediaSource) {
           setVideoValid(true)
           setVideoMediaSource(validation.mediaSource as 'youtube' | 'vimeo' | 'mux' | 'other_url')
-          // Don't set validity to true until preview loads successfully
-          // This will be set when onReady fires
+          // Set validity immediately based on URL pattern - preview loading is optional
+          onChangeValidity(true)
         } else {
+          setVideoValid(false)
           onChangeValidity(false)
         }
       } else {
+        setVideoUrl('')
+        setVideoValid(false)
         onChangeValidity(false)
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []) // Only run on mount
+    }, [initialUrl]) // Run when initialUrl changes
 
     const handleVideoUrlChange = (url: string) => {
       setVideoUrl(url)
@@ -186,34 +196,18 @@ export const VideoWorkFields = forwardRef<VideoWorkFieldsHandle, VideoWorkFields
 
     // Update parent validity when videoValid, videoReady, videoStarted, or errors change
     useEffect(() => {
-      // If there's an error, always invalid
-      if (videoError || previewError) {
+      // Only invalidate if URL pattern validation failed (videoError)
+      // Don't invalidate due to preview errors (previewError) as these can be caused by CORS/network issues
+      if (videoError) {
         onChangeValidity(false)
         return
       }
-      // For video, we need both validation AND preview to be ready
-      // For Vimeo/Twitch, we also need videoStarted to ensure content actually loaded
-      // This ensures the save button only activates when preview is actually working
-      if (videoMediaSource === 'other_url') {
-        // Check if it's a direct video file or an embed platform (like Twitch)
-        if (isDirectVideoFile(videoUrl)) {
-          // Direct video URLs - just need valid URL format
-          onChangeValidity(videoValid && !!videoUrl.trim())
-        } else {
-          // Embed platform like Twitch - need valid URL, ready, AND started
-          // This catches cases where embed loads but video doesn't exist
-          onChangeValidity(videoValid && videoReady && videoStarted && !!videoUrl.trim())
-        }
-      } else if (videoMediaSource === 'vimeo') {
-        // For Vimeo, need valid URL, ready, AND started
-        // This catches cases where embed loads but video doesn't exist (404s)
-        onChangeValidity(videoValid && videoReady && videoStarted && !!videoUrl.trim())
-      } else {
-        // For YouTube, Mux - need both valid URL AND preview ready
-        // YouTube reliably fires onError for invalid videos, so we don't need videoStarted check
-        onChangeValidity(videoValid && videoReady && !!videoUrl.trim())
-      }
-    }, [videoValid, videoReady, videoStarted, videoError, previewError, videoUrl, videoMediaSource, isDirectVideoFile, onChangeValidity])
+      
+      // For video, we primarily rely on URL pattern validation
+      // If URL pattern is valid, allow saving - preview loading is optional
+      // This ensures save button works even if preview has network/CORS issues
+      onChangeValidity(videoValid && !!videoUrl.trim())
+    }, [videoValid, videoError, videoUrl, onChangeValidity])
 
     useEffect(() => {
       setVideoReady(false)

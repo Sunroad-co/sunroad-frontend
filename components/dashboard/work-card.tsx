@@ -479,7 +479,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
         <>
           {!iframeLoaded && !iframeError && (
             <div className="absolute inset-0 z-10 pointer-events-none">
-              <Skeleton className="w-full h-[152px]" />
+              <Skeleton className="w-full h-[180px]" />
             </div>
           )}
           {iframeError || hasError ? (
@@ -491,8 +491,8 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
           ) : (
             <iframe
               width="100%"
-              height="152"
-              className="w-full h-[152px]"
+              height="180"
+              className="w-full h-[180px]"
               frameBorder="0"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
               loading="lazy"
@@ -650,7 +650,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
         <>
           {!iframeLoaded && !iframeError && (
             <div className="absolute inset-0 z-10 pointer-events-none">
-              <Skeleton className="w-full h-[166px]" />
+              <Skeleton className="w-full h-[180px]" />
             </div>
           )}
           {iframeError || hasError ? (
@@ -662,8 +662,8 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
           ) : (
             <iframe
               width="100%"
-              height="166"
-              className="w-full h-[166px]"
+              height="180"
+              className="w-full h-[180px]"
               scrolling="no"
               frameBorder="no"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
@@ -749,7 +749,7 @@ export default function WorkCard({ work, onEdit, onDelete, onOpen }: WorkCardPro
   if (isEmbedAudio) {
     return (
       <div 
-        className="relative w-full group/work cursor-pointer"
+        className="relative w-full h-full group/work cursor-pointer"
         onClick={handleCardClick}
       >
         <MediaPreview work={work} variant="card" />
@@ -791,7 +791,7 @@ export default function WorkCard({ work, onEdit, onDelete, onOpen }: WorkCardPro
   // For other media types, use card wrapper
   return (
     <div 
-      className="relative group/work rounded-2xl overflow-hidden bg-black/100 border border-gray-200/70 hover:border-gray-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+      className="relative h-full group/work rounded-2xl overflow-hidden bg-black/100 border border-gray-200/70 hover:border-gray-300 hover:shadow-md transition-all duration-200 cursor-pointer"
       onClick={handleCardClick}
     >
       {/* Media Preview */}

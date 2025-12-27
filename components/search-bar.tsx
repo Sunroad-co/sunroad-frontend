@@ -11,6 +11,7 @@ interface SearchBarProps {
   className?: string
   onResultClick?: () => void
   categoryIds?: number[]
+  locationIds?: number[]
   embedded?: boolean
   onFocusChange?: (isFocused: boolean) => void
   isActive?: boolean
@@ -80,6 +81,7 @@ export default function SearchBar({
   className = "",
   onResultClick,
   categoryIds,
+  locationIds,
   embedded = false,
   onFocusChange,
   isActive = true,
@@ -107,6 +109,7 @@ export default function SearchBar({
     minQueryLength: 2,
     limit: 8,
     categoryIds,
+    locationIds,
     enabled: !disableDropdown
   })
   

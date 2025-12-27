@@ -142,13 +142,24 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
         </div>
 
         {works.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr" style={{ gridAutoFlow: 'dense' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[180px]" style={{ gridAutoFlow: 'dense' }}>
             {works.map((work) => {
               const isEmbedAudio = isAudioEmbed(work)
+              const isVideo = work.media_type === 'video'
+              
+              // Compute grid spans based on media type
+              let gridClasses = 'h-full'
+              if (isEmbedAudio) {
+                gridClasses += ' sm:col-span-2 sm:row-span-1'
+              } else if (isVideo) {
+                gridClasses += ' sm:col-span-2 sm:row-span-2'
+              }
+              // Images default to 1x1 (no additional spans needed)
+              
               return (
                 <div
                   key={work.id}
-                  className={isEmbedAudio ? 'sm:col-span-2 md:col-span-2 lg:col-span-2' : ''}
+                  className={gridClasses}
                 >
                   <WorkCard
                     work={work}

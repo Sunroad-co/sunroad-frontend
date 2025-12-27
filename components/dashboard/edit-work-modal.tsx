@@ -473,8 +473,8 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
     // Check if media URL changed
     let mediaUrlChanged = false
     if (mediaTab === 'video') {
-      const videoData = videoWorkFieldsRef.current?.getVideoData()
-      const currentUrl = videoData?.url || ''
+      // Get current URL directly from the component (regardless of validity)
+      const currentUrl = videoWorkFieldsRef.current?.getCurrentUrl() || ''
       // If switching to video tab, any URL entry is a change
       // If already on video, check if URL changed
       if (originalMediaType !== 'video') {
@@ -482,12 +482,14 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
         // Use isVideoValid to detect if user has entered and validated a URL
         mediaUrlChanged = isVideoValid
       } else {
-        // Already video - check if URL changed
-        mediaUrlChanged = currentUrl !== originalMediaUrl && currentUrl !== ''
+        // Already video - check if URL changed (compare trimmed URLs)
+        const trimmedCurrent = currentUrl.trim()
+        const trimmedOriginal = (originalMediaUrl || '').trim()
+        mediaUrlChanged = trimmedCurrent !== trimmedOriginal && trimmedCurrent !== ''
       }
     } else if (mediaTab === 'audio') {
-      const audioData = audioWorkFieldsRef.current?.getAudioData()
-      const currentUrl = audioData?.url || ''
+      // Get current URL directly from the component (regardless of validity)
+      const currentUrl = audioWorkFieldsRef.current?.getCurrentUrl() || ''
       // If switching to audio tab, any URL entry is a change
       // If already on audio, check if URL changed
       if (originalMediaType !== 'audio') {
@@ -495,8 +497,10 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
         // Use isAudioValid to detect if user has entered and validated a URL
         mediaUrlChanged = isAudioValid
       } else {
-        // Already audio - check if URL changed
-        mediaUrlChanged = currentUrl !== originalMediaUrl && currentUrl !== ''
+        // Already audio - check if URL changed (compare trimmed URLs)
+        const trimmedCurrent = currentUrl.trim()
+        const trimmedOriginal = (originalMediaUrl || '').trim()
+        mediaUrlChanged = trimmedCurrent !== trimmedOriginal && trimmedCurrent !== ''
       }
     } else if (mediaTab === 'image') {
       // For images, if isImageValid is true, a new image was selected
@@ -535,26 +539,28 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
       // Keeping existing image, just updating title/description - valid (no media change)
       return true
     } else if (mediaTab === 'video') {
-      // Check if video URL changed
-      const videoData = videoWorkFieldsRef.current?.getVideoData()
-      const currentUrl = videoData?.url || ''
-      const videoUrlChanged = currentUrl !== originalMediaUrl
+      // Check if video URL changed - use getCurrentUrl to get URL regardless of validity
+      const currentUrl = videoWorkFieldsRef.current?.getCurrentUrl() || ''
+      const trimmedCurrent = currentUrl.trim()
+      const trimmedOriginal = (originalMediaUrl || '').trim()
+      const videoUrlChanged = trimmedCurrent !== trimmedOriginal
       
       // If keeping same video URL and same media type, consider valid (no need to re-validate preview)
-      if (originalMediaType === 'video' && !videoUrlChanged && currentUrl !== '') {
+      if (originalMediaType === 'video' && !videoUrlChanged && trimmedCurrent !== '') {
         return true
       }
       
       // New/changed video - must have valid video (validation + preview ready)
       return isVideoValid
     } else if (mediaTab === 'audio') {
-      // Check if audio URL changed
-      const audioData = audioWorkFieldsRef.current?.getAudioData()
-      const currentUrl = audioData?.url || ''
-      const audioUrlChanged = currentUrl !== originalMediaUrl
+      // Check if audio URL changed - use getCurrentUrl to get URL regardless of validity
+      const currentUrl = audioWorkFieldsRef.current?.getCurrentUrl() || ''
+      const trimmedCurrent = currentUrl.trim()
+      const trimmedOriginal = (originalMediaUrl || '').trim()
+      const audioUrlChanged = trimmedCurrent !== trimmedOriginal
       
       // If keeping same audio URL and same media type, consider valid (no need to re-validate preview)
-      if (originalMediaType === 'audio' && !audioUrlChanged && currentUrl !== '') {
+      if (originalMediaType === 'audio' && !audioUrlChanged && trimmedCurrent !== '') {
         return true
       }
       

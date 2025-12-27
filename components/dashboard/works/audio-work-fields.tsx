@@ -18,6 +18,7 @@ export interface AudioWorkFieldsProps {
 
 export interface AudioWorkFieldsHandle {
   getAudioData: () => { url: string; mediaSource: 'spotify' | 'soundcloud' } | null
+  getCurrentUrl: () => string
   clear: () => void
 }
 
@@ -43,6 +44,10 @@ export const AudioWorkFields = forwardRef<AudioWorkFieldsHandle, AudioWorkFields
       }
       return { url: audioUrl.trim(), mediaSource: audioMediaSource }
     }, [audioValid, audioUrl, audioMediaSource])
+
+    const getCurrentUrl = useCallback(() => {
+      return audioUrl.trim()
+    }, [audioUrl])
 
     const clear = useCallback(() => {
       setAudioUrl('')
@@ -70,6 +75,7 @@ export const AudioWorkFields = forwardRef<AudioWorkFieldsHandle, AudioWorkFields
 
     useImperativeHandle(ref, () => ({
       getAudioData,
+      getCurrentUrl,
       clear
     }))
 

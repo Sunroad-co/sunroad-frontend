@@ -145,7 +145,10 @@ export default function CategoryFilterPill({
         <button
           ref={buttonRef}
           type="button"
-          onClick={handleButtonClick}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleButtonClick()
+          }}
           className="w-full text-left text-sm text-gray-500 hover:text-gray-700 transition-colors min-w-0"
           aria-expanded={isOpen}
           aria-haspopup="listbox"

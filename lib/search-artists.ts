@@ -4,6 +4,7 @@ export type SearchParams = {
   q?: string
   category?: string
   category_ids?: number[] | null
+  location_ids?: number[] | null
   city?: string
   state?: string
   limit?: number
@@ -26,6 +27,7 @@ export async function searchArtists({
   q,
   category,
   category_ids,
+  location_ids,
   city,
   state,
   limit = 20,
@@ -36,11 +38,12 @@ export async function searchArtists({
   const rpcParams = {
     q: q ?? null,
     category_ids: category_ids && category_ids.length > 0 ? category_ids : null,
+    location_ids: location_ids && location_ids.length > 0 ? location_ids : null,
     lim: limit,
     off: offset,
   }
   
-  const { data, error } = await supabase.rpc('search_artists', rpcParams)
+  const { data, error } = await supabase.rpc('search_artists_v2', rpcParams)
   
   if (error) {
     console.error('Search error:', error)
