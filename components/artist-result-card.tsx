@@ -20,6 +20,14 @@ function formatCategories(categories: string | null): string | null {
   return categories
 }
 
+function formatDistance(distanceKm: number): string {
+  const distanceMiles = distanceKm * 0.621371 // Convert km to miles
+  if (distanceMiles < 10) {
+    return `${distanceMiles.toFixed(1)} mi`
+  }
+  return `${Math.round(distanceMiles)} mi`
+}
+
 export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
   const location = formatLocation(artist.city, artist.state)
   const categories = formatCategories(artist.categories)
@@ -80,6 +88,12 @@ export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span className="truncate">{location}</span>
+              {/* Distance (only shown when distance_km is available, i.e., near-me mode) */}
+              {artist.distance_km !== null && artist.distance_km !== undefined && (
+                <span className="ml-2 text-xs text-sunroad-brown-500">
+                  ~{formatDistance(artist.distance_km)} away
+                </span>
+              )}
             </div>
           )}
 

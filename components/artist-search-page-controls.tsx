@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react'
 import SearchBar from './search-bar'
-import WhereFilterPill from './where-filter-pill'
+import WhereFilterPill, { type NearMeCoords } from './where-filter-pill'
 import CategoryFilterPill from './category-filter-pill'
 import type { Location } from '@/hooks/use-location-search'
 
@@ -15,6 +15,10 @@ interface ArtistSearchPageControlsProps {
   onLocationChange: (location: Location | null) => void
   activeSegment: 'search' | 'where' | 'category' | null
   onSegmentActivate: (segment: 'search' | 'where' | 'category' | null) => void
+  // Near-me props
+  isNearMe?: boolean
+  onNearMeChange?: (isNearMe: boolean, coords?: NearMeCoords | null) => void
+  nearMeCoords?: NearMeCoords | null
 }
 
 export default function ArtistSearchPageControls({
@@ -25,7 +29,10 @@ export default function ArtistSearchPageControls({
   selectedLocation,
   onLocationChange,
   activeSegment,
-  onSegmentActivate
+  onSegmentActivate,
+  isNearMe,
+  onNearMeChange,
+  nearMeCoords
 }: ArtistSearchPageControlsProps) {
   const searchRef = useRef<HTMLDivElement>(null)
   const whereRef = useRef<HTMLDivElement>(null)
@@ -39,6 +46,26 @@ export default function ArtistSearchPageControls({
 
   const handleWhereActiveChange = (isActive: boolean) => {
     onSegmentActivate(isActive ? 'where' : null)
+  }
+
+  // Handle location change - clear near-me when location is selected
+  const handleLocationChange = (location: Location | null) => {
+    onLocationChange(location)
+    // Clear near-me when location is selected
+    if (location && onNearMeChange) {
+      onNearMeChange(false, null)
+    }
+  }
+
+  // Handle near-me change - clear location when near-me is activated
+  const handleNearMeChange = (newIsNearMe: boolean, coords?: NearMeCoords | null) => {
+    if (onNearMeChange) {
+      onNearMeChange(newIsNearMe, coords)
+    }
+    // Clear location when near-me is activated
+    if (newIsNearMe) {
+      onLocationChange(null)
+    }
   }
 
   const handleCategoryActiveChange = (isActive: boolean) => {
@@ -143,10 +170,13 @@ export default function ArtistSearchPageControls({
             <div className="text-sm text-gray-500 min-w-0">
               <WhereFilterPill 
                 selectedLocation={selectedLocation}
-                onChange={onLocationChange}
+                onChange={handleLocationChange}
                 embedded={true}
                 onActiveChange={handleWhereActiveChange}
                 showLabel={false}
+                isNearMe={isNearMe}
+                onNearMeChange={handleNearMeChange}
+                nearMeCoords={nearMeCoords}
               />
             </div>
           </div>
@@ -264,10 +294,13 @@ export default function ArtistSearchPageControls({
                 <div className="text-sm text-gray-500 min-w-0">
                   <WhereFilterPill 
                     selectedLocation={selectedLocation}
-                    onChange={onLocationChange}
+                    onChange={handleLocationChange}
                     embedded={true}
                     onActiveChange={handleWhereActiveChange}
                     showLabel={false}
+                    isNearMe={isNearMe}
+                    onNearMeChange={handleNearMeChange}
+                    nearMeCoords={nearMeCoords}
                   />
                 </div>
               </div>

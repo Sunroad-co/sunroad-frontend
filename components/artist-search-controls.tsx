@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import SearchBar from './search-bar'
 import CategoryFilterPill from './category-filter-pill'
-import WhereFilterPill from './where-filter-pill'
+import WhereFilterPill, { type NearMeCoords } from './where-filter-pill'
 import type { Location } from '@/hooks/use-location-search'
 
 interface ArtistSearchControlsProps {
@@ -20,6 +20,10 @@ interface ArtistSearchControlsProps {
   onCategoryChange?: (ids: number[]) => void
   selectedLocation?: Location | null
   onLocationChange?: (location: Location | null) => void
+  // Near-me props
+  isNearMe?: boolean
+  onNearMeChange?: (isNearMe: boolean, coords?: NearMeCoords | null) => void
+  nearMeCoords?: NearMeCoords | null
 }
 
 export default function ArtistSearchControls({
@@ -33,20 +37,58 @@ export default function ArtistSearchControls({
   selectedCategoryIds: controlledCategoryIds,
   onCategoryChange,
   selectedLocation: controlledLocation,
-  onLocationChange
+  onLocationChange,
+  isNearMe: controlledIsNearMe,
+  onNearMeChange: controlledOnNearMeChange,
+  nearMeCoords: controlledNearMeCoords
 }: ArtistSearchControlsProps) {
   const router = useRouter()
   const [internalCategoryIds, setInternalCategoryIds] = useState<number[]>([])
   const [internalSearchQuery, setInternalSearchQuery] = useState('')
   const [internalLocation, setInternalLocation] = useState<Location | null>(null)
+  const [internalIsNearMe, setInternalIsNearMe] = useState(false)
+  const [internalNearMeCoords, setInternalNearMeCoords] = useState<NearMeCoords | null>(null)
   
   // Use controlled props if provided (for variant="page"), otherwise use internal state
   const selectedCategoryIds = controlledCategoryIds ?? internalCategoryIds
   const searchQuery = controlledQuery ?? internalSearchQuery
   const selectedLocation = controlledLocation !== undefined ? controlledLocation : internalLocation
+  const isNearMe = controlledIsNearMe ?? internalIsNearMe
+  const nearMeCoords = controlledNearMeCoords ?? internalNearMeCoords
   const setSelectedCategoryIds = onCategoryChange ?? setInternalCategoryIds
   const setSearchQuery = onQueryChange ?? setInternalSearchQuery
   const setSelectedLocation = onLocationChange ?? setInternalLocation
+  
+  // Handle near-me change
+  const handleNearMeChange = useCallback((newIsNearMe: boolean, coords?: NearMeCoords | null) => {
+    if (controlledOnNearMeChange) {
+      controlledOnNearMeChange(newIsNearMe, coords)
+    } else {
+      setInternalIsNearMe(newIsNearMe)
+      setInternalNearMeCoords(coords ?? null)
+    }
+    // Clear location when near-me is activated
+    if (newIsNearMe) {
+      if (onLocationChange) {
+        onLocationChange(null)
+      } else {
+        setInternalLocation(null)
+      }
+    }
+  }, [controlledOnNearMeChange, onLocationChange])
+  
+  // Handle location change - clear near-me when location is selected
+  const handleLocationChange = useCallback((location: Location | null) => {
+    if (onLocationChange) {
+      onLocationChange(location)
+    } else {
+      setInternalLocation(location)
+    }
+    // Clear near-me when location is selected
+    if (location) {
+      handleNearMeChange(false, null)
+    }
+  }, [onLocationChange, handleNearMeChange])
   
   const [activeSegment, setActiveSegment] = useState<'search' | 'where' | 'category' | null>(null)
   // For 'page' variant, always expanded; for 'default', use state
@@ -166,6 +208,7 @@ export default function ArtistSearchControls({
         !activeSegment &&
         !searchQuery.trim() &&
         !selectedLocation && // Don't collapse if location is selected
+        !isNearMe && // Don't collapse if near-me is active
         !selectedCategoryIds.length && // Don't collapse if categories are selected
         !isAnimatingOut &&
         containerRef.current &&
@@ -194,6 +237,7 @@ export default function ArtistSearchControls({
         !activeSegment &&
         !searchQuery.trim() &&
         !selectedLocation && // Don't collapse if location is selected
+        !isNearMe && // Don't collapse if near-me is active
         !selectedCategoryIds.length && // Don't collapse if categories are selected
         !isAnimatingOut &&
         !justExpandedRef.current
@@ -251,7 +295,12 @@ export default function ArtistSearchControls({
     if (selectedCategoryIds.length > 0) {
       params.set('categories', selectedCategoryIds.join(','))
     }
-    if (selectedLocation) {
+    if (isNearMe && nearMeCoords) {
+      params.set('near', '1')
+      params.set('lat', nearMeCoords.lat.toString())
+      params.set('lon', nearMeCoords.lon.toString())
+      params.set('rmi', '50') // 50 miles
+    } else if (selectedLocation) {
       // Pass location data directly in URL to avoid extra API call
       params.set('location_id', selectedLocation.id.toString())
       params.set('location_formatted', selectedLocation.formatted)
@@ -263,7 +312,7 @@ export default function ArtistSearchControls({
     }
     const queryString = params.toString()
     router.push(`/search${queryString ? `?${queryString}` : ''}`)
-  }, [searchQuery, selectedCategoryIds, selectedLocation, router])
+  }, [searchQuery, selectedCategoryIds, selectedLocation, isNearMe, nearMeCoords, router])
 
   return (
     <div ref={containerRef} className={`w-full ${className}`}>
@@ -396,10 +445,13 @@ export default function ArtistSearchControls({
                 <div className="text-sm text-gray-500 min-w-0">
                   <WhereFilterPill 
                     selectedLocation={selectedLocation}
-                    onChange={setSelectedLocation}
+                    onChange={handleLocationChange}
                     embedded={true}
                     onActiveChange={handleWhereActiveChange}
                     showLabel={false}
+                    isNearMe={isNearMe}
+                    onNearMeChange={handleNearMeChange}
+                    nearMeCoords={nearMeCoords}
                   />
                 </div>
               </div>
@@ -609,10 +661,13 @@ export default function ArtistSearchControls({
                 <div className="text-sm text-gray-500 min-w-0">
                   <WhereFilterPill 
                     selectedLocation={selectedLocation}
-                    onChange={setSelectedLocation}
+                    onChange={handleLocationChange}
                     embedded={true}
                     onActiveChange={handleWhereActiveChange}
                     showLabel={false}
+                    isNearMe={isNearMe}
+                    onNearMeChange={handleNearMeChange}
+                    nearMeCoords={nearMeCoords}
                   />
                 </div>
                 </div>

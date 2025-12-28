@@ -7,6 +7,9 @@ interface UseArtistSearchResultsParams {
   locationIds?: number[]
   limit?: number
   enabled?: boolean
+  // Near-me params
+  nearMeCoords?: { lat: number; lon: number } | null
+  radiusKm?: number
 }
 
 interface UseArtistSearchResultsReturn {
@@ -24,7 +27,9 @@ export function useArtistSearchResults({
   categoryIds,
   locationIds,
   limit = 20,
-  enabled = true
+  enabled = true,
+  nearMeCoords,
+  radiusKm = 80
 }: UseArtistSearchResultsParams): UseArtistSearchResultsReturn {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -39,13 +44,15 @@ export function useArtistSearchResults({
   const currentQueryRef = useRef(query)
   const currentCategoryIdsRef = useRef(categoryIds)
   const currentLocationIdsRef = useRef(locationIds)
+  const currentNearMeCoordsRef = useRef(nearMeCoords)
 
   // Update refs when params change
   useEffect(() => {
     currentQueryRef.current = query
     currentCategoryIdsRef.current = categoryIds
     currentLocationIdsRef.current = locationIds
-  }, [query, categoryIds, locationIds])
+    currentNearMeCoordsRef.current = nearMeCoords
+  }, [query, categoryIds, locationIds, nearMeCoords])
 
   const performSearch = useCallback(async (
     searchQuery: string,
@@ -67,12 +74,20 @@ export function useArtistSearchResults({
     setError(null)
 
     try {
+      // Determine if we should use near-me search
+      const nearMeCoords = currentNearMeCoordsRef.current
+      const shouldUseNearMe = nearMeCoords !== null && nearMeCoords !== undefined
+      
       const searchResults = await searchArtists({
         q: searchQuery.trim() || undefined,
         category_ids: categoryIdsParam && categoryIdsParam.length > 0 ? categoryIdsParam : null,
         location_ids: locationIdsParam && locationIdsParam.length > 0 ? locationIdsParam : null,
         limit,
-        offset: currentOffset
+        offset: currentOffset,
+        // Near-me params (only if near-me is active)
+        user_lat: shouldUseNearMe && nearMeCoords ? nearMeCoords.lat : null,
+        user_lon: shouldUseNearMe && nearMeCoords ? nearMeCoords.lon : null,
+        radius_km: shouldUseNearMe ? radiusKm : null
       })
 
       // Check if we got fewer results than requested (means no more pages)
@@ -101,12 +116,13 @@ export function useArtistSearchResults({
       setIsLoadingMore(false)
       fetchingRef.current = false
     }
-  }, [limit])
+  }, [limit, radiusKm])
 
   // Create stable string keys for comparison to prevent unnecessary re-fetches
   const categoryIdsKey = categoryIds ? categoryIds.sort().join(',') : ''
   const locationIdsKey = locationIds ? locationIds.sort().join(',') : ''
-  const searchKey = `${query}|${categoryIdsKey}|${locationIdsKey}`
+  const nearMeKey = nearMeCoords ? `${nearMeCoords.lat},${nearMeCoords.lon}` : ''
+  const searchKey = `${query}|${categoryIdsKey}|${locationIdsKey}|${nearMeKey}`
 
   // Initial search when query, categoryIds, or locationIds change
   useEffect(() => {
@@ -126,7 +142,7 @@ export function useArtistSearchResults({
     // Perform search with no delay (no debounce for page results)
     performSearch(query, categoryIds, locationIds, 0, false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchKey, enabled, performSearch])
+  }, [searchKey, enabled, performSearch, nearMeCoords])
 
   const loadMore = useCallback(() => {
     if (!enabled || loading || isLoadingMore || !hasMore || fetchingRef.current) {
@@ -140,13 +156,13 @@ export function useArtistSearchResults({
       offset,
       true // append mode
     )
-  }, [enabled, loading, isLoadingMore, hasMore, offset, performSearch])
+  }, [enabled, loading, isLoadingMore, hasMore, offset, performSearch, nearMeCoords])
 
   const refetch = useCallback(() => {
     setOffset(0)
     setHasMore(true)
     performSearch(query, categoryIds, locationIds, 0, false)
-  }, [query, categoryIds, locationIds, performSearch])
+  }, [query, categoryIds, locationIds, performSearch, nearMeCoords])
 
   return {
     results,

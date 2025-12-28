@@ -6,7 +6,9 @@ import ArtistSearchControls from '@/components/artist-search-controls'
 import ArtistResultCard from '@/components/artist-result-card'
 import { useArtistSearchResults } from '@/hooks/use-artist-search-results'
 import type { Location } from '@/hooks/use-location-search'
+import type { NearMeCoords } from '@/components/where-filter-pill'
 import { createClient } from '@/lib/supabase/client'
+import Toast from '@/components/ui/toast'
 
 // Infinite scroll sentinel component
 function InfiniteScrollSentinel({ 
@@ -75,8 +77,27 @@ function SearchPageContent() {
   const initialQuery = searchParams.get('q') || ''
   const initialCategories = searchParams.get('categories')?.split(',').map(Number).filter(Boolean) || []
   
+  // Check for near-me params
+  const initialIsNearMe = searchParams.get('near') === '1'
+  const initialNearMeCoords: NearMeCoords | null = useMemo(() => {
+    if (!initialIsNearMe) return null
+    const lat = searchParams.get('lat')
+    const lon = searchParams.get('lon')
+    if (lat && lon) {
+      const latNum = parseFloat(lat)
+      const lonNum = parseFloat(lon)
+      if (!isNaN(latNum) && !isNaN(lonNum)) {
+        return { lat: latNum, lon: lonNum }
+      }
+    }
+    return null
+  }, [searchParams, initialIsNearMe])
+  
   // Reconstruct location from URL params (no API call needed!)
   const initialLocation: Location | null = useMemo(() => {
+    // Don't load location if near-me is active
+    if (initialIsNearMe) return null
+    
     const locationId = searchParams.get('location_id')
     if (!locationId) return null
     
@@ -89,25 +110,68 @@ function SearchPageContent() {
       country_code: searchParams.get('location_country_code') || null,
       artist_count: searchParams.get('location_artist_count') ? Number(searchParams.get('location_artist_count')) : 0
     }
-  }, [searchParams])
+  }, [searchParams, initialIsNearMe])
 
   // Local state
   const [query, setQuery] = useState(initialQuery)
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(initialCategories)
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(initialLocation)
+  const [isNearMe, setIsNearMe] = useState(initialIsNearMe)
+  const [nearMeCoords, setNearMeCoords] = useState<NearMeCoords | null>(initialNearMeCoords)
   const [activeSegment, setActiveSegment] = useState<'search' | 'where' | 'category' | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [toastVisible, setToastVisible] = useState(false)
 
   // Update location if URL params change
   useEffect(() => {
     if (initialLocation) {
       setSelectedLocation(initialLocation)
+      setIsNearMe(false)
+      setNearMeCoords(null)
     }
   }, [initialLocation])
 
+  // Handle near-me hydration from URL
+  useEffect(() => {
+    if (initialIsNearMe && initialNearMeCoords) {
+      setIsNearMe(true)
+      setNearMeCoords(initialNearMeCoords)
+      setSelectedLocation(null)
+    } else if (initialIsNearMe && !initialNearMeCoords) {
+      // near=1 but missing coords - show toast and ignore
+      setToastMessage('Location unavailable. Please try selecting "Near me" again.')
+      setToastVisible(true)
+      setIsNearMe(false)
+      setNearMeCoords(null)
+    }
+  }, [initialIsNearMe, initialNearMeCoords])
+
+  // Handle near-me change
+  const handleNearMeChange = useCallback((newIsNearMe: boolean, coords?: NearMeCoords | null) => {
+    setIsNearMe(newIsNearMe)
+    setNearMeCoords(coords ?? null)
+    // Clear location when near-me is activated
+    if (newIsNearMe) {
+      setSelectedLocation(null)
+    }
+  }, [])
+
+  // Handle location change - clear near-me when location is selected
+  const handleLocationChange = useCallback((location: Location | null) => {
+    setSelectedLocation(location)
+    // Clear near-me when location is selected
+    if (location) {
+      setIsNearMe(false)
+      setNearMeCoords(null)
+    }
+  }, [])
+
   // Memoize locationIds array to prevent infinite loops
   const locationIds = useMemo(() => {
+    // Don't use location_ids when near-me is active
+    if (isNearMe) return undefined
     return selectedLocation ? [selectedLocation.id] : undefined
-  }, [selectedLocation?.id])
+  }, [selectedLocation?.id, isNearMe])
 
   // Sync URL when state changes (only if different from current URL)
   useEffect(() => {
@@ -118,7 +182,12 @@ function SearchPageContent() {
     if (selectedCategoryIds.length > 0) {
       params.set('categories', selectedCategoryIds.join(','))
     }
-    if (selectedLocation) {
+    if (isNearMe && nearMeCoords) {
+      params.set('near', '1')
+      params.set('lat', nearMeCoords.lat.toString())
+      params.set('lon', nearMeCoords.lon.toString())
+      params.set('rmi', '50') // 50 miles
+    } else if (selectedLocation) {
       // Pass location data directly in URL to avoid extra API call
       params.set('location_id', selectedLocation.id.toString())
       params.set('location_formatted', selectedLocation.formatted)
@@ -136,7 +205,7 @@ function SearchPageContent() {
     if (newUrl !== currentUrl) {
       router.replace(newUrl, { scroll: false })
     }
-  }, [query, selectedCategoryIds, selectedLocation, router])
+  }, [query, selectedCategoryIds, selectedLocation, isNearMe, nearMeCoords, router])
 
   // Memoize categoryIds to prevent unnecessary re-renders
   const categoryIds = useMemo(() => {
@@ -156,7 +225,9 @@ function SearchPageContent() {
     categoryIds,
     locationIds,
     limit: 20,
-    enabled: true
+    enabled: true,
+    nearMeCoords: isNearMe ? nearMeCoords : null,
+    radiusKm: 80 // ~50 miles
   })
 
   const handleLoadMore = useCallback(() => {
@@ -166,7 +237,7 @@ function SearchPageContent() {
   }, [loading, hasMore, loadMore])
 
   // Check if we have any search criteria
-  const hasSearchCriteria = query.trim().length > 0 || selectedCategoryIds.length > 0 || selectedLocation !== null
+  const hasSearchCriteria = query.trim().length > 0 || selectedCategoryIds.length > 0 || selectedLocation !== null || isNearMe
 
   return (
     <main className="min-h-screen bg-sunroad-cream font-body">
@@ -185,7 +256,10 @@ function SearchPageContent() {
             selectedCategoryIds={selectedCategoryIds}
             onCategoryChange={setSelectedCategoryIds}
             selectedLocation={selectedLocation}
-            onLocationChange={setSelectedLocation}
+            onLocationChange={handleLocationChange}
+            isNearMe={isNearMe}
+            onNearMeChange={handleNearMeChange}
+            nearMeCoords={nearMeCoords}
           />
         </section>
 
@@ -297,6 +371,15 @@ function SearchPageContent() {
           )}
         </section>
       </div>
+      {/* Toast for errors */}
+      <Toast
+        message={toastMessage || ''}
+        isVisible={toastVisible}
+        onClose={() => {
+          setToastVisible(false)
+          setToastMessage(null)
+        }}
+      />
     </main>
   )
 }

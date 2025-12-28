@@ -1,9 +1,15 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useLocationSearch, type Location } from '@/hooks/use-location-search'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import Toast from '@/components/ui/toast'
+
+export interface NearMeCoords {
+  lat: number
+  lon: number
+}
 
 interface WhereFilterPillProps {
   selectedLocation: Location | null
@@ -12,6 +18,10 @@ interface WhereFilterPillProps {
   onActiveChange?: (isActive: boolean) => void
   isActive?: boolean
   showLabel?: boolean
+  // Near-me props
+  isNearMe?: boolean
+  onNearMeChange?: (isNearMe: boolean, coords?: NearMeCoords | null) => void
+  nearMeCoords?: NearMeCoords | null
 }
 
 export default function WhereFilterPill({
@@ -20,7 +30,10 @@ export default function WhereFilterPill({
   embedded = false,
   onActiveChange,
   isActive = true,
-  showLabel = true
+  showLabel = true,
+  isNearMe = false,
+  onNearMeChange,
+  nearMeCoords
 }: WhereFilterPillProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [locationQuery, setLocationQuery] = useState('')
@@ -28,6 +41,9 @@ export default function WhereFilterPill({
   const buttonRef = useRef<HTMLButtonElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [toastVisible, setToastVisible] = useState(false)
 
   // Only enable location search when dropdown is open
   const { locations, loading, error, retry, query, setQuery } = useLocationSearch({ 
@@ -90,8 +106,132 @@ export default function WhereFilterPill({
     }
   }, [isOpen, onActiveChange])
 
+  // Geolocation cache key
+  const GEOLOCATION_CACHE_KEY = 'sunroad_geolocation'
+  const GEOLOCATION_CACHE_TTL = 60 * 60 * 1000 // 1 hour
+
+  // Get cached geolocation
+  const getCachedGeolocation = useCallback((): NearMeCoords | null => {
+    if (typeof window === 'undefined') return null
+    try {
+      const cached = sessionStorage.getItem(GEOLOCATION_CACHE_KEY)
+      if (!cached) return null
+      const { coords, timestamp } = JSON.parse(cached)
+      const now = Date.now()
+      if (now - timestamp < GEOLOCATION_CACHE_TTL) {
+        return coords
+      }
+      // Cache expired, remove it
+      sessionStorage.removeItem(GEOLOCATION_CACHE_KEY)
+      return null
+    } catch {
+      return null
+    }
+  }, [])
+
+  // Cache geolocation
+  const cacheGeolocation = useCallback((coords: NearMeCoords) => {
+    if (typeof window === 'undefined') return
+    try {
+      sessionStorage.setItem(GEOLOCATION_CACHE_KEY, JSON.stringify({
+        coords,
+        timestamp: Date.now()
+      }))
+    } catch {
+      // Ignore storage errors
+    }
+  }, [])
+
+  // Show toast
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message)
+    setToastVisible(true)
+  }, [])
+
+  // Handle "Near me" click
+  const handleNearMeClick = useCallback(async () => {
+    if (isGettingLocation) return
+
+    // Check for cached location first
+    const cached = getCachedGeolocation()
+    if (cached) {
+      onNearMeChange?.(true, cached)
+      onChange(null) // Clear location selection
+      setIsOpen(false)
+      onActiveChange?.(false)
+      setLocationQuery('')
+      setActiveIndex(-1)
+      return
+    }
+
+    // Check if geolocation is available
+    if (!navigator.geolocation) {
+      showToast('Geolocation is not supported by your browser')
+      return
+    }
+
+    setIsGettingLocation(true)
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Geolocation request timed out'))
+        }, 10000) // 10 second timeout
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            clearTimeout(timeout)
+            resolve(pos)
+          },
+          (err) => {
+            clearTimeout(timeout)
+            reject(err)
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 60000 // Accept cached position up to 1 minute old
+          }
+        )
+      })
+
+      const coords: NearMeCoords = {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude
+      }
+
+      // Cache the coordinates
+      cacheGeolocation(coords)
+
+      // Activate near-me mode
+      onNearMeChange?.(true, coords)
+      onChange(null) // Clear location selection
+      setIsOpen(false)
+      onActiveChange?.(false)
+      setLocationQuery('')
+      setActiveIndex(-1)
+    } catch (error) {
+      let errorMessage = 'Unable to get your location'
+      if (error instanceof Error) {
+        if (error.message.includes('denied') || error.message.includes('permission')) {
+          errorMessage = 'Location access denied. Please enable location permissions in your browser settings.'
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Location request timed out. Please try again.'
+        } else if (error.message.includes('unavailable')) {
+          errorMessage = 'Location is unavailable. Please try again later.'
+        }
+      }
+      showToast(errorMessage)
+      // Keep dropdown open and usable
+    } finally {
+      setIsGettingLocation(false)
+    }
+  }, [isGettingLocation, getCachedGeolocation, onNearMeChange, onChange, onActiveChange, cacheGeolocation, showToast])
+
   const handleSelect = (location: Location) => {
     onChange(location)
+    // Clear near-me when selecting a location
+    onNearMeChange?.(false, null)
     setIsOpen(false)
     onActiveChange?.(false)
     setLocationQuery('')
@@ -102,6 +242,7 @@ export default function WhereFilterPill({
     e.stopPropagation()
     e.preventDefault()
     onChange(null)
+    onNearMeChange?.(false, null)
     // Don't clear locationQuery or open dropdown
     // Just clear the selection
   }
@@ -121,6 +262,9 @@ export default function WhereFilterPill({
   }
 
   const getButtonLabel = () => {
+    if (isNearMe) {
+      return 'Near me'
+    }
     if (!selectedLocation) {
       return showLabel ? 'Where' : 'Location'
     }
@@ -128,6 +272,9 @@ export default function WhereFilterPill({
   }
 
   const getSubtitle = () => {
+    if (isNearMe) {
+      return 'Near me'
+    }
     if (!selectedLocation) {
       return 'Location'
     }
@@ -167,12 +314,22 @@ export default function WhereFilterPill({
 
     if (!isOpen) return
 
+    // Check if "Near me" option is visible (when query is empty)
+    const showNearMe = !locationQuery.trim()
+    const totalOptions = showNearMe ? locations.length + 1 : locations.length
+
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (activeIndex >= 0 && activeIndex < locations.length) {
+      if (activeIndex === -1 && showNearMe) {
+        // "Near me" is selected (index -1)
+        handleNearMeClick()
+      } else if (activeIndex >= 0 && activeIndex < locations.length) {
         handleSelect(locations[activeIndex])
+      } else if (showNearMe) {
+        // Select "Near me" if no active index and it's visible
+        handleNearMeClick()
       } else if (locations.length > 0) {
-        // Select first item if no active index
+        // Select first location if no active index
         handleSelect(locations[0])
       }
       return
@@ -181,7 +338,11 @@ export default function WhereFilterPill({
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       setActiveIndex((prev) => {
-        const nextIndex = prev < locations.length - 1 ? prev + 1 : 0
+        if (prev === -1) {
+          // Move from "Near me" to first location
+          return 0
+        }
+        const nextIndex = prev < locations.length - 1 ? prev + 1 : (showNearMe ? -1 : 0)
         return nextIndex
       })
       return
@@ -190,7 +351,11 @@ export default function WhereFilterPill({
     if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActiveIndex((prev) => {
-        const nextIndex = prev > 0 ? prev - 1 : locations.length - 1
+        if (prev === 0 && showNearMe) {
+          // Move from first location to "Near me"
+          return -1
+        }
+        const nextIndex = prev > 0 ? prev - 1 : (showNearMe ? -1 : locations.length - 1)
         return nextIndex
       })
       return
@@ -234,14 +399,14 @@ export default function WhereFilterPill({
             <span 
               className={cn(
                 "block min-w-0 truncate whitespace-nowrap",
-                selectedLocation && "text-amber-800 font-medium"
+                (selectedLocation || isNearMe) && "text-amber-800 font-medium"
               )}
               title={selectedLocation ? selectedLocation.formatted : undefined}
             >
               {getSubtitle()}
             </span>
           </button>
-          {selectedLocation && (
+          {(selectedLocation || isNearMe) && (
             <button
               type="button"
               onClick={handleClear}
@@ -270,7 +435,7 @@ export default function WhereFilterPill({
         embedded
           ? 'h-full rounded-none border-0 bg-transparent px-4 py-3 text-left'
               : 'rounded-full border bg-white min-w-[100px] px-3 py-2 justify-center',
-            selectedLocation
+            (selectedLocation || isNearMe)
               ? embedded
                 ? 'text-amber-800 font-medium'
                 : 'border-amber-300 bg-amber-50 text-amber-800 font-medium'
@@ -287,7 +452,7 @@ export default function WhereFilterPill({
           >
             {getButtonLabel()}
           </span>
-          {selectedLocation && (
+          {(selectedLocation || isNearMe) && (
             <button
               type="button"
               onClick={handleClear}
@@ -342,6 +507,7 @@ export default function WhereFilterPill({
               }}
               onKeyDown={(e) => {
                 e.stopPropagation()
+                const showNearMe = !locationQuery.trim()
                 if (e.key === 'Escape') {
                   setIsOpen(false)
                   onActiveChange?.(false)
@@ -351,19 +517,29 @@ export default function WhereFilterPill({
                 } else if (e.key === 'ArrowDown') {
                   e.preventDefault()
                   setActiveIndex((prev) => {
-                    const nextIndex = prev < locations.length - 1 ? prev + 1 : 0
+                    if (prev === -1) {
+                      return 0
+                    }
+                    const nextIndex = prev < locations.length - 1 ? prev + 1 : (showNearMe ? -1 : 0)
                     return nextIndex
                   })
                 } else if (e.key === 'ArrowUp') {
                   e.preventDefault()
                   setActiveIndex((prev) => {
-                    const nextIndex = prev > 0 ? prev - 1 : locations.length - 1
+                    if (prev === 0 && showNearMe) {
+                      return -1
+                    }
+                    const nextIndex = prev > 0 ? prev - 1 : (showNearMe ? -1 : locations.length - 1)
                     return nextIndex
                   })
                 } else if (e.key === 'Enter') {
                   e.preventDefault()
-                  if (activeIndex >= 0 && activeIndex < locations.length) {
+                  if (activeIndex === -1 && showNearMe) {
+                    handleNearMeClick()
+                  } else if (activeIndex >= 0 && activeIndex < locations.length) {
                     handleSelect(locations[activeIndex])
+                  } else if (showNearMe) {
+                    handleNearMeClick()
                   } else if (locations.length > 0) {
                     handleSelect(locations[0])
                   }
@@ -379,6 +555,38 @@ export default function WhereFilterPill({
 
           {/* Results Area - Shows loading, error, or results */}
           <div className="flex-1 overflow-y-auto">
+            {/* Near me option - Always shown at top when query is empty */}
+            {!locationQuery.trim() && (
+              <div className="p-3 border-b border-gray-200">
+                <button
+                  type="button"
+                  onClick={handleNearMeClick}
+                  disabled={isGettingLocation}
+                  onMouseEnter={() => setActiveIndex(-1)}
+                  className={cn(
+                    'w-full text-left px-3 py-2.5 text-sm rounded-lg transition-colors flex items-center gap-3',
+                    isNearMe
+                      ? 'bg-amber-100 border border-amber-500 text-amber-800'
+                      : activeIndex === -1
+                      ? 'bg-amber-50 text-gray-900 border border-transparent'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-transparent',
+                    isGettingLocation && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium">Near me</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Within 50 miles</div>
+                  </div>
+                  {isGettingLocation && (
+                    <div className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full flex-shrink-0" />
+                  )}
+                </button>
+              </div>
+            )}
             {loading ? (
               <div className="p-3 space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -449,6 +657,15 @@ export default function WhereFilterPill({
           </div>
         </div>
       )}
+      {/* Toast for geolocation errors */}
+      <Toast
+        message={toastMessage || ''}
+        isVisible={toastVisible}
+        onClose={() => {
+          setToastVisible(false)
+          setToastMessage(null)
+        }}
+      />
     </div>
   )
 }
