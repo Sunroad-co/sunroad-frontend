@@ -73,9 +73,10 @@ export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
                 </p>
               )}
             </div>
-            {artist.rank > 0 && (
+            {/* Distance badge (only shown when distance_km is available, i.e., near-me mode) */}
+            {artist.distance_km !== null && artist.distance_km !== undefined && (
               <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-sunroad-amber-100 text-sunroad-amber-800 flex-shrink-0 whitespace-nowrap">
-                Match
+                ~{formatDistance(artist.distance_km)}
               </span>
             )}
           </div>
@@ -88,12 +89,6 @@ export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span className="truncate">{location}</span>
-              {/* Distance (only shown when distance_km is available, i.e., near-me mode) */}
-              {artist.distance_km !== null && artist.distance_km !== undefined && (
-                <span className="ml-2 text-xs text-sunroad-brown-500">
-                  ~{formatDistance(artist.distance_km)} away
-                </span>
-              )}
             </div>
           )}
 

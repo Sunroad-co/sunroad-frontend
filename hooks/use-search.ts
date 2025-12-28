@@ -8,6 +8,9 @@ interface UseSearchOptions {
   categoryIds?: number[]
   locationIds?: number[]
   enabled?: boolean
+  // Near-me params
+  nearMeCoords?: { lat: number; lon: number } | null
+  radiusKm?: number
 }
 
 interface UseSearchReturn {
@@ -28,7 +31,9 @@ export function useSearch({
   limit = 10,
   categoryIds,
   locationIds,
-  enabled = true
+  enabled = true,
+  nearMeCoords,
+  radiusKm = 80
 }: UseSearchOptions = {}): UseSearchReturn {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -39,7 +44,7 @@ export function useSearch({
 
   // Debounced search function
   const debouncedSearch = useCallback(
-    debounce(async (searchQuery: string, categoryIdsParam?: number[], locationIdsParam?: number[]) => {
+    debounce(async (searchQuery: string, categoryIdsParam?: number[], locationIdsParam?: number[], nearMeCoordsParam?: { lat: number; lon: number } | null) => {
       if (searchQuery.length < minQueryLength) {
         setResults([])
         setLoading(false)
@@ -55,7 +60,11 @@ export function useSearch({
           q: searchQuery,
           category_ids: categoryIdsParam && categoryIdsParam.length > 0 ? categoryIdsParam : null,
           location_ids: locationIdsParam && locationIdsParam.length > 0 ? locationIdsParam : null,
-          limit
+          limit,
+          // Near-me params (only if near-me is active)
+          user_lat: nearMeCoordsParam ? nearMeCoordsParam.lat : null,
+          user_lon: nearMeCoordsParam ? nearMeCoordsParam.lon : null,
+          radius_km: nearMeCoordsParam ? radiusKm : null
         })
         setResults(searchResults)
         setHasSearched(true) // Mark that we've completed a search
@@ -68,7 +77,7 @@ export function useSearch({
         setLoading(false)
       }
     }, debounceMs),
-    [debounceMs, minQueryLength, limit]
+    [debounceMs, minQueryLength, limit, radiusKm]
   )
 
   // Effect to trigger search when query, categoryIds, or locationIds changes
@@ -83,14 +92,14 @@ export function useSearch({
 
     if (query.trim() && query.trim().length >= minQueryLength) {
       setHasSearched(false) // Reset search completion flag when starting new search
-      debouncedSearch(query.trim(), categoryIds, locationIds)
+      debouncedSearch(query.trim(), categoryIds, locationIds, nearMeCoords)
     } else {
       setResults([])
       setLoading(false)
       setError(null)
       setHasSearched(false)
     }
-  }, [query, categoryIds, locationIds, debouncedSearch, minQueryLength, enabled])
+  }, [query, categoryIds, locationIds, nearMeCoords, debouncedSearch, minQueryLength, enabled])
 
   // Clear search function
   const clearSearch = useCallback(() => {

@@ -13,6 +13,10 @@ interface CategoryFilterPillProps {
   isActive?: boolean
   showLabel?: boolean
   subtitle?: string
+  // Parent rendering props
+  renderDropdownInParent?: boolean
+  onDropdownRender?: (dropdown: React.ReactNode) => void
+  isOpen?: boolean
 }
 
 export default function CategoryFilterPill({
@@ -22,10 +26,15 @@ export default function CategoryFilterPill({
   onActiveChange,
   isActive = true,
   showLabel = true,
-  subtitle = "Category"
+  subtitle = "Category",
+  renderDropdownInParent = false,
+  onDropdownRender,
+  isOpen: controlledIsOpen
 }: CategoryFilterPillProps) {
   const { categories, loading, error, retry } = useCategories()
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen
+  const setIsOpen = controlledIsOpen !== undefined ? (() => {}) : setInternalIsOpen
   const [categoryQuery, setCategoryQuery] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -138,18 +147,154 @@ export default function CategoryFilterPill({
     e.preventDefault()
   }
 
+  // Render dropdown content function (without positioning wrapper for parent rendering)
+  const renderDropdownContent = () => {
+    if (!isOpen) return null
+    
+    return (
+      <div
+        onMouseDown={handleDropdownMouseDown}
+        className="bg-white border border-gray-200 rounded-xl shadow-xl max-h-96 overflow-hidden flex flex-col transition-all duration-200 ease-out opacity-100 translate-y-0 w-full"
+        role="listbox"
+      >
+        {loading ? (
+          <div className="p-4 space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="p-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-800 mb-2">{error}</p>
+              <button
+                onClick={retry}
+                className="text-xs text-red-600 hover:text-red-700 font-medium"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="p-4 text-center text-gray-500 text-sm">
+            No categories available
+          </div>
+        ) : (
+          <>
+            {/* Search Input */}
+            <div className="p-3 border-b border-gray-200">
+              <input
+                ref={inputRef}
+                type="text"
+                value={categoryQuery}
+                onChange={(e) => {
+                  e.stopPropagation()
+                  setCategoryQuery(e.target.value)
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation()
+                  if (e.key === 'Escape') {
+                    setIsOpen(false)
+                    onActiveChange?.(false)
+                    buttonRef.current?.focus()
+                  }
+                }}
+                placeholder="Search categories..."
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              />
+            </div>
+
+            {/* Category Chips */}
+            <div className="flex-1 overflow-y-auto p-3">
+              {filteredCategories.length === 0 ? (
+                <div className="text-center text-gray-500 text-sm py-4">
+                  No categories match &quot;{categoryQuery}&quot;
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {filteredCategories.map((category) => {
+                    const isSelected = selectedIds.includes(category.id)
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => handleToggle(category.id)}
+                        role="option"
+                        aria-selected={isSelected}
+                        className={cn(
+                          'px-3 py-1 text-sm rounded-full border transition-colors',
+                          isSelected
+                            ? 'bg-amber-100 border-amber-500 text-amber-800'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                        )}
+                      >
+                        {category.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // Track previous content signature to prevent unnecessary re-renders
+  const prevContentSignatureRef = useRef<string>('')
+
+  // Expose dropdown to parent when renderDropdownInParent is true
+  useEffect(() => {
+    if (!renderDropdownInParent || !onDropdownRender) {
+      return
+    }
+
+    // Create a signature of the current state that determines what should be rendered
+    const categoriesIds = categories.map(c => c.id).join(',')
+    const selectedIdsStr = selectedIds.sort().join(',')
+    const contentSignature = JSON.stringify({
+      isOpen,
+      categoryQuery,
+      categoriesIds,
+      selectedIdsStr,
+      loading,
+      error: !!error
+    })
+
+    // Only update if the signature actually changed
+    if (contentSignature === prevContentSignatureRef.current) {
+      return
+    }
+
+    prevContentSignatureRef.current = contentSignature
+
+    if (isOpen) {
+      const content = renderDropdownContent()
+      onDropdownRender(content)
+    } else {
+      onDropdownRender(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, categoryQuery, categories, loading, error, selectedIds, renderDropdownInParent, onDropdownRender])
+
   return (
-    <div className={`${embedded ? '' : 'relative'} w-full`}>
+    <div className="relative w-full">
       {!showLabel && embedded ? (
         // When showLabel is false, render as clickable subtitle text
         <button
           ref={buttonRef}
           type="button"
           onClick={(e) => {
-            e.stopPropagation()
+            if (!renderDropdownInParent) {
+              e.stopPropagation()
+            }
             handleButtonClick()
           }}
-          className="w-full text-left text-sm text-gray-500 hover:text-gray-700 transition-colors min-w-0"
+          className="w-full h-full text-left text-sm text-gray-500 hover:text-gray-700 transition-colors min-w-0"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
         >
@@ -194,17 +339,13 @@ export default function CategoryFilterPill({
       )}
 
       {/* Dropdown */}
-      {isOpen && (
+      {isOpen && !renderDropdownInParent && (
         <div
           ref={dropdownRef}
           onMouseDown={handleDropdownMouseDown}
           className={cn(
-            'absolute top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-hidden flex flex-col',
-            'transition-all duration-200 ease-out',
-            embedded 
-              ? 'left-0 right-0 w-full md:left-auto md:right-0 md:min-w-[420px] md:max-w-[560px] md:w-auto' 
-              : 'left-1/2 -translate-x-1/2 w-[calc(100vw-1rem)] max-w-64',
-            'opacity-100 translate-y-0'
+            'absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-hidden flex flex-col',
+            'transition-all duration-200 ease-out opacity-100 translate-y-0 w-full'
           )}
           role="listbox"
         >

@@ -20,6 +20,11 @@ interface SearchBarProps {
   disableDropdown?: boolean
   value?: string
   onSearch?: () => void
+  mobileDropdownTop?: number
+  renderDropdownInParent?: boolean
+  onDropdownRender?: (dropdown: React.ReactNode) => void
+  // Near-me params
+  nearMeCoords?: { lat: number; lon: number } | null
 }
 
 // Skeleton loader component - extracted outside to avoid recreation on every render
@@ -45,6 +50,15 @@ const SkeletonLoader: React.FC = () => (
     ))}
   </div>
 )
+
+// Format distance helper function
+function formatDistance(distanceKm: number): string {
+  const distanceMiles = distanceKm * 0.621371 // Convert km to miles
+  if (distanceMiles < 10) {
+    return `${distanceMiles.toFixed(1)} mi`
+  }
+  return `${Math.round(distanceMiles)} mi`
+}
 
 // Artist Avatar component - extracted for better readability
 interface ArtistAvatarProps {
@@ -89,7 +103,11 @@ export default function SearchBar({
   showLabel = true,
   disableDropdown = false,
   value: controlledValue,
-  onSearch
+  onSearch,
+  mobileDropdownTop,
+  renderDropdownInParent = false,
+  onDropdownRender,
+  nearMeCoords
 }: SearchBarProps) {
   const router = useRouter()
   const [isFocused, setIsFocused] = useState(false)
@@ -110,7 +128,8 @@ export default function SearchBar({
     limit: 8,
     categoryIds,
     locationIds,
-    enabled: !disableDropdown
+    enabled: !disableDropdown,
+    nearMeCoords
   })
   
   // When dropdown is disabled, use local state and controlled value
@@ -155,6 +174,162 @@ export default function SearchBar({
 
   // Show skeleton loader when dropdown is open but we haven't started loading yet
   const shouldShowSkeleton = isOpen && (loading || (!hasSearched && query.length >= 2))
+
+  // Render dropdown content function (without positioning wrapper for parent rendering)
+  const renderDropdownContent = () => {
+    if (!isOpen || disableDropdown) return null
+    
+    return (
+      <div
+        onMouseEnter={handleDropdownMouseEnter}
+        onMouseLeave={handleDropdownMouseLeave}
+        role="listbox"
+        id={listboxId}
+        className="bg-white border border-gray-200 rounded-xl shadow-xl max-h-96 overflow-y-auto transition-all duration-200 ease-out opacity-100 translate-y-0 w-full"
+      >
+        {error ? (
+          <div className="p-4 text-center text-red-600">
+            <p className="text-sm">Failed to search artists</p>
+            <button
+              onClick={() => setQuery(query)}
+              className="mt-2 text-xs text-amber-600 hover:text-amber-700"
+            >
+              Try again
+            </button>
+          </div>
+        ) : shouldShowSkeleton ? (
+          <SkeletonLoader />
+        ) : results.length > 0 ? (
+          <div className="py-2">
+            {results.map((artist, index) => {
+              const location = formatLocation(artist.city, artist.state)
+              const categories = formatCategories(artist.categories)
+              const isActive = activeIndex === index
+              
+              return (
+                <Link
+                  key={artist.id}
+                  href={`/artists/${artist.handle}`}
+                  prefetch={false}
+                  onMouseDown={handleResultMouseDown}
+                  onMouseEnter={() => handleResultMouseEnter(index)}
+                  onClick={handleResultClick}
+                  role="option"
+                  aria-selected={isActive}
+                  id={`${listboxId}-option-${index}`}
+                  className={`block px-4 py-3 transition-all duration-150 border-b border-gray-100 last:border-b-0 
+                             hover:shadow-sm hover:scale-[1.01] ${
+                               isActive 
+                                 ? 'bg-amber-50 hover:bg-amber-50' 
+                                 : 'hover:bg-gray-50'
+                             }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <ArtistAvatar src={artist.avatar_url} name={artist.display_name} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="text-sm font-medium text-gray-900 truncate">
+                          {artist.display_name}
+                        </h4>
+                        {/* Distance badge (only shown when distance_km is available, i.e., near-me mode) */}
+                        {artist.distance_km !== null && artist.distance_km !== undefined && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 whitespace-nowrap">
+                            ~{formatDistance(artist.distance_km)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 space-y-1">
+                        {location && (
+                          <p className="text-xs text-gray-500 truncate">
+                            📍 {location}
+                          </p>
+                        )}
+                        {categories && (
+                          <p className="text-xs text-amber-600 truncate">
+                            🎨 {categories}
+                          </p>
+                        )}
+                        {artist.bio && (
+                          <p className="text-xs text-gray-600 truncate">
+                            {artist.bio.length > 60 ? `${artist.bio.substring(0, 60)}...` : artist.bio}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
+            {results.length >= 8 && (
+              <div className="px-4 py-2 border-t border-gray-100">
+                <Link
+                  href={`/search?q=${encodeURIComponent(query)}`}
+                  prefetch={false}
+                  onMouseDown={handleResultMouseDown}
+                  onClick={handleResultClick}
+                  className="block text-center text-sm text-amber-600 hover:text-amber-700 font-medium 
+                             transition-colors duration-150 hover:bg-amber-50 py-2 rounded-lg"
+                >
+                  View all results for &quot;{query}&quot;
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : query.length >= 2 && !loading && hasSearched && results.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            <p className="text-sm">No artists found for &quot;{query}&quot;</p>
+            <p className="text-xs mt-1">Try a different search term</p>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  // Track previous content signature to prevent unnecessary re-renders
+  const prevContentSignatureRef = useRef<string>('')
+
+  // Expose dropdown to parent when renderDropdownInParent is true
+  useEffect(() => {
+    // Only run if renderDropdownInParent is true and we have the callback
+    if (!renderDropdownInParent || !onDropdownRender) {
+      return
+    }
+
+    // Create a signature of the current state that determines what should be rendered
+    const resultsIds = results.map(r => r.id).join(',')
+    const contentSignature = JSON.stringify({
+      isOpen,
+      query,
+      resultsIds,
+      loading,
+      hasSearched,
+      activeIndex,
+      error: !!error,
+      shouldShowSkeleton
+    })
+
+    // Only update if the signature actually changed
+    if (contentSignature === prevContentSignatureRef.current) {
+      return
+    }
+
+    prevContentSignatureRef.current = contentSignature
+
+    if (isOpen) {
+      const content = renderDropdownContent()
+      onDropdownRender(content)
+    } else {
+      onDropdownRender(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, query, results, loading, hasSearched, activeIndex, error, shouldShowSkeleton, renderDropdownInParent, onDropdownRender])
 
 
   // Handle click outside to close dropdown and prevent scrolling
@@ -384,18 +559,23 @@ export default function SearchBar({
           }`}
         />
         {/* Dropdown Results */}
-        {isOpen && (
+        {isOpen && !renderDropdownInParent && (
           <div
             ref={dropdownRef}
             onMouseEnter={handleDropdownMouseEnter}
             onMouseLeave={handleDropdownMouseLeave}
             role="listbox"
             id={listboxId}
-            className={`absolute top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-y-auto transition-all duration-200 ease-out opacity-100 translate-y-0 ${
+            className={`${
+              embedded && mobileDropdownTop !== undefined
+                ? 'fixed md:absolute md:top-full md:mt-2'
+                : 'absolute top-full mt-2'
+            } bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-y-auto transition-all duration-200 ease-out opacity-100 translate-y-0 ${
               embedded 
                 ? 'left-0 right-0 w-full md:left-0 md:right-auto md:min-w-[480px] md:max-w-[480px] md:w-full' 
                 : 'left-0 right-0 w-full'
             }`}
+            style={embedded && mobileDropdownTop !== undefined ? { top: `${mobileDropdownTop}px` } : undefined}
           >
             {error ? (
               <div className="p-4 text-center text-red-600">
@@ -443,9 +623,10 @@ export default function SearchBar({
                             <h4 className="text-sm font-medium text-gray-900 truncate">
                               {artist.display_name}
                             </h4>
-                            {artist.rank > 0 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                Match
+                            {/* Distance badge (only shown when distance_km is available, i.e., near-me mode) */}
+                            {artist.distance_km !== null && artist.distance_km !== undefined && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 whitespace-nowrap">
+                                ~{formatDistance(artist.distance_km)}
                               </span>
                             )}
                           </div>
@@ -557,19 +738,24 @@ export default function SearchBar({
       {/* Backdrop removed per user request */}
 
       {/* Dropdown Results */}
-      {!disableDropdown && isOpen && (
+      {!disableDropdown && isOpen && !renderDropdownInParent && (
         <div
           ref={dropdownRef}
           onMouseEnter={handleDropdownMouseEnter}
           onMouseLeave={handleDropdownMouseLeave}
           role="listbox"
           id={listboxId}
-          className={`absolute top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-y-auto
+          className={`${
+            embedded && mobileDropdownTop !== undefined
+              ? 'fixed md:absolute md:top-full md:mt-2'
+              : 'absolute top-full mt-2'
+          } bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-y-auto
                      transition-all duration-200 ease-out ${
                        embedded 
                          ? 'left-0 right-0 w-full md:left-0 md:right-auto md:min-w-[480px] md:max-w-[480px] md:w-full' 
                          : 'left-0 right-0 w-full'
                      } opacity-100 translate-y-0`}
+          style={embedded && mobileDropdownTop !== undefined ? { top: `${mobileDropdownTop}px` } : undefined}
         >
           {error ? (
             <div className="p-4 text-center text-red-600">
@@ -621,9 +807,10 @@ export default function SearchBar({
                           <h4 className="text-sm font-medium text-gray-900 truncate">
                             {artist.display_name}
                           </h4>
-                          {artist.rank > 0 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                              Match
+                          {/* Distance badge (only shown when distance_km is available, i.e., near-me mode) */}
+                          {artist.distance_km !== null && artist.distance_km !== undefined && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 whitespace-nowrap">
+                              ~{formatDistance(artist.distance_km)}
                             </span>
                           )}
                         </div>
@@ -685,3 +872,4 @@ export default function SearchBar({
     </div>
   )
 }
+

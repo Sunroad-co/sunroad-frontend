@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import SearchBar from './search-bar'
 import CategoryFilterPill from './category-filter-pill'
 import WhereFilterPill, { type NearMeCoords } from './where-filter-pill'
 import type { Location } from '@/hooks/use-location-search'
+import { useClickOutside } from '@/hooks/use-click-outside'
 
 interface ArtistSearchControlsProps {
   placeholder?: string
@@ -53,47 +54,38 @@ export default function ArtistSearchControls({
   const selectedCategoryIds = controlledCategoryIds ?? internalCategoryIds
   const searchQuery = controlledQuery ?? internalSearchQuery
   const selectedLocation = controlledLocation !== undefined ? controlledLocation : internalLocation
-  const isNearMe = controlledIsNearMe ?? internalIsNearMe
-  const nearMeCoords = controlledNearMeCoords ?? internalNearMeCoords
+  const isNearMe = controlledIsNearMe !== undefined ? controlledIsNearMe : internalIsNearMe
+  const nearMeCoords = controlledNearMeCoords !== undefined ? controlledNearMeCoords : internalNearMeCoords
   const setSelectedCategoryIds = onCategoryChange ?? setInternalCategoryIds
   const setSearchQuery = onQueryChange ?? setInternalSearchQuery
   const setSelectedLocation = onLocationChange ?? setInternalLocation
   
-  // Handle near-me change
-  const handleNearMeChange = useCallback((newIsNearMe: boolean, coords?: NearMeCoords | null) => {
-    if (controlledOnNearMeChange) {
-      controlledOnNearMeChange(newIsNearMe, coords)
-    } else {
-      setInternalIsNearMe(newIsNearMe)
-      setInternalNearMeCoords(coords ?? null)
-    }
-    // Clear location when near-me is activated
-    if (newIsNearMe) {
-      if (onLocationChange) {
-        onLocationChange(null)
-      } else {
-        setInternalLocation(null)
-      }
-    }
-  }, [controlledOnNearMeChange, onLocationChange])
-  
-  // Handle location change - clear near-me when location is selected
-  const handleLocationChange = useCallback((location: Location | null) => {
-    if (onLocationChange) {
-      onLocationChange(location)
-    } else {
-      setInternalLocation(location)
-    }
-    // Clear near-me when location is selected
-    if (location) {
-      handleNearMeChange(false, null)
-    }
-  }, [onLocationChange, handleNearMeChange])
+  // Memoize locationIds to prevent unnecessary re-renders - only use when near-me is NOT active
+  const locationIds = useMemo(() => {
+    if (isNearMe) return undefined
+    return selectedLocation ? [selectedLocation.id] : undefined
+  }, [selectedLocation?.id, isNearMe])
   
   const [activeSegment, setActiveSegment] = useState<'search' | 'where' | 'category' | null>(null)
+  const [activeDropdown, setActiveDropdown] = useState<'search' | 'where' | 'category' | null>(null)
   // For 'page' variant, always expanded; for 'default', use state
   const [isExpanded, setIsExpanded] = useState(variant === 'page')
   const [isAnimatingOut, setIsAnimatingOut] = useState(false)
+  const [searchDropdownContent, setSearchDropdownContent] = useState<React.ReactNode>(null)
+  const [whereDropdownContent, setWhereDropdownContent] = useState<React.ReactNode>(null)
+  const [categoryDropdownContent, setCategoryDropdownContent] = useState<React.ReactNode>(null)
+  const [expandedHeight, setExpandedHeight] = useState<number | null>(null)
+
+  // Simple callbacks - no blocking, let React handle re-renders efficiently
+  const handleSearchDropdownRender = useCallback((content: React.ReactNode) => {
+    setSearchDropdownContent(content)
+  }, [])
+  const handleWhereDropdownRender = useCallback((content: React.ReactNode) => {
+    setWhereDropdownContent(content)
+  }, [])
+  const handleCategoryDropdownRender = useCallback((content: React.ReactNode) => {
+    setCategoryDropdownContent(content)
+  }, [])
   const justExpandedRef = useRef(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const whereRef = useRef<HTMLDivElement>(null)
@@ -104,10 +96,12 @@ export default function ArtistSearchControls({
   const expandedRef = useRef<HTMLDivElement>(null)
   const desktopContainerRef = useRef<HTMLDivElement>(null)
   const pillRef = useRef<HTMLDivElement>(null)
+  const dropdownContainerRef = useRef<HTMLDivElement>(null)
 
   // Close other segments when one becomes active - memoized to prevent infinite loops
   const handleSegmentActivate = useCallback((segment: 'search' | 'where' | 'category' | null) => {
     setActiveSegment(prev => prev !== segment ? segment : prev)
+    setActiveDropdown(prev => prev !== segment ? segment : prev)
   }, [])
 
   // Expand search bar when user interacts (skip for variant="page")
@@ -152,6 +146,49 @@ export default function ArtistSearchControls({
       return () => clearTimeout(timer)
     }
   }, [isExpanded, isAnimatingOut])
+
+  // Open dropdown when segment is activated (for where and category)
+  useEffect(() => {
+    if (activeSegment === 'where' || activeSegment === 'category') {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        const pillContainer = activeSegment === 'where' ? whereRef.current : categoryRef.current
+        if (pillContainer) {
+          // Find the button inside the pill component and click it
+          const pillButton = pillContainer.querySelector('button[aria-haspopup="listbox"]') as HTMLButtonElement
+          if (pillButton && pillButton.getAttribute('aria-expanded') === 'false') {
+            pillButton.click()
+          }
+        }
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [activeSegment])
+
+
+  // Track expanded height to prevent layout shift
+  useEffect(() => {
+    if ((isExpanded || variant === 'page') && expandedRef.current && variant !== 'page') {
+      const updateHeight = () => {
+        if (expandedRef.current) {
+          const height = expandedRef.current.offsetHeight
+          console.log('[ArtistSearchControls] Expanded height:', height)
+          setExpandedHeight(height)
+        }
+      }
+      // Small delay to ensure DOM is updated
+      const timer = setTimeout(updateHeight, 50)
+      updateHeight() // Also call immediately
+      // Update on resize
+      window.addEventListener('resize', updateHeight)
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('resize', updateHeight)
+      }
+    } else if (!isExpanded && variant !== 'page') {
+      setExpandedHeight(null)
+    }
+  }, [isExpanded, variant, activeSegment, activeDropdown])
 
   // Update pill position when active segment changes
   useEffect(() => {
@@ -261,6 +298,35 @@ export default function ArtistSearchControls({
     }
   }, [isExpanded, activeSegment, searchQuery, isAnimatingOut, handleCollapse])
 
+  // Handle click outside to close active dropdown
+  const handleDropdownClickOutside = useCallback((event: MouseEvent) => {
+    // Don't close if we just expanded
+    if (justExpandedRef.current) {
+      return
+    }
+    
+    // Close the active dropdown
+    if (activeDropdown) {
+      setActiveDropdown(null)
+      // Also deactivate the segment if it matches
+      if (activeSegment === activeDropdown) {
+        setActiveSegment(null)
+      }
+    }
+  }, [activeDropdown, activeSegment])
+
+  useClickOutside(
+    [
+      searchRef,
+      whereRef,
+      categoryRef,
+      dropdownContainerRef,
+      containerRef
+    ],
+    handleDropdownClickOutside,
+    !!activeDropdown && (isExpanded || variant === 'page')
+  )
+
   // Memoized callbacks to prevent infinite loops
   const handleSearchFocusChange = useCallback((isFocused: boolean) => {
     // Only activate search if no other segment is active or if search is explicitly focused
@@ -281,6 +347,34 @@ export default function ArtistSearchControls({
   const handleWhereActiveChange = useCallback((isActive: boolean) => {
     handleSegmentActivate(isActive ? 'where' : null)
   }, [handleSegmentActivate])
+
+  // Handle location change - clear near-me when location is selected
+  const handleLocationChange = useCallback((location: Location | null) => {
+    setSelectedLocation(location)
+    // Clear near-me when location is selected
+    if (location) {
+      if (controlledOnNearMeChange) {
+        controlledOnNearMeChange(false, null)
+      } else {
+        setInternalIsNearMe(false)
+        setInternalNearMeCoords(null)
+      }
+    }
+  }, [setSelectedLocation, controlledOnNearMeChange])
+
+  // Handle near-me change - clear location when near-me is activated
+  const handleNearMeChange = useCallback((newIsNearMe: boolean, coords?: NearMeCoords | null) => {
+    if (controlledOnNearMeChange) {
+      controlledOnNearMeChange(newIsNearMe, coords ?? null)
+    } else {
+      setInternalIsNearMe(newIsNearMe)
+      setInternalNearMeCoords(coords ?? null)
+    }
+    // Clear location when near-me is activated
+    if (newIsNearMe) {
+      setSelectedLocation(null)
+    }
+  }, [setSelectedLocation, controlledOnNearMeChange])
 
   const handleCategoryActiveChange = useCallback((isActive: boolean) => {
     handleSegmentActivate(isActive ? 'category' : null)
@@ -317,7 +411,13 @@ export default function ArtistSearchControls({
   return (
     <div ref={containerRef} className={`w-full ${className}`}>
       {/* Mobile Layout - Unified Search Bar */}
-      <div className="md:hidden relative">
+      <div 
+        className="md:hidden relative" 
+        style={{ 
+          minHeight: '56px',
+          height: expandedHeight && expandedHeight > 0 ? `${expandedHeight}px` : undefined
+        }}
+      >
         {/* Collapsed State - Simple Input (Normal size) - Only for default variant */}
         {variant !== 'page' && (
           <div 
@@ -334,7 +434,7 @@ export default function ArtistSearchControls({
             role="button"
             aria-label="Open search"
             className={`bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
-              isExpanded ? 'invisible' : 'visible'
+              isExpanded ? 'absolute inset-0 opacity-0 pointer-events-none' : 'relative opacity-100'
             }`}
           >
           <div className="px-4 py-2.5 flex items-center">
@@ -364,7 +464,7 @@ export default function ArtistSearchControls({
               variant !== 'page' && (isAnimatingOut 
                 ? 'animate-fade-out-slide-up' 
                 : 'animate-fade-in-slide-down')
-            }`}
+            } overflow-visible`}
             style={variant === 'page' ? {} : { 
               transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
@@ -404,7 +504,7 @@ export default function ArtistSearchControls({
                 placeholder={placeholder}
                 className="w-full"
                 categoryIds={selectedCategoryIds}
-                locationIds={selectedLocation ? [selectedLocation.id] : undefined}
+                locationIds={locationIds}
                 onResultClick={onResultClick}
                 embedded={true}
                 isActive={activeSegment === 'search'}
@@ -414,6 +514,9 @@ export default function ArtistSearchControls({
                 disableDropdown={variant === 'page'}
                 value={variant === 'page' ? searchQuery : undefined}
                 onSearch={handleSearchClick}
+                renderDropdownInParent={true}
+                onDropdownRender={handleSearchDropdownRender}
+                nearMeCoords={isNearMe ? nearMeCoords : null}
               />
             </div>
 
@@ -430,8 +533,11 @@ export default function ArtistSearchControls({
                     : 'hover:bg-gray-50/50'
                 }`}
                 onClick={(e) => {
-                  if (activeSegment !== 'where') {
+                  if (activeDropdown !== 'where') {
                     handleSegmentActivate('where')
+                  } else {
+                    // If already active, toggle dropdown
+                    setActiveDropdown(prev => prev === 'where' ? null : 'where')
                   }
                 }}
               >
@@ -445,13 +551,13 @@ export default function ArtistSearchControls({
                 <div className="text-sm text-gray-500 min-w-0">
                   <WhereFilterPill 
                     selectedLocation={selectedLocation}
-                    onChange={handleLocationChange}
+                    onChange={setSelectedLocation}
                     embedded={true}
                     onActiveChange={handleWhereActiveChange}
                     showLabel={false}
-                    isNearMe={isNearMe}
-                    onNearMeChange={handleNearMeChange}
-                    nearMeCoords={nearMeCoords}
+                    renderDropdownInParent={true}
+                    onDropdownRender={handleWhereDropdownRender}
+                    isOpen={activeDropdown === 'where'}
                   />
                 </div>
               </div>
@@ -467,8 +573,11 @@ export default function ArtistSearchControls({
                     : 'hover:bg-gray-50/50'
                 }`}
                 onClick={(e) => {
-                  if (activeSegment !== 'category') {
+                  if (activeDropdown !== 'category') {
                     handleSegmentActivate('category')
+                  } else {
+                    // If already active, toggle dropdown
+                    setActiveDropdown(prev => prev === 'category' ? null : 'category')
                   }
                 }}
               >
@@ -487,6 +596,9 @@ export default function ArtistSearchControls({
                     onActiveChange={handleCategoryActiveChange}
                     showLabel={false}
                     subtitle="Category"
+                    renderDropdownInParent={true}
+                    onDropdownRender={handleCategoryDropdownRender}
+                    isOpen={activeDropdown === 'category'}
                   />
                 </div>
               </div>
@@ -510,12 +622,21 @@ export default function ArtistSearchControls({
                 </div>
               )}
             </div>
+
+            {/* Shared Dropdown Container - All dropdowns render here */}
+            {activeDropdown && (
+              <div ref={dropdownContainerRef} className="absolute top-full left-0 w-full mt-2 z-[60]">
+                {activeDropdown === 'search' && searchDropdownContent}
+                {activeDropdown === 'where' && whereDropdownContent}
+                {activeDropdown === 'category' && categoryDropdownContent}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Desktop Layout - Unified Airbnb-style Bar */}
-      <div className="hidden md:block relative" style={{ height: '80px' }}>
+      <div className="hidden md:block relative overflow-visible" style={{ height: '80px' }}>
         {/* Single Container - Morphs between collapsed and expanded */}
         <div 
           ref={desktopContainerRef}
@@ -534,7 +655,7 @@ export default function ArtistSearchControls({
           tabIndex={!isExpanded && variant !== 'page' ? 0 : -1}
           role={!isExpanded && variant !== 'page' ? "button" : undefined}
           aria-label={!isExpanded && variant !== 'page' ? "Open search" : undefined}
-          className={`absolute inset-x-0 top-0 ${
+          className={`relative overflow-visible absolute inset-x-0 top-0 ${
             variant === 'page' 
               ? 'bg-gray-100 border border-sunroad-brown-200/60 shadow-[0_8px_24px_rgba(67,48,43,0.08)] max-w-full mx-0'
               : 'bg-gray-100 border border-gray-200 shadow-lg hover:shadow-xl cursor-pointer max-w-2xl mx-auto'
@@ -614,7 +735,7 @@ export default function ArtistSearchControls({
                     placeholder="Find local creatives"
                     className="w-full"
                     categoryIds={selectedCategoryIds}
-                    locationIds={selectedLocation ? [selectedLocation.id] : undefined}
+                    locationIds={locationIds}
                     onResultClick={onResultClick}
                     embedded={true}
                     isActive={activeSegment === 'search'}
@@ -624,6 +745,9 @@ export default function ArtistSearchControls({
                     disableDropdown={variant === 'page'}
                     value={variant === 'page' ? searchQuery : undefined}
                     onSearch={handleSearchClick}
+                    renderDropdownInParent={true}
+                    onDropdownRender={handleSearchDropdownRender}
+                    nearMeCoords={isNearMe ? nearMeCoords : null}
                   />
                 </div>
               </div>
@@ -641,8 +765,11 @@ export default function ArtistSearchControls({
                 }`}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (activeSegment !== 'where') {
+                  if (activeDropdown !== 'where') {
                     handleSegmentActivate('where')
+                  } else {
+                    // If already active, toggle dropdown
+                    setActiveDropdown(prev => prev === 'where' ? null : 'where')
                   }
                 }}
               >
@@ -665,6 +792,9 @@ export default function ArtistSearchControls({
                     embedded={true}
                     onActiveChange={handleWhereActiveChange}
                     showLabel={false}
+                    renderDropdownInParent={true}
+                    onDropdownRender={handleWhereDropdownRender}
+                    isOpen={activeDropdown === 'where'}
                     isNearMe={isNearMe}
                     onNearMeChange={handleNearMeChange}
                     nearMeCoords={nearMeCoords}
@@ -686,8 +816,11 @@ export default function ArtistSearchControls({
                 }`}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (activeSegment !== 'category') {
+                  if (activeDropdown !== 'category') {
                     handleSegmentActivate('category')
+                  } else {
+                    // If already active, toggle dropdown
+                    setActiveDropdown(prev => prev === 'category' ? null : 'category')
                   }
                 }}
               >
@@ -711,6 +844,9 @@ export default function ArtistSearchControls({
                       onActiveChange={handleCategoryActiveChange}
                       showLabel={false}
                       subtitle="Category"
+                      renderDropdownInParent={true}
+                      onDropdownRender={handleCategoryDropdownRender}
+                      isOpen={activeDropdown === 'category'}
                     />
                   </div>
                 </div>
@@ -733,9 +869,19 @@ export default function ArtistSearchControls({
               </div>
             </div>
           )}
+
+          {/* Shared Dropdown Container - Desktop - All dropdowns render here */}
+          {activeDropdown && (
+            <div ref={dropdownContainerRef} className="absolute top-full left-0 w-full mt-2 z-[60]">
+              {activeDropdown === 'search' && searchDropdownContent}
+              {activeDropdown === 'where' && whereDropdownContent}
+              {activeDropdown === 'category' && categoryDropdownContent}
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
 }
+
 

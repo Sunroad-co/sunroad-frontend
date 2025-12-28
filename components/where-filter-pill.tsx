@@ -22,6 +22,10 @@ interface WhereFilterPillProps {
   isNearMe?: boolean
   onNearMeChange?: (isNearMe: boolean, coords?: NearMeCoords | null) => void
   nearMeCoords?: NearMeCoords | null
+  // Parent rendering props
+  renderDropdownInParent?: boolean
+  onDropdownRender?: (dropdown: React.ReactNode) => void
+  isOpen?: boolean
 }
 
 export default function WhereFilterPill({
@@ -33,9 +37,14 @@ export default function WhereFilterPill({
   showLabel = true,
   isNearMe = false,
   onNearMeChange,
-  nearMeCoords
+  nearMeCoords,
+  renderDropdownInParent = false,
+  onDropdownRender,
+  isOpen: controlledIsOpen
 }: WhereFilterPillProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen
+  const setIsOpen = controlledIsOpen !== undefined ? (() => {}) : setInternalIsOpen
   const [locationQuery, setLocationQuery] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -379,29 +388,247 @@ export default function WhereFilterPill({
   const displayLocations = locations
   const showTopLocationsLabel = !locationQuery.trim() && locations.length > 0
 
+  // Render dropdown content function (without positioning wrapper for parent rendering)
+  const renderDropdownContent = () => {
+    if (!isOpen) return null
+    
+    return (
+      <div
+        onMouseDown={handleDropdownMouseDown}
+        className="bg-white border border-gray-200 rounded-xl shadow-xl max-h-96 overflow-hidden flex flex-col transition-all duration-200 ease-out opacity-100 translate-y-0 w-full"
+        role="listbox"
+      >
+        {/* Search Input - Always rendered */}
+        <div className="p-3 border-b border-gray-200">
+          <input
+            ref={inputRef}
+            type="text"
+            value={locationQuery}
+            onChange={(e) => {
+              e.stopPropagation()
+              setLocationQuery(e.target.value)
+              setActiveIndex(-1)
+            }}
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              const showNearMe = !locationQuery.trim()
+              if (e.key === 'Escape') {
+                setIsOpen(false)
+                onActiveChange?.(false)
+                buttonRef.current?.focus()
+                setLocationQuery('')
+                setActiveIndex(-1)
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                setActiveIndex((prev) => {
+                  if (prev === -1) {
+                    return 0
+                  }
+                  const nextIndex = prev < locations.length - 1 ? prev + 1 : (showNearMe ? -1 : 0)
+                  return nextIndex
+                })
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                setActiveIndex((prev) => {
+                  if (prev === 0 && showNearMe) {
+                    return -1
+                  }
+                  const nextIndex = prev > 0 ? prev - 1 : (showNearMe ? -1 : locations.length - 1)
+                  return nextIndex
+                })
+              } else if (e.key === 'Enter') {
+                e.preventDefault()
+                if (activeIndex === -1 && showNearMe) {
+                  handleNearMeClick()
+                } else if (activeIndex >= 0 && activeIndex < locations.length) {
+                  handleSelect(locations[activeIndex])
+                } else if (showNearMe) {
+                  handleNearMeClick()
+                } else if (locations.length > 0) {
+                  handleSelect(locations[0])
+                }
+              }
+            }}
+            placeholder="Search locations..."
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            onClick={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        </div>
+
+        {/* Results Area - Shows loading, error, or results */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Near me option - Always shown at top when query is empty */}
+          {!locationQuery.trim() && (
+            <div className="p-3 border-b border-gray-200">
+              <button
+                type="button"
+                onClick={handleNearMeClick}
+                disabled={isGettingLocation}
+                onMouseEnter={() => setActiveIndex(-1)}
+                className={cn(
+                  'w-full text-left px-3 py-2.5 text-sm rounded-lg transition-colors flex items-center gap-3',
+                  isNearMe
+                    ? 'bg-amber-100 border border-amber-500 text-amber-800'
+                    : activeIndex === -1
+                    ? 'bg-amber-50 text-gray-900 border border-transparent'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-transparent',
+                  isGettingLocation && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">Near me</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Within 50 miles</div>
+                </div>
+                {isGettingLocation && (
+                  <div className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full flex-shrink-0" />
+                )}
+              </button>
+            </div>
+          )}
+          {loading ? (
+            <div className="p-3 space-y-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-800 mb-2">{error}</p>
+                <button
+                  onClick={retry}
+                  className="text-xs text-red-600 hover:text-red-700 font-medium"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          ) : displayLocations.length === 0 ? (
+            <div className="text-center text-gray-500 text-sm py-4">
+              {locationQuery.trim() 
+                ? `No locations found for "${locationQuery}"`
+                : 'No locations available'}
+            </div>
+          ) : (
+            <div className="p-3">
+              {showTopLocationsLabel && (
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 px-2">
+                  Top locations
+                </div>
+              )}
+              <div className="space-y-1">
+                {displayLocations.map((location, index) => {
+                  const isSelected = selectedLocation?.id === location.id
+                  const isActive = activeIndex === index
+                  return (
+                    <button
+                      key={location.id}
+                      type="button"
+                      onClick={() => handleSelect(location)}
+                      role="option"
+                      aria-selected={isSelected}
+                      data-location-index={index}
+                      className={cn(
+                        'w-full text-left px-3 py-2 text-sm rounded-lg transition-colors',
+                        isSelected
+                          ? 'bg-amber-100 border border-amber-500 text-amber-800'
+                          : isActive
+                          ? 'bg-amber-50 text-gray-900'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      )}
+                      onMouseEnter={() => setActiveIndex(index)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{location.formatted}</span>
+                        {location.artist_count > 0 && (
+                          <span className="text-xs text-gray-500 ml-2">
+                            ({location.artist_count} {location.artist_count === 1 ? 'artist' : 'artists'})
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Track previous content signature to prevent unnecessary re-renders
+  const prevContentSignatureRef = useRef<string>('')
+
+  // Expose dropdown to parent when renderDropdownInParent is true
+  useEffect(() => {
+    if (!renderDropdownInParent || !onDropdownRender) {
+      return
+    }
+
+    // Create a signature of the current state that determines what should be rendered
+    const locationsIds = locations.map(l => l.id).join(',')
+    const contentSignature = JSON.stringify({
+      isOpen,
+      locationQuery,
+      locationsIds,
+      loading,
+      error: !!error,
+      activeIndex,
+      isNearMe,
+      isGettingLocation,
+      selectedLocationId: selectedLocation?.id
+    })
+
+    // Only update if the signature actually changed
+    if (contentSignature === prevContentSignatureRef.current) {
+      return
+    }
+
+    prevContentSignatureRef.current = contentSignature
+
+    if (isOpen) {
+      const content = renderDropdownContent()
+      onDropdownRender(content)
+    } else {
+      onDropdownRender(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, locationQuery, locations, loading, error, activeIndex, isNearMe, isGettingLocation, selectedLocation, renderDropdownInParent, onDropdownRender])
+
   return (
-    <div className={`${embedded ? '' : 'relative'} w-full`}>
+    <div className="relative w-full">
       {!showLabel && embedded ? (
         // Embedded mode without label - render as clickable subtitle text
-        <div className="w-full flex items-center gap-1 min-w-0">
+        <div className="w-full h-full flex items-center gap-1 min-w-0 relative">
           <button
             ref={buttonRef}
             type="button"
             onClick={(e) => {
-              e.stopPropagation()
+              if (!renderDropdownInParent) {
+                e.stopPropagation()
+              }
               handleButtonClick()
             }}
-            className="flex-1 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors min-w-0"
+            className={cn(
+              "flex-1 min-w-0 text-left text-sm transition-colors",
+              (selectedLocation || isNearMe) 
+                ? "text-amber-800 font-medium hover:text-amber-900" 
+                : "text-gray-500 hover:text-gray-700"
+            )}
             aria-expanded={isOpen}
             aria-haspopup="listbox"
             onKeyDown={handleKeyDown}
           >
             <span 
-              className={cn(
-                "block min-w-0 truncate whitespace-nowrap",
-                (selectedLocation || isNearMe) && "text-amber-800 font-medium"
-              )}
-              title={selectedLocation ? selectedLocation.formatted : undefined}
+              className="block min-w-0 truncate whitespace-nowrap"
+              title={selectedLocation ? selectedLocation.formatted : (isNearMe ? "Near me" : undefined)}
             >
               {getSubtitle()}
             </span>
@@ -409,12 +636,16 @@ export default function WhereFilterPill({
           {(selectedLocation || isNearMe) && (
             <button
               type="button"
-              onClick={handleClear}
+              onClick={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+                handleClear(e)
+              }}
               onMouseDown={(e) => {
                 e.stopPropagation()
                 e.preventDefault()
               }}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors relative z-10"
               aria-label="Clear location"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -480,17 +711,13 @@ export default function WhereFilterPill({
       )}
 
       {/* Dropdown */}
-      {isOpen && (
+      {isOpen && !renderDropdownInParent && (
         <div
           ref={dropdownRef}
           onMouseDown={handleDropdownMouseDown}
           className={cn(
-            'absolute top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-hidden flex flex-col',
-            'transition-all duration-200 ease-out',
-            embedded 
-              ? 'left-0 right-0 w-full md:left-auto md:right-0 md:min-w-[420px] md:max-w-[560px] md:w-auto' 
-              : 'left-1/2 -translate-x-1/2 w-[calc(100vw-1rem)] max-w-64',
-            'opacity-100 translate-y-0'
+            'absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-96 overflow-hidden flex flex-col',
+            'transition-all duration-200 ease-out opacity-100 translate-y-0 w-full'
           )}
           role="listbox"
         >
@@ -669,4 +896,3 @@ export default function WhereFilterPill({
     </div>
   )
 }
-
