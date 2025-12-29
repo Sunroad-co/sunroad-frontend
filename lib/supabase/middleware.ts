@@ -47,18 +47,9 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/artists") &&
-    !request.nextUrl.pathname.startsWith("/search") &&
-    !request.nextUrl.pathname.startsWith("/api") &&
-    !request.nextUrl.pathname.startsWith("/test-migration") &&
-    !request.nextUrl.pathname.startsWith("/migration-dashboard")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Since proxy only runs on /dashboard/** routes, we can simplify the check
+  // If no user is authenticated, redirect to login
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
