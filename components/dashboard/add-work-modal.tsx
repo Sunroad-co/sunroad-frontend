@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { UserProfile } from '@/hooks/use-user-profile'
 import Toast from '@/components/ui/toast'
 import { sanitizeAndTrim } from '@/lib/utils/sanitize'
+import { revalidateCache } from '@/lib/revalidate-client'
 import { ImageWorkFields, type ImageWorkFieldsHandle } from './works/image-work-fields'
 import { VideoWorkFields, type VideoWorkFieldsHandle } from './works/video-work-fields'
 import { AudioWorkFields, type AudioWorkFieldsHandle } from './works/audio-work-fields'
@@ -176,21 +177,11 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
 
       // Revalidate cache
       if (profile.handle) {
-        try {
-          await fetch('/api/revalidate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              handle: profile.handle,
-              artistId: profile.id,
-              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
-            }),
-          })
-        } catch (revalidateError) {
-          console.warn('Failed to revalidate cache:', revalidateError)
-        }
+        await revalidateCache({
+          handle: profile.handle,
+          artistId: profile.id,
+          tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+        })
       }
 
       // Success

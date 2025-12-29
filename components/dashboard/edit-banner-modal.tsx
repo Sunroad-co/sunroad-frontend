@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import type { Area, Point } from 'react-easy-crop'
 import SRImage from '@/components/media/SRImage'
 import { createClient } from '@/lib/supabase/client'
+import { revalidateCache } from '@/lib/revalidate-client'
 import { getCroppedImg } from '@/lib/image-crop'
 import { decodeAndDownscale } from '@/lib/utils/decode-and-downscale'
 import { validateImageFile } from '@/lib/utils/image-validation'
@@ -272,22 +273,11 @@ export default function EditBannerModal({
 
       // Revalidate the artist profile page cache
       if (profile.handle) {
-        try {
-          await fetch('/api/revalidate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              handle: profile.handle,
-              artistId: profile.id,
-              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
-            }),
-          })
-        } catch (revalidateError) {
-          // Log but don't fail - revalidation is best effort
-          console.warn('Failed to revalidate cache:', revalidateError)
-        }
+        await revalidateCache({
+          handle: profile.handle,
+          artistId: profile.id,
+          tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+        })
       }
 
       // Success - trigger refetch and close

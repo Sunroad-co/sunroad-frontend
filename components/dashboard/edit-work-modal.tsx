@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { revalidateCache } from '@/lib/revalidate-client'
 import { UserProfile, Work } from '@/hooks/use-user-profile'
 import Toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
@@ -316,21 +317,11 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
 
       // Revalidate cache
       if (profile.handle) {
-        try {
-          await fetch('/api/revalidate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              handle: profile.handle,
-              artistId: profile.id,
-              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
-            }),
-          })
-        } catch (revalidateError) {
-          console.warn('Failed to revalidate cache:', revalidateError)
-        }
+        await revalidateCache({
+          handle: profile.handle,
+          artistId: profile.id,
+          tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+        })
       }
 
       // Success
@@ -397,21 +388,11 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
 
       // Revalidate cache
       if (profile.handle) {
-        try {
-          await fetch('/api/revalidate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              handle: profile.handle,
-              artistId: profile.id,
-              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
-            }),
-          })
-        } catch (revalidateError) {
-          console.warn('Failed to revalidate cache:', revalidateError)
-        }
+        await revalidateCache({
+          handle: profile.handle,
+          artistId: profile.id,
+          tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+        })
       }
 
       // Success

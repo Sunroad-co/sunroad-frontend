@@ -1,25 +1,38 @@
 /**
  * Helper function to revalidate artist pages when data changes
  * This should be called whenever an artist updates their profile, bio, or works
+ * 
+ * For client-side calls: Uses session-based authentication (no secrets)
+ * For server-side calls: Can use system secret via x-revalidate-secret header
  */
 
 interface RevalidateArtistOptions {
   handle: string
   artistId: string
   baseUrl?: string
+  systemSecret?: string // Optional: for server-side/webhook calls
 }
 
 export async function revalidateArtist({ 
   handle, 
   artistId, 
-  baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' 
+  baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  systemSecret
 }: RevalidateArtistOptions) {
   try {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    // If system secret provided (server-side), use it; otherwise rely on session
+    if (systemSecret) {
+      headers['x-revalidate-secret'] = systemSecret
+    }
+
     const response = await fetch(`${baseUrl}/api/revalidate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: systemSecret ? 'omit' : 'include', // Include cookies only for session mode
       body: JSON.stringify({
         handle,
         artistId,

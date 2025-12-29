@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { UserProfile } from '@/hooks/use-user-profile'
+import { revalidateCache } from '@/lib/revalidate-client'
 import { Skeleton } from '@/components/ui/skeleton'
 
 interface Category {
@@ -176,22 +177,11 @@ export default function EditCategoriesModal({
 
       // Revalidate the artist profile page cache
       if (profile.handle) {
-        try {
-          await fetch('/api/revalidate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              handle: profile.handle,
-              artistId: profile.id,
-              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
-            }),
-          })
-        } catch (revalidateError) {
-          // Log but don't fail - revalidation is best effort
-          console.warn('Failed to revalidate cache:', revalidateError)
-        }
+        await revalidateCache({
+          handle: profile.handle,
+          artistId: profile.id,
+          tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+        })
       }
 
       // Success - call onSuccess and close

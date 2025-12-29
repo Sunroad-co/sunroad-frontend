@@ -1,5 +1,6 @@
 /**
  * Utility functions for cache revalidation
+ * Uses session-based authentication (no secrets sent from client)
  */
 
 export async function revalidateArtist(handle: string) {
@@ -9,7 +10,9 @@ export async function revalidateArtist(handle: string) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies for session authentication
       body: JSON.stringify({
+        handle,
         tags: [`artist:${handle}`]
       })
     })
@@ -27,14 +30,17 @@ export async function revalidateArtist(handle: string) {
   }
 }
 
-export async function revalidateArtistWorks(artistId: string) {
+export async function revalidateArtistWorks(artistId: string, handle: string) {
   try {
     const response = await fetch('/api/revalidate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies for session authentication
       body: JSON.stringify({
+        handle,
+        artistId,
         tags: [`artist-works:${artistId}`]
       })
     })

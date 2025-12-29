@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { revalidateCache } from '@/lib/revalidate-client'
 import EditButton from './edit-button'
 import AddWorkModal from './add-work-modal'
 import EditWorkModal from './edit-work-modal'
@@ -83,21 +84,11 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
 
       // Revalidate cache
       if (profile.handle) {
-        try {
-          await fetch('/api/revalidate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              handle: profile.handle,
-              artistId: profile.id,
-              tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
-            }),
-          })
-        } catch (revalidateError) {
-          console.warn('Failed to revalidate cache:', revalidateError)
-        }
+        await revalidateCache({
+          handle: profile.handle,
+          artistId: profile.id,
+          tags: [`artist:${profile.handle}`, `artist-works:${profile.id}`],
+        })
       }
 
       // Success
