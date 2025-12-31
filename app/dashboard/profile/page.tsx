@@ -22,6 +22,13 @@ export default function DashboardProfilePage() {
     }
   }, [user, loading, router])
 
+  // Redirect to onboarding if authenticated but no profile
+  useEffect(() => {
+    if (!loading && user && !profileLoading && !profile) {
+      router.push('/onboarding')
+    }
+  }, [user, profile, loading, profileLoading, router])
+
   // Show loading while fetching user or profile
   if (loading || profileLoading) {
     return <ProfilePageSkeleton />
@@ -46,7 +53,7 @@ export default function DashboardProfilePage() {
   }
 
   if (!user || !profile) {
-    return null // Will redirect to login or show loading
+    return null // Will redirect to login/onboarding or show loading
   }
 
   return (

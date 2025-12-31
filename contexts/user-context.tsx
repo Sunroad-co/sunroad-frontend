@@ -100,18 +100,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
           .from('artists_min')
           .select('display_name, avatar_url')
           .eq('auth_user_id', user.id)
-          .single()
+          .maybeSingle()
 
         if (profileError) {
-          // Profile might not exist yet, that's okay
-          console.error('Error fetching basic profile:', profileError)
+          // Only log actual errors, not "no rows" (which is normal during onboarding)
+          if (profileError.code !== 'PGRST116') {
+            console.error('Error fetching basic profile:', profileError)
+          }
+          setProfile(null)
+          return
+        }
+
+        // Profile might not exist yet (during onboarding), that's normal
+        if (!data) {
           setProfile(null)
           return
         }
 
         setProfile({
-          display_name: data?.display_name ?? null,
-          avatar_url: data?.avatar_url ?? null,
+          display_name: data.display_name ?? null,
+          avatar_url: data.avatar_url ?? null,
         })
       } catch (err) {
         console.error('Unexpected error fetching basic profile:', err)

@@ -214,7 +214,7 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
         Login
       </Link>
       <Link 
-        href="/auth/sign-up" 
+        href="/signup" 
         className="px-4 py-2 text-white bg-sunroad-amber-600 rounded-lg hover:bg-sunroad-amber-700 transition-colors font-medium"
       >
         Sign Up

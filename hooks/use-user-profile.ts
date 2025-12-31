@@ -69,11 +69,25 @@ export function useUserProfile(user: User | null) {
           )
         `)
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError)
-        setError('Failed to load profile')
+        // Only log actual errors, not "no rows" (which is normal during onboarding)
+        if (profileError.code !== 'PGRST116') {
+          console.error('Error fetching profile:', profileError)
+          setError('Failed to load profile')
+        } else {
+          // No profile exists yet - this is normal during onboarding
+          setProfile(null)
+          setLoading(false)
+        }
+        return
+      }
+
+      if (!profileData) {
+        // No profile exists yet - this is normal during onboarding
+        setProfile(null)
+        setLoading(false)
         return
       }
 
