@@ -39,7 +39,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <AuthLayout title="Complete your profile" subtitle="Tell us about yourself to get started">
+    <AuthLayout containerClassName="w-full max-w-3xl py-2 lg:py-4 mx-auto">
       <OnboardingForm />
     </AuthLayout>
   )

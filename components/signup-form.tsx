@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { TurnstileCaptcha, TurnstileCaptchaHandle } from "@/components/auth/TurnstileCaptcha";
 
 type Step = "email" | "otp";
 
@@ -28,6 +29,10 @@ export default function SignupForm({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [resendCaptchaToken, setResendCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<TurnstileCaptchaHandle>(null);
+  const resendCaptchaRef = useRef<TurnstileCaptchaHandle>(null);
   const router = useRouter();
 
   // Cooldown timer for resend OTP
@@ -42,6 +47,12 @@ export default function SignupForm({
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!captchaToken) {
+      setError("Please complete the CAPTCHA verification.");
+      return;
+    }
+
     const supabase = createClient();
     setIsLoading(true);
     setError(null);
@@ -51,13 +62,23 @@ export default function SignupForm({
         email,
         options: {
           shouldCreateUser: true,
+          captchaToken,
         },
       });
       if (error) throw error;
       setStep("otp");
       setResendCooldown(60); // 60 second cooldown
+      captchaRef.current?.reset();
+      setCaptchaToken(null);
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Failed to send OTP. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to send OTP. Please try again.";
+      if (errorMessage.includes('captcha') || errorMessage.includes('CAPTCHA') || errorMessage.includes('turnstile')) {
+        setError("CAPTCHA verification failed. Please try again.");
+      } else {
+        setError(errorMessage);
+      }
+      captchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -65,6 +86,11 @@ export default function SignupForm({
 
   const handleResendOTP = async () => {
     if (resendCooldown > 0) return;
+    
+    if (!resendCaptchaToken) {
+      setError("Please complete the CAPTCHA verification.");
+      return;
+    }
     
     const supabase = createClient();
     setIsLoading(true);
@@ -75,12 +101,22 @@ export default function SignupForm({
         email,
         options: {
           shouldCreateUser: true,
+          captchaToken: resendCaptchaToken,
         },
       });
       if (error) throw error;
       setResendCooldown(60);
+      resendCaptchaRef.current?.reset();
+      setResendCaptchaToken(null);
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Failed to resend OTP. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to resend OTP. Please try again.";
+      if (errorMessage.includes('captcha') || errorMessage.includes('CAPTCHA') || errorMessage.includes('turnstile')) {
+        setError("CAPTCHA verification failed. Please try again.");
+      } else {
+        setError(errorMessage);
+      }
+      resendCaptchaRef.current?.reset();
+      setResendCaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -117,10 +153,10 @@ export default function SignupForm({
     <div className={cn("flex flex-col gap-6 w-full max-w-md mx-auto", className)} {...props}>
       <Card className="w-full">
         <CardHeader>
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-2xl font-body">
             {step === "email" ? "Sign up" : "Verify your email"}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="font-body">
             {step === "email"
               ? "Enter your email to receive a verification code"
               : `We sent a code to ${email}`}
@@ -131,26 +167,42 @@ export default function SignupForm({
             <form onSubmit={handleSendOTP}>
               <div className="flex flex-col gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="font-body">Email</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="m@example.com"
+                    placeholder="Enter your email address"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
-                    className="h-12"
+                    className="h-12 font-body"
                   />
                 </div>
-                {error && <p className="text-sm text-red-500">{error}</p>}
-                <Button type="submit" className="w-full h-12" disabled={isLoading}>
+                {error && <p className="text-sm text-red-500 font-body">{error}</p>}
+                <TurnstileCaptcha
+                  ref={captchaRef}
+                  onToken={setCaptchaToken}
+                  onExpire={() => {
+                    setCaptchaToken(null);
+                  }}
+                  onError={() => {
+                    setCaptchaToken(null);
+                  }}
+                  className="my-2"
+                  size="normal"
+                />
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 bg-sunroad-amber-600 hover:bg-sunroad-amber-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-xl font-body" 
+                  disabled={isLoading || !captchaToken}
+                >
                   {isLoading ? "Sending code..." : "Send verification code"}
                 </Button>
               </div>
-              <div className="mt-4 text-center text-sm">
+              <div className="mt-4 text-center text-sm font-body">
                 Already have an account?{" "}
-                <Link href="/auth/login" className="underline underline-offset-4">
+                <Link href="/auth/login" className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline underline-offset-4">
                   Login
                 </Link>
               </div>
@@ -159,7 +211,7 @@ export default function SignupForm({
             <form onSubmit={handleVerifyOTP}>
               <div className="flex flex-col gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="otp">Verification code</Label>
+                  <Label htmlFor="otp" className="font-body">Verification code</Label>
                   <Input
                     id="otp"
                     type="text"
@@ -172,22 +224,40 @@ export default function SignupForm({
                     disabled={isLoading}
                     maxLength={6}
                     autoFocus
-                    className="text-center text-2xl tracking-widest font-mono"
+                    className="text-center text-2xl tracking-widest font-mono h-12"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground font-body">
                     Enter the 6-digit code sent to your email
                   </p>
                 </div>
-                {error && <p className="text-sm text-red-500">{error}</p>}
-                <Button type="submit" className="w-full h-12" disabled={isLoading || otp.length !== 6}>
+                {error && <p className="text-sm text-red-500 font-body">{error}</p>}
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 bg-sunroad-amber-600 hover:bg-sunroad-amber-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-xl font-body" 
+                  disabled={isLoading || otp.length !== 6}
+                >
                   {isLoading ? "Verifying..." : "Verify code"}
                 </Button>
+                {resendCooldown === 0 && (
+                  <TurnstileCaptcha
+                    ref={resendCaptchaRef}
+                    onToken={setResendCaptchaToken}
+                    onExpire={() => {
+                      setResendCaptchaToken(null);
+                    }}
+                    onError={() => {
+                      setResendCaptchaToken(null);
+                    }}
+                    className="my-2"
+                    size="compact"
+                  />
+                )}
                 <div className="text-center">
                   <button
                     type="button"
                     onClick={handleResendOTP}
-                    disabled={isLoading || resendCooldown > 0}
-                    className="text-sm text-sunroad-amber-600 hover:text-sunroad-amber-700 underline underline-offset-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoading || resendCooldown > 0 || !resendCaptchaToken}
+                    className="text-sm text-sunroad-amber-600 hover:text-sunroad-amber-700 underline underline-offset-4 disabled:opacity-50 disabled:cursor-not-allowed font-body"
                   >
                     {resendCooldown > 0
                       ? `Resend code in ${resendCooldown}s`
@@ -203,7 +273,7 @@ export default function SignupForm({
                       setError(null);
                     }}
                     disabled={isLoading}
-                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 disabled:opacity-50"
+                    className="text-sm text-sunroad-brown-600 hover:text-sunroad-brown-700 underline underline-offset-4 disabled:opacity-50 font-body"
                   >
                     Change email
                   </button>
