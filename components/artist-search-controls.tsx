@@ -91,6 +91,7 @@ export default function ArtistSearchControls({
     setCategoryDropdownContent(content)
   }, [])
   const justExpandedRef = useRef(false)
+  const justOpenedDropdownRef = useRef(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const whereRef = useRef<HTMLDivElement>(null)
   const categoryRef = useRef<HTMLDivElement>(null)
@@ -108,7 +109,17 @@ export default function ArtistSearchControls({
   // Close other segments when one becomes active - memoized to prevent infinite loops
   const handleSegmentActivate = useCallback((segment: 'search' | 'where' | 'category' | null) => {
     setActiveSegment(prev => prev !== segment ? segment : prev)
-    setActiveDropdown(prev => prev !== segment ? segment : prev)
+    setActiveDropdown(prev => {
+      if (prev !== segment) {
+        // Set flag to prevent click-outside from immediately closing
+        justOpenedDropdownRef.current = true
+        setTimeout(() => {
+          justOpenedDropdownRef.current = false
+        }, 200)
+        return segment
+      }
+      return prev
+    })
   }, [])
 
   // Expand search bar when user interacts (skip for variant="page")
@@ -344,12 +355,22 @@ export default function ArtistSearchControls({
 
   // Handle click outside to close active dropdown
   const handleDropdownClickOutside = useCallback((event: MouseEvent) => {
-    // Don't close if we just expanded
-    if (justExpandedRef.current) {
+    // Don't close if we just expanded or just opened a dropdown
+    if (justExpandedRef.current || justOpenedDropdownRef.current) {
       return
     }
     
     const target = event.target as HTMLElement
+    
+    // Don't close if clicking on the pill containers themselves (whereRef, categoryRef)
+    // This prevents closing when clicking to open the dropdown
+    if (
+      (whereRef.current && whereRef.current.contains(target as Node)) ||
+      (categoryRef.current && categoryRef.current.contains(target as Node)) ||
+      (searchRef.current && searchRef.current.contains(target as Node))
+    ) {
+      return
+    }
     
     // Don't close if clicking on interactive elements inside dropdown (links, buttons)
     // This allows navigation/selection to complete before closing
@@ -360,7 +381,7 @@ export default function ArtistSearchControls({
         target.closest('[role="option"]') !== null) {
       // Allow the click to complete, then close after a short delay
       setTimeout(() => {
-        if (activeDropdown) {
+        if (activeDropdown && !justOpenedDropdownRef.current) {
           setActiveDropdown(null)
           if (activeSegment === activeDropdown) {
             setActiveSegment(null)
