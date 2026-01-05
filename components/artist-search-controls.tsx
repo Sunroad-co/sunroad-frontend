@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import SearchBar from './search-bar'
 import CategoryFilterPill from './category-filter-pill'
@@ -14,6 +15,7 @@ interface ArtistSearchControlsProps {
   onResultClick?: () => void
   variant?: 'default' | 'page'
   showSearchButton?: boolean
+  mobileMode?: 'inline' | 'overlay' // For mobile: 'inline' expands in place, 'overlay' shows fixed overlay
   // Controlled props for variant="page"
   query?: string
   onQueryChange?: (query: string) => void
@@ -33,6 +35,7 @@ export default function ArtistSearchControls({
   onResultClick,
   variant = 'default',
   showSearchButton = true,
+  mobileMode = 'inline',
   query: controlledQuery,
   onQueryChange,
   selectedCategoryIds: controlledCategoryIds,
@@ -75,6 +78,7 @@ export default function ArtistSearchControls({
   const [whereDropdownContent, setWhereDropdownContent] = useState<React.ReactNode>(null)
   const [categoryDropdownContent, setCategoryDropdownContent] = useState<React.ReactNode>(null)
   const [expandedHeight, setExpandedHeight] = useState<number | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
 
   // Simple callbacks - no blocking, let React handle re-renders efficiently
   const handleSearchDropdownRender = useCallback((content: React.ReactNode) => {
@@ -97,6 +101,9 @@ export default function ArtistSearchControls({
   const desktopContainerRef = useRef<HTMLDivElement>(null)
   const pillRef = useRef<HTMLDivElement>(null)
   const dropdownContainerRef = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const overlayPanelRef = useRef<HTMLDivElement>(null)
+  const placeholderButtonRef = useRef<HTMLDivElement>(null)
 
   // Close other segments when one becomes active - memoized to prevent infinite loops
   const handleSegmentActivate = useCallback((segment: 'search' | 'where' | 'category' | null) => {
@@ -132,8 +139,12 @@ export default function ArtistSearchControls({
     setTimeout(() => {
       setIsExpanded(false)
       setIsAnimatingOut(false)
+      // Return focus to placeholder button in overlay mode
+      if (mobileMode === 'overlay' && placeholderButtonRef.current) {
+        placeholderButtonRef.current.focus()
+      }
     }, 300) // Match animation duration
-  }, [variant])
+  }, [variant, mobileMode])
 
   // Auto-focus search input when expanded
   useEffect(() => {
@@ -146,6 +157,36 @@ export default function ArtistSearchControls({
       return () => clearTimeout(timer)
     }
   }, [isExpanded, isAnimatingOut])
+
+  // Track client-side mount for portal
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Scroll lock and escape key handling for overlay mode
+  useEffect(() => {
+    if (mobileMode !== 'overlay') return
+    
+    if (isExpanded && !isAnimatingOut) {
+      // Lock body scroll
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      
+      // Handle escape key
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          handleCollapse()
+        }
+      }
+      
+      document.addEventListener('keydown', handleEscape)
+      
+      return () => {
+        document.body.style.overflow = originalOverflow
+        document.removeEventListener('keydown', handleEscape)
+      }
+    }
+  }, [isExpanded, isAnimatingOut, mobileMode, handleCollapse])
 
   // Open dropdown when segment is activated (for where and category)
   useEffect(() => {
@@ -408,79 +449,94 @@ export default function ArtistSearchControls({
     router.push(`/search${queryString ? `?${queryString}` : ''}`)
   }, [searchQuery, selectedCategoryIds, selectedLocation, isNearMe, nearMeCoords, router])
 
+  // Handle backdrop click for overlay mode
+  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleCollapse()
+    }
+  }, [handleCollapse])
+
+  // Handle result click - close overlay if in overlay mode
+  const handleResultClickWithOverlay = useCallback(() => {
+    if (mobileMode === 'overlay' && isExpanded) {
+      handleCollapse()
+    }
+    onResultClick?.()
+  }, [mobileMode, isExpanded, handleCollapse, onResultClick])
+
   return (
     <div ref={containerRef} className={`w-full ${className}`}>
       {/* Mobile Layout - Unified Search Bar */}
-      <div 
-        className="md:hidden relative" 
-        style={{ 
-          minHeight: '56px',
-          height: expandedHeight && expandedHeight > 0 ? `${expandedHeight}px` : undefined
-        }}
-      >
-        {/* Collapsed State - Simple Input (Normal size) - Only for default variant */}
-        {variant !== 'page' && (
-          <div 
-            ref={placeholderRef}
-            onClick={!isExpanded ? (e) => handleExpand(e) : undefined}
-            onMouseDown={!isExpanded ? (e) => e.stopPropagation() : undefined}
-            onKeyDown={!isExpanded ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                handleExpand()
-              }
-            } : undefined}
-            tabIndex={!isExpanded ? 0 : -1}
-            role="button"
-            aria-label="Open search"
-            className={`bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
-              isExpanded ? 'absolute inset-0 opacity-0 pointer-events-none' : 'relative opacity-100'
-            }`}
-          >
-          <div className="px-4 py-2.5 flex items-center">
-            <input
-              type="text"
-              placeholder="Find local creatives"
-              readOnly
-              tabIndex={-1}
-              className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-500 placeholder-gray-400 cursor-pointer pointer-events-none"
-            />
-            <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
-        )}
+      {mobileMode === 'overlay' ? (
+        // Overlay Mode: Compact pill + Fixed overlay
+        <>
+          {/* Compact Placeholder Pill - Always visible when collapsed */}
+          {variant !== 'page' && !isExpanded && (
+            <div 
+              ref={placeholderButtonRef}
+              onClick={(e) => handleExpand(e)}
+              onMouseDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleExpand()
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label="Open search"
+              className="md:hidden bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 flex-shrink-0"
+              style={{ minWidth: '80px' }}
+            >
+              <div className="px-3 py-2 flex items-center gap-2">
+                <svg className="h-4 w-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="text-xs text-gray-500 truncate">Find local creatives</span>
+              </div>
+            </div>
+          )}
 
-        {/* Expanded State - Full Search Bar (Expands in place from placeholder) */}
-        {(isExpanded || variant === 'page') && (
-          <div 
-            ref={expandedRef}
-            className={`${
-              variant === 'page'
-                ? 'relative bg-white border border-sunroad-brown-200/60 rounded-2xl shadow-[0_8px_24px_rgba(67,48,43,0.08)]'
-                : 'absolute top-0 left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[60]'
-            } ${
-              variant !== 'page' && (isAnimatingOut 
-                ? 'animate-fade-out-slide-up' 
-                : 'animate-fade-in-slide-down')
-            } overflow-visible`}
-            style={variant === 'page' ? {} : { 
-              transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          >
-            {/* Close Button - Over the search bar, top right (only for default variant) */}
-            {variant !== 'page' && (
-              <button
-                onClick={handleCollapse}
-                className="absolute top-3 right-3 z-[70] w-8 h-8 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
-                aria-label="Close search"
+          {/* Overlay - Rendered via portal to document.body for true fullscreen */}
+          {isMounted && (isExpanded || variant === 'page') && typeof document !== 'undefined' && createPortal(
+            <div
+              ref={overlayRef}
+              className={`md:hidden fixed inset-0 z-[100] ${
+                isAnimatingOut ? 'animate-fade-out' : 'animate-fade-in'
+              }`}
+              onClick={variant !== 'page' ? handleBackdropClick : undefined}
+            >
+              {/* Fullscreen Backdrop */}
+              <div 
+                className="absolute inset-0 bg-black/70 backdrop-blur-lg"
+                aria-hidden="true"
+              />
+              
+              {/* Floating Panel - Centered near top with margins */}
+              <div
+                ref={overlayPanelRef}
+                onClick={(e) => e.stopPropagation()}
+                className={`absolute left-4 right-4 top-4 bg-white rounded-2xl border border-gray-200 shadow-2xl ${
+                  isAnimatingOut 
+                    ? 'animate-fade-out-slide-up' 
+                    : 'animate-fade-in-slide-down'
+                } overflow-visible`}
+                style={{ 
+                  transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
               >
-              <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              </button>
-            )}
+                {/* Close Button - Top right */}
+                {variant !== 'page' && (
+                  <button
+                    onClick={handleCollapse}
+                    className="absolute top-4 right-4 z-[110] w-8 h-8 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
+                    aria-label="Close search"
+                  >
+                    <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
 
             {/* First Row: Search Input */}
             <div 
@@ -505,7 +561,7 @@ export default function ArtistSearchControls({
                 className="w-full"
                 categoryIds={selectedCategoryIds}
                 locationIds={locationIds}
-                onResultClick={onResultClick}
+                onResultClick={handleResultClickWithOverlay}
                 embedded={true}
                 isActive={activeSegment === 'search'}
                 onFocusChange={handleSearchFocusChange}
@@ -513,7 +569,12 @@ export default function ArtistSearchControls({
                 showLabel={false}
                 disableDropdown={variant === 'page'}
                 value={variant === 'page' ? searchQuery : undefined}
-                onSearch={handleSearchClick}
+                onSearch={() => {
+                  handleSearchClick()
+                  if (mobileMode === 'overlay' && variant !== 'page') {
+                    handleCollapse()
+                  }
+                }}
                 renderDropdownInParent={true}
                 onDropdownRender={handleSearchDropdownRender}
                 nearMeCoords={isNearMe ? nearMeCoords : null}
@@ -607,7 +668,12 @@ export default function ArtistSearchControls({
               {showSearchButton && (
                 <div className="px-3 py-2 flex items-center">
                   <button
-                    onClick={handleSearchClick}
+                    onClick={() => {
+                      handleSearchClick()
+                      if (mobileMode === 'overlay' && variant !== 'page') {
+                        handleCollapse()
+                      }
+                    }}
                     className={`w-10 h-10 rounded-full text-white flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg flex-shrink-0 ${
                       variant === 'page' 
                         ? 'bg-sunroad-amber-600 hover:bg-sunroad-amber-700' 
@@ -623,17 +689,247 @@ export default function ArtistSearchControls({
               )}
             </div>
 
-            {/* Shared Dropdown Container - All dropdowns render here */}
+            {/* Shared Dropdown Container - All dropdowns render here (higher z-index for overlay) */}
             {activeDropdown && (
-              <div ref={dropdownContainerRef} className="absolute top-full left-0 w-full mt-2 z-[60]">
+              <div ref={dropdownContainerRef} className={`absolute top-full left-0 w-full mt-2 ${
+                mobileMode === 'overlay' ? 'z-[120]' : 'z-[60]'
+              }`}>
                 {activeDropdown === 'search' && searchDropdownContent}
                 {activeDropdown === 'where' && whereDropdownContent}
                 {activeDropdown === 'category' && categoryDropdownContent}
               </div>
             )}
+              </div>
+            </div>,
+            document.body
+          )}
+        </>
+      ) : (
+        // Inline Mode: Original behavior (expands in place)
+        <div 
+          className="md:hidden relative" 
+          style={{ 
+            minHeight: '56px',
+            height: expandedHeight && expandedHeight > 0 ? `${expandedHeight}px` : undefined
+          }}
+        >
+          {/* Collapsed State - Simple Input (Normal size) - Only for default variant */}
+          {variant !== 'page' && (
+            <div 
+              ref={placeholderRef}
+              onClick={!isExpanded ? (e) => handleExpand(e) : undefined}
+              onMouseDown={!isExpanded ? (e) => e.stopPropagation() : undefined}
+              onKeyDown={!isExpanded ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleExpand()
+                }
+              } : undefined}
+              tabIndex={!isExpanded ? 0 : -1}
+              role="button"
+              aria-label="Open search"
+              className={`bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
+                isExpanded ? 'absolute inset-0 opacity-0 pointer-events-none' : 'relative opacity-100'
+              }`}
+            >
+            <div className="px-4 py-2.5 flex items-center">
+              <input
+                type="text"
+                placeholder="Find local creatives"
+                readOnly
+                tabIndex={-1}
+                className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-500 placeholder-gray-400 cursor-pointer pointer-events-none"
+              />
+              <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
           </div>
-        )}
-      </div>
+          )}
+
+          {/* Expanded State - Full Search Bar (Expands in place from placeholder) */}
+          {(isExpanded || variant === 'page') && (
+            <div 
+              ref={expandedRef}
+              className={`${
+                variant === 'page'
+                  ? 'relative bg-white border border-sunroad-brown-200/60 rounded-2xl shadow-[0_8px_24px_rgba(67,48,43,0.08)]'
+                  : 'absolute top-0 left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[60]'
+              } ${
+                variant !== 'page' && (isAnimatingOut 
+                  ? 'animate-fade-out-slide-up' 
+                  : 'animate-fade-in-slide-down')
+              } overflow-visible`}
+              style={variant === 'page' ? {} : { 
+                transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              {/* Close Button - Over the search bar, top right (only for default variant) */}
+              {variant !== 'page' && (
+                <button
+                  onClick={handleCollapse}
+                  className="absolute top-3 right-3 z-[70] w-8 h-8 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  aria-label="Close search"
+                >
+                <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                </button>
+              )}
+
+              {/* First Row: Search Input */}
+              <div 
+                ref={searchRef}
+                className={`px-4 py-3 border-b border-gray-100 transition-colors relative ${
+                  activeSegment === 'search' && variant === 'page'
+                    ? 'bg-white rounded-t-xl'
+                    : activeSegment === 'search'
+                    ? 'bg-gray-50'
+                    : ''
+                }`}
+                onClick={(e) => {
+                  if (activeSegment !== 'search') {
+                    handleSegmentActivate('search')
+                    const input = searchRef.current?.querySelector('input[role="combobox"]') as HTMLInputElement
+                    input?.focus()
+                  }
+                }}
+              >
+                <SearchBar
+                  placeholder={placeholder}
+                  className="w-full"
+                  categoryIds={selectedCategoryIds}
+                  locationIds={locationIds}
+                  onResultClick={onResultClick}
+                  embedded={true}
+                  isActive={activeSegment === 'search'}
+                  onFocusChange={handleSearchFocusChange}
+                  onQueryChange={setSearchQuery}
+                  showLabel={false}
+                  disableDropdown={variant === 'page'}
+                  value={variant === 'page' ? searchQuery : undefined}
+                  onSearch={handleSearchClick}
+                  renderDropdownInParent={true}
+                  onDropdownRender={handleSearchDropdownRender}
+                  nearMeCoords={isNearMe ? nearMeCoords : null}
+                />
+              </div>
+
+              {/* Second Row: Where and Category Filters */}
+              <div className="flex items-center divide-x divide-gray-200 relative overflow-visible">
+                {/* Where Filter */}
+                <div 
+                  ref={whereRef}
+                  className={`flex-1 px-4 py-3 transition-colors cursor-pointer relative ${
+                    activeSegment === 'where' && variant === 'page'
+                      ? 'bg-white rounded-l-xl'
+                      : activeSegment === 'where'
+                      ? 'bg-gray-50'
+                      : 'hover:bg-gray-50/50'
+                  }`}
+                  onClick={(e) => {
+                    if (activeDropdown !== 'where') {
+                      handleSegmentActivate('where')
+                    } else {
+                      // If already active, toggle dropdown
+                      setActiveDropdown(prev => prev === 'where' ? null : 'where')
+                    }
+                  }}
+                >
+                  <div className="text-xs font-semibold text-gray-900 mb-0.5 flex items-center gap-1.5">
+                    <svg className="h-3.5 w-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Where
+                  </div>
+                  <div className="text-sm text-gray-500 min-w-0">
+                    <WhereFilterPill 
+                      selectedLocation={selectedLocation}
+                      onChange={setSelectedLocation}
+                      embedded={true}
+                      onActiveChange={handleWhereActiveChange}
+                      showLabel={false}
+                      renderDropdownInParent={true}
+                      onDropdownRender={handleWhereDropdownRender}
+                      isOpen={activeDropdown === 'where'}
+                    />
+                  </div>
+                </div>
+
+                {/* Category Filter */}
+                <div 
+                  ref={categoryRef}
+                  className={`flex-1 px-4 py-3 transition-colors cursor-pointer relative ${
+                    activeSegment === 'category' && variant === 'page'
+                      ? 'bg-white rounded-r-xl'
+                      : activeSegment === 'category'
+                      ? 'bg-gray-50'
+                      : 'hover:bg-gray-50/50'
+                  }`}
+                  onClick={(e) => {
+                    if (activeDropdown !== 'category') {
+                      handleSegmentActivate('category')
+                    } else {
+                      // If already active, toggle dropdown
+                      setActiveDropdown(prev => prev === 'category' ? null : 'category')
+                    }
+                  }}
+                >
+                  <div className="text-xs font-semibold text-gray-900 mb-0.5 flex items-center gap-1.5">
+                    <svg className="h-3.5 w-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    What
+                  </div>
+                  <div className="text-sm text-gray-500 min-w-0">
+                    <CategoryFilterPill
+                      selectedIds={selectedCategoryIds}
+                      onChange={setSelectedCategoryIds}
+                      embedded={true}
+                      isActive={activeSegment === 'category'}
+                      onActiveChange={handleCategoryActiveChange}
+                      showLabel={false}
+                      subtitle="Category"
+                      renderDropdownInParent={true}
+                      onDropdownRender={handleCategoryDropdownRender}
+                      isOpen={activeDropdown === 'category'}
+                    />
+                  </div>
+                </div>
+
+                {/* Search Button - Circular on far right */}
+                {showSearchButton && (
+                  <div className="px-3 py-2 flex items-center">
+                    <button
+                      onClick={handleSearchClick}
+                      className={`w-10 h-10 rounded-full text-white flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg flex-shrink-0 ${
+                        variant === 'page' 
+                          ? 'bg-sunroad-amber-600 hover:bg-sunroad-amber-700' 
+                          : 'bg-amber-600 hover:bg-amber-700'
+                      }`}
+                      aria-label="Search"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Shared Dropdown Container - All dropdowns render here */}
+              {activeDropdown && (
+                <div ref={dropdownContainerRef} className="absolute top-full left-0 w-full mt-2 z-[60]">
+                  {activeDropdown === 'search' && searchDropdownContent}
+                  {activeDropdown === 'where' && whereDropdownContent}
+                  {activeDropdown === 'category' && categoryDropdownContent}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Desktop Layout - Unified Airbnb-style Bar */}
       <div className="hidden md:block relative overflow-visible" style={{ height: '80px' }}>

@@ -176,6 +176,13 @@ export default function MobileMenuOverlay({ isOpen, onClose, user, onLogout }: M
                     Home
                   </Link>
                   <Link
+                    href="/blog"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-3 text-white hover:bg-sunroad-amber-900/40 rounded-lg transition-colors font-medium"
+                  >
+                    Blog
+                  </Link>
+                  <Link
                     href="/search"
                     onClick={handleLinkClick}
                     className="block px-4 py-3 text-white hover:bg-sunroad-amber-900/40 rounded-lg transition-colors font-medium"
@@ -200,6 +207,13 @@ export default function MobileMenuOverlay({ isOpen, onClose, user, onLogout }: M
                     className="block px-4 py-3 text-white hover:bg-sunroad-amber-900/40 rounded-lg transition-colors font-medium"
                   >
                     Home
+                  </Link>
+                  <Link
+                    href="/blog"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-3 text-white hover:bg-sunroad-amber-900/40 rounded-lg transition-colors font-medium"
+                  >
+                    Blog
                   </Link>
                   <Link
                     href="/search"

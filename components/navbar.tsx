@@ -56,56 +56,69 @@ export default function Navbar({ variant }: NavbarProps = {}) {
           </div>
           )}
           
-          {/* Right side - Auth */}
-          <div className="flex items-center">
+          {/* Right side - Navigation Links + Auth */}
+          <div className="flex items-center gap-6">
+            <nav className="hidden lg:flex items-center gap-4">
+              <Link
+                href="/blog"
+                className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors font-medium text-sm"
+              >
+                Blog
+              </Link>
+            </nav>
             <NavbarAuth />
           </div>
         </div>
 
         {/* Mobile Layout */}
         <div className="md:hidden py-4">
-          {/* Top row - Logo and Menu Trigger */}
-          <div className="flex justify-between items-center mb-4">
-            <Link href="/" className="flex items-center space-x-2">
+          {/* Top row - Logo, Search, and Menu Trigger */}
+          <div className="flex items-center gap-1.5">
+            {/* Logo - Always on left */}
+            <Link href="/" className="flex items-center flex-shrink-0" style={{ minWidth: '70px' }}>
               <Image 
                 src="/sunroad_logo.png" 
                 alt="Sun Road" 
                 width={100} 
-                height={32}
+                height={40}
                 className="h-10 w-auto"
+                priority
               />
             </Link>
             
-            {/* Show avatar if authenticated, hamburger if not */}
-            {!loading && (
-              user ? (
+            {/* Search Bar - Inline, compact */}
+            {!hideSearchControls && (
+              <div className="flex-1 min-w-0">
+                <ArtistSearchControls 
+                  placeholder="Search for local creatives"
+                  onResultClick={() => setIsMobileMenuOpen(false)}
+                  mobileMode="overlay"
+                />
+              </div>
+            )}
+            
+            {/* Menu/Auth - Always on right, show skeleton when loading */}
+            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
+              {loading ? (
+                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+              ) : user ? (
                 <NavbarAuth 
                   onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
                   showMobileAvatar={true}
                 />
               ) : (
-            <button
+                <button
                   onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50"
+                  className="w-10 h-10 flex items-center justify-center text-sunroad-brown-600 hover:text-sunroad-amber-600 transition-colors rounded-lg hover:bg-sunroad-amber-50"
                   aria-label="Open menu"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-              )
-            )}
-          </div>
-          
-          {/* Search Bar */}
-          {!hideSearchControls && (
-          <div className="mb-4">
-            <ArtistSearchControls 
-              placeholder="Search for local creatives"
-              onResultClick={() => setIsMobileMenuOpen(false)}
-            />
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 

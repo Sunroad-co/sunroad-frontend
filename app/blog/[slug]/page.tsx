@@ -4,6 +4,7 @@ import { fetchBlogPostBySlug } from '@/lib/sanity/queries'
 import PostBody from '@/components/blog/post-body'
 import AuthorCard from '@/components/blog/author-card'
 import BlogShareButton from '@/components/blog/share-button'
+import Breadcrumbs from '@/components/blog/breadcrumbs'
 import SRImage from '@/components/media/SRImage'
 import { urlForImage } from '@/lib/sanity/image'
 
@@ -100,6 +101,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   return (
     <main className="min-h-screen bg-sunroad-cream">
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Breadcrumbs */}
+        <Breadcrumbs postTitle={post.title} />
+
         {/* Header */}
         <header className="mb-8">
           {/* Title */}

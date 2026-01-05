@@ -132,6 +132,24 @@
   }
 }
 
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @layer utilities {
   .animate-shimmer {
     animation: shimmer 2s infinite;
@@ -147,5 +165,11 @@
   }
   .animate-border-radius-collapse {
     animation: borderRadiusCollapse 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  .animate-fade-out {
+    animation: fadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 }

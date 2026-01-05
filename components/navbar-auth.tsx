@@ -56,12 +56,14 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
   }
 
   if (loading || profileLoading) {
-    // Show skeleton while loading
+    // Show single skeleton while loading (mobile shows skeleton in navbar, desktop shows buttons skeleton)
+    if (showMobileAvatar) {
+      // Mobile: return null, skeleton is handled in navbar
+      return null
+    }
+    // Desktop: show single skeleton
     return (
-      <div className="flex items-center space-x-4">
-        <div className="w-20 h-8 bg-gray-200 rounded animate-pulse"></div>
-        <div className="w-20 h-8 bg-gray-200 rounded animate-pulse"></div>
-      </div>
+      <div className="w-20 h-8 bg-gray-200 rounded animate-pulse"></div>
     )
   }
 
