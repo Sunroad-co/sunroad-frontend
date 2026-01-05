@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
         hostname: 'www.sunroad.io',
         pathname: '/upload/uploads/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.sanity.io',
+        pathname: '/images/**',
+      },
     ],
     minimumCacheTTL: 2678400, // 31 days
     deviceSizes: [640, 1200], // Mobile + desktop widths only

@@ -1,0 +1,118 @@
+import { revalidateTag, revalidatePath } from 'next/cache'
+import { NextRequest, NextResponse } from 'next/server'
+
+// Route segment config - ensure this endpoint is never cached
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+/**
+ * Sanity webhook handler for revalidating blog posts
+ * 
+ * Webhook configuration:
+ * - URL: https://sunroad-frontent.vercel.app/api/revalidatePost
+ * - Header: X-Sanity-Webhook-Secret: <secret>
+ * - Body projection: { "_type": _type, "_id": _id, "slug": slug.current }
+ * 
+ * Note: For delete/unpublish events, slug may be null
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // Verify webhook secret
+    const webhookSecret = request.headers.get('x-sanity-webhook-secret')
+    const expectedSecret = process.env.SANITY_WEBHOOK_SECRET
+
+    if (!webhookSecret || !expectedSecret) {
+      console.error('[revalidatePost] Missing webhook secret in header or env')
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized: Missing webhook secret' },
+        { status: 401 }
+      )
+    }
+
+    if (webhookSecret !== expectedSecret) {
+      console.error('[revalidatePost] Invalid webhook secret')
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized: Invalid webhook secret' },
+        { status: 401 }
+      )
+    }
+
+    // Parse and validate payload
+    const body = await request.json()
+    const { _type, _id, slug } = body
+
+    // Log the incoming webhook
+    console.log('[revalidatePost] Received webhook:', { _type, _id, slug })
+
+    // Ignore non-post types (return 200 OK to acknowledge receipt)
+    if (_type !== 'post') {
+      console.log(`[revalidatePost] Ignoring non-post type: ${_type}`)
+      return NextResponse.json(
+        { ok: true, message: `Ignored: _type is '${_type}', expected 'post'` },
+        { status: 200 }
+      )
+    }
+
+    // Always revalidate blog listing page
+    const revalidatedTags: string[] = []
+    const revalidatedPaths: string[] = []
+    
+    // Always revalidate blog listing (sync, no await)
+    // TypeScript types may be outdated - revalidateTag takes one arg in Next.js 16
+    ;(revalidateTag as (tag: string) => void)('sanity:blog')
+    revalidatePath('/blog')
+    revalidatedTags.push('sanity:blog')
+    revalidatedPaths.push('/blog')
+
+    // Always revalidate general post tag
+    ;(revalidateTag as (tag: string) => void)('sanity:post')
+    revalidatedTags.push('sanity:post')
+
+    // If slug exists, revalidate the specific post page
+    if (slug && typeof slug === 'string') {
+      const postTag = `sanity:post:${slug}`
+      const postPath = `/blog/${slug}`
+      
+      ;(revalidateTag as (tag: string) => void)(postTag)
+      revalidatePath(postPath)
+      revalidatedTags.push(postTag)
+      revalidatedPaths.push(postPath)
+      
+      console.log(`[revalidatePost] Revalidated post: ${slug}`)
+    } else {
+      console.log('[revalidatePost] No slug provided (likely delete/unpublish), only revalidated listing')
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        revalidated: {
+          _type,
+          _id,
+          slug: slug || null,
+          paths: revalidatedPaths,
+          tags: revalidatedTags,
+        },
+      },
+      { status: 200 }
+    )
+  } catch (error) {
+    console.error('[revalidatePost] Error processing webhook:', error)
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Failed to process webhook',
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// Explicitly disallow GET and other methods
+export async function GET() {
+  return NextResponse.json(
+    { ok: false, error: 'Method not allowed. Use POST.' },
+    { status: 405 }
+  )
+}
+
