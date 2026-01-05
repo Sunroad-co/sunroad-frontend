@@ -73,7 +73,7 @@ export default function Navbar({ variant }: NavbarProps = {}) {
         {/* Mobile Layout */}
         <div className="md:hidden py-4">
           {/* Top row - Logo, Search, and Menu Trigger */}
-          <div className="flex items-center gap-1.5">
+          <div className={`flex items-center ${hideSearchControls ? 'justify-between' : 'gap-1.5'}`}>
             {/* Logo - Always on left */}
             <Link href="/" className="flex items-center flex-shrink-0" style={{ minWidth: '60px' }}>
               <Image 
