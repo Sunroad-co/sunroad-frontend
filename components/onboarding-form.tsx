@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { sanitizeAndTrim } from "@/lib/utils/sanitize";
@@ -52,6 +53,8 @@ export default function OnboardingForm({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [repeatPasswordError, setRepeatPasswordError] = useState<string | null>(null);
   const [isSearchingLocations, setIsSearchingLocations] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(true); // Checked by default
+  const [locationError, setLocationError] = useState<string | null>(null);
   const router = useRouter();
   const locationRef = useRef<HTMLDivElement>(null);
 
@@ -269,6 +272,12 @@ export default function OnboardingForm({
       return;
     }
 
+    if (!selectedLocation) {
+      setLocationError("Location is required");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Update password
       const { error: passwordError } = await supabase.auth.updateUser({
@@ -356,6 +365,7 @@ export default function OnboardingForm({
     setLocationQuery(suggestion.properties.formatted);
     setShowSuggestions(false);
     setLocationSuggestions([]);
+    setLocationError(null); // Clear error when location is selected
   };
 
   const handleLocationClear = () => {
@@ -381,7 +391,9 @@ export default function OnboardingForm({
               <div className="flex flex-col gap-6">
                 {/* Name */}
                 <div className="grid gap-2">
-                  <Label htmlFor="display-name" className="font-body">Name</Label>
+                  <Label htmlFor="display-name" className="font-body">
+                    Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="display-name"
                     type="text"
@@ -397,7 +409,9 @@ export default function OnboardingForm({
 
                 {/* Handle */}
                 <div className="grid gap-2">
-                  <Label htmlFor="handle" className="font-body">Handle</Label>
+                  <Label htmlFor="handle" className="font-body">
+                    Handle <span className="text-red-500">*</span>
+                  </Label>
                   <div className={cn(
                     "relative flex items-center rounded-md border border-input bg-transparent shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring min-w-0",
                     isHandleAvailable === true && "border-green-500 focus-within:ring-green-500",
@@ -471,7 +485,9 @@ export default function OnboardingForm({
 
                 {/* Location */}
                 <div className="grid gap-2">
-                  <Label htmlFor="location" className="font-body">Location (optional)</Label>
+                  <Label htmlFor="location" className="font-body">
+                    Location <span className="text-red-500">*</span>
+                  </Label>
                   {selectedLocation ? (
                     <div className="flex items-center gap-2 p-3 bg-sunroad-amber-50 border border-sunroad-amber-200 rounded-md">
                       <div className="flex-1">
@@ -497,6 +513,7 @@ export default function OnboardingForm({
                         value={locationQuery}
                         onChange={(e) => {
                           setLocationQuery(e.target.value);
+                          setLocationError(null); // Clear error when user starts typing
                           if (selectedLocation) {
                             setSelectedLocation(null);
                           }
@@ -507,7 +524,8 @@ export default function OnboardingForm({
                           }
                         }}
                         disabled={isLoading}
-                        className="h-12 pr-10 font-body"
+                        required
+                        className={cn("h-12 pr-10 font-body", locationError && "border-red-500 focus-visible:ring-red-500")}
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         {isSearchingLocations && (
@@ -536,9 +554,14 @@ export default function OnboardingForm({
                       )}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground font-body">
-                    Help others find you by location
-                  </p>
+                  {locationError && (
+                    <p className="text-xs text-red-500 font-body">{locationError}</p>
+                  )}
+                  {!locationError && (
+                    <p className="text-xs text-muted-foreground font-body">
+                      Help others find you by location
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -546,7 +569,9 @@ export default function OnboardingForm({
               <div className="flex flex-col gap-6">
                 {/* Password fields */}
                 <div className="grid gap-2">
-                  <Label htmlFor="password" className="font-body">Password</Label>
+                  <Label htmlFor="password" className="font-body">
+                    Password <span className="text-red-500">*</span>
+                  </Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -581,7 +606,9 @@ export default function OnboardingForm({
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="repeat-password" className="font-body">Confirm Password</Label>
+                  <Label htmlFor="repeat-password" className="font-body">
+                    Confirm Password <span className="text-red-500">*</span>
+                  </Label>
                   <div className="relative">
                     <Input
                       id="repeat-password"
@@ -618,6 +645,37 @@ export default function OnboardingForm({
                   </div>
                 )}
 
+                {/* Terms and Conditions Checkbox */}
+                <div className="flex items-start gap-3 pt-2">
+                  <Checkbox
+                    id="terms-checkbox"
+                    checked={agreedToTerms}
+                    onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <Label
+                    htmlFor="terms-checkbox"
+                    className="text-sm text-sunroad-brown-700 font-body leading-relaxed cursor-pointer"
+                  >
+                    By creating an account, you agree to our{" "}
+                    <Link
+                      href="/terms"
+                      className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/privacy"
+                      className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Privacy Policy
+                    </Link>
+                  </Label>
+                </div>
+
                 <Button 
                   type="submit" 
                   className="w-full h-12 mt-auto bg-sunroad-amber-600 hover:bg-sunroad-amber-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-xl" 
@@ -631,24 +689,13 @@ export default function OnboardingForm({
                     !password.trim() ||
                     !repeatPassword.trim() ||
                     !displayName.trim() ||
-                    !handle.trim()
+                    !handle.trim() ||
+                    !agreedToTerms ||
+                    !selectedLocation
                   }
                 >
                   {isLoading ? "Creating profile..." : "Complete setup"}
                 </Button>
-                
-                <div className="text-center mt-4">
-                  <p className="text-xs text-sunroad-brown-500 font-body">
-                    By completing setup, you agree to our{" "}
-                    <Link href="/terms" className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline">
-                      Terms of Service
-                    </Link>{" "}
-                    and{" "}
-                    <Link href="/privacy" className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline">
-                      Privacy Policy
-                    </Link>
-                  </p>
-                </div>
               </div>
             </div>
           </form>
