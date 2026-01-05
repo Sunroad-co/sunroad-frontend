@@ -298,7 +298,10 @@ export default function ArtistSearchControls({
   }, [activeSegment, searchQuery, selectedLocation, selectedCategoryIds, isAnimatingOut, handleCollapse])
 
   // Collapse when clicking outside (only if no active segment and no query)
+  // Skip this for overlay mode - backdrop click handler handles it
   useEffect(() => {
+    if (mobileMode === 'overlay') return // Overlay mode uses backdrop click handler instead
+    
     function handleClickOutside(event: MouseEvent) {
       // Don't collapse if we just expanded (prevents immediate collapse)
       if (justExpandedRef.current) {
@@ -337,7 +340,7 @@ export default function ArtistSearchControls({
         document.removeEventListener('click', handleClickOutside)
       }
     }
-  }, [isExpanded, activeSegment, searchQuery, isAnimatingOut, handleCollapse])
+  }, [isExpanded, activeSegment, searchQuery, isAnimatingOut, handleCollapse, mobileMode])
 
   // Handle click outside to close active dropdown
   const handleDropdownClickOutside = useCallback((event: MouseEvent) => {
@@ -346,7 +349,28 @@ export default function ArtistSearchControls({
       return
     }
     
-    // Close the active dropdown
+    const target = event.target as HTMLElement
+    
+    // Don't close if clicking on interactive elements inside dropdown (links, buttons)
+    // This allows navigation/selection to complete before closing
+    if (target.tagName === 'A' || 
+        target.tagName === 'BUTTON' || 
+        target.closest('a') !== null || 
+        target.closest('button') !== null ||
+        target.closest('[role="option"]') !== null) {
+      // Allow the click to complete, then close after a short delay
+      setTimeout(() => {
+        if (activeDropdown) {
+          setActiveDropdown(null)
+          if (activeSegment === activeDropdown) {
+            setActiveSegment(null)
+          }
+        }
+      }, 100)
+      return
+    }
+    
+    // Close the active dropdown immediately for non-interactive clicks
     if (activeDropdown) {
       setActiveDropdown(null)
       // Also deactivate the segment if it matches
@@ -458,10 +482,13 @@ export default function ArtistSearchControls({
 
   // Handle result click - close overlay if in overlay mode
   const handleResultClickWithOverlay = useCallback(() => {
-    if (mobileMode === 'overlay' && isExpanded) {
-      handleCollapse()
-    }
     onResultClick?.()
+    // Delay closing overlay to allow navigation to start first
+    if (mobileMode === 'overlay' && isExpanded) {
+      setTimeout(() => {
+        handleCollapse()
+      }, 200)
+    }
   }, [mobileMode, isExpanded, handleCollapse, onResultClick])
 
   return (
@@ -515,7 +542,55 @@ export default function ArtistSearchControls({
               {/* Floating Panel - Centered near top with margins */}
               <div
                 ref={overlayPanelRef}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  // Only stop propagation for clicks on the panel background itself
+                  // Allow all clicks on interactive elements and dropdowns to work normally
+                  const target = e.target as HTMLElement
+                  
+                  // Check if click is inside a dropdown container
+                  const isInDropdown = dropdownContainerRef.current?.contains(target) || false
+                  
+                  // Check if click is on an interactive element or its children
+                  const isInteractive = target.tagName === 'A' || 
+                                       target.tagName === 'BUTTON' || 
+                                       target.tagName === 'INPUT' ||
+                                       target.tagName === 'LABEL' ||
+                                       target.closest('a') !== null || 
+                                       target.closest('button') !== null ||
+                                       target.closest('[role="option"]') !== null ||
+                                       target.closest('[role="listbox"]') !== null ||
+                                       target.closest('[role="combobox"]') !== null ||
+                                       target.closest('[role="menuitem"]') !== null ||
+                                       target.closest('[data-interactive]') !== null
+                  
+                  // Don't stop propagation for clicks on interactive elements or inside dropdowns
+                  if (!isInteractive && !isInDropdown) {
+                    e.stopPropagation()
+                  }
+                }}
+                onMouseDown={(e) => {
+                  // Also handle mousedown to prevent backdrop clicks on interactive elements
+                  const target = e.target as HTMLElement
+                  
+                  // Check if click is inside a dropdown container
+                  const isInDropdown = dropdownContainerRef.current?.contains(target) || false
+                  
+                  const isInteractive = target.tagName === 'A' || 
+                                       target.tagName === 'BUTTON' || 
+                                       target.tagName === 'INPUT' ||
+                                       target.tagName === 'LABEL' ||
+                                       target.closest('a') !== null || 
+                                       target.closest('button') !== null ||
+                                       target.closest('[role="option"]') !== null ||
+                                       target.closest('[role="listbox"]') !== null ||
+                                       target.closest('[role="combobox"]') !== null ||
+                                       target.closest('[role="menuitem"]') !== null ||
+                                       target.closest('[data-interactive]') !== null
+                  
+                  if (!isInteractive && !isInDropdown) {
+                    e.stopPropagation()
+                  }
+                }}
                 className={`absolute left-4 right-4 top-4 bg-white rounded-2xl border border-gray-200 shadow-2xl ${
                   isAnimatingOut 
                     ? 'animate-fade-out-slide-up' 

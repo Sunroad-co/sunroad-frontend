@@ -75,13 +75,13 @@ export default function Navbar({ variant }: NavbarProps = {}) {
           {/* Top row - Logo, Search, and Menu Trigger */}
           <div className="flex items-center gap-1.5">
             {/* Logo - Always on left */}
-            <Link href="/" className="flex items-center flex-shrink-0" style={{ minWidth: '70px' }}>
+            <Link href="/" className="flex items-center flex-shrink-0" style={{ minWidth: '60px' }}>
               <Image 
                 src="/sunroad_logo.png" 
                 alt="Sun Road" 
                 width={100} 
                 height={40}
-                className="h-10 w-auto"
+                className="h-8 w-auto"
                 priority
               />
             </Link>
