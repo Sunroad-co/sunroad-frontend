@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { UserProfile } from '@/hooks/use-user-profile'
 import { revalidateCache } from '@/lib/revalidate-client'
+import { useFeature } from '@/hooks/use-feature'
+import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
 import { Skeleton } from '@/components/ui/skeleton'
+import Toast from '@/components/ui/toast'
 
 interface Category {
   id: number
@@ -32,6 +35,16 @@ export default function EditCategoriesModal({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [maxLimitError, setMaxLimitError] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+
+  const { allowed: canAddCategory, reason: addCategoryReason, limit: maxCategories, used: currentCategories } = useFeature('add_category')
+  const { tier, refresh: refreshSnapshot } = useDashboardSnapshot()
+
+  // Calculate remaining categories
+  const remainingCategories = maxCategories !== null && currentCategories !== null 
+    ? Math.max(0, maxCategories - currentCategories)
+    : null
 
   // Fetch categories and current category IDs when modal opens
   useEffect(() => {
@@ -94,11 +107,11 @@ export default function EditCategoriesModal({
     
     setSelectedCategoryIds(prev => {
       if (prev.includes(categoryId)) {
-        // Remove category
+        // Remove category - always allowed
         return prev.filter(id => id !== categoryId)
       } else {
-        // Add category - check max limit
-        if (prev.length >= 5) {
+        // Add category - check max limit using feature gating
+        if (maxCategories !== null && prev.length >= maxCategories) {
           setMaxLimitError(true)
           // Clear error after 3 seconds
           setTimeout(() => setMaxLimitError(false), 3000)
@@ -158,6 +171,12 @@ export default function EditCategoriesModal({
           .insert(insertPayload)
 
         if (insertError) {
+          // Check if it's a limit reached error
+          const errorMsg = insertError.message.toLowerCase()
+          if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+            refreshSnapshot()
+            throw new Error(insertError.message)
+          }
           throw new Error(`Failed to add categories: ${insertError.message}`)
         }
       }
@@ -184,14 +203,27 @@ export default function EditCategoriesModal({
         })
       }
 
-      // Success - call onSuccess and close
+      // Success - refresh snapshot to update limits/usage
+      refreshSnapshot()
+      
+      // Call onSuccess and close
       if (onSuccess) {
         onSuccess(selectedCategoryIds)
       }
       onClose()
     } catch (err) {
       console.error('Error saving categories:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save categories. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save categories. Please try again.'
+      setError(errorMessage)
+      
+      // Show toast for limit errors
+      const errorMsg = errorMessage.toLowerCase()
+      if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+        setToastMessage(errorMessage)
+        setShowToast(true)
+        setTimeout(() => setShowToast(false), 5000)
+        refreshSnapshot()
+      }
     } finally {
       setSaving(false)
     }
@@ -246,7 +278,16 @@ export default function EditCategoriesModal({
               {loading ? (
                 <Skeleton className="h-4 w-20" />
               ) : (
-                `${selectedCategoryIds.length} of 5 selected`
+                maxCategories !== null ? (
+                  <>
+                    {selectedCategoryIds.length} of {maxCategories} selected
+                    {remainingCategories !== null && remainingCategories > 0 && (
+                      <span className="text-green-600 ml-1">({remainingCategories} remaining)</span>
+                    )}
+                  </>
+                ) : (
+                  `${selectedCategoryIds.length} selected`
+                )
               )}
             </div>
           </div>
@@ -305,13 +346,33 @@ export default function EditCategoriesModal({
             <>
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-4">
-                  Select the categories that best describe your artistic work. You can choose up to 5 categories.
+                  Select the categories that best describe your artistic work.
+                  {maxCategories !== null && (
+                    <> You can choose up to {maxCategories} {maxCategories === 1 ? 'category' : 'categories'}.</>
+                  )}
                 </p>
+                
+                {/* Feature Gating Warning */}
+                {!canAddCategory && addCategoryReason && (
+                  <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-sm text-amber-800">
+                      {tier === 'pro' 
+                        ? `You have reached the limit of ${maxCategories} categories for the Pro plan. We don't have a higher tier available at this time.`
+                        : addCategoryReason
+                      }
+                    </p>
+                  </div>
+                )}
                 
                 {/* Max Limit Error */}
                 {maxLimitError && (
                   <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-sm text-amber-800">You can select up to 5 categories.</p>
+                    <p className="text-sm text-amber-800">
+                      {tier === 'pro'
+                        ? `You have reached the limit of ${maxCategories} categories for the Pro plan.`
+                        : `You can select up to ${maxCategories} categories. ${addCategoryReason || ''}`
+                      }
+                    </p>
                   </div>
                 )}
 
@@ -335,7 +396,7 @@ export default function EditCategoriesModal({
                           <button
                             key={category.id}
                             onClick={() => handleCategoryToggle(category.id)}
-                            disabled={saving || (!isSelected && selectedCategoryIds.length >= 5)}
+                            disabled={saving || (!isSelected && maxCategories !== null && selectedCategoryIds.length >= maxCategories)}
                             className={`
                               px-3 py-2 text-sm rounded-lg border transition-colors text-left
                               ${isSelected
@@ -359,7 +420,9 @@ export default function EditCategoriesModal({
                 <h3 className="text-sm font-medium text-blue-800 mb-2">Category Tips</h3>
                 <ul className="text-xs text-blue-700 space-y-1">
                   <li>• Choose categories that accurately represent your work</li>
-                  <li>• You can select up to 5 categories</li>
+                  {maxCategories !== null && (
+                    <li>• You can select up to {maxCategories} {maxCategories === 1 ? 'category' : 'categories'}</li>
+                  )}
                   <li>• Categories help people discover your work</li>
                   <li>• You can change these anytime</li>
                 </ul>
@@ -396,6 +459,13 @@ export default function EditCategoriesModal({
             </button>
           </div>
         </div>
+
+        {/* Toast for errors */}
+        <Toast
+          message={toastMessage}
+          isVisible={showToast}
+          onClose={() => setShowToast(false)}
+        />
       </div>
   )
 }

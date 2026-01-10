@@ -27,6 +27,9 @@ interface GeoapifySuggestion {
     state?: string;
     country?: string;
     postcode?: string;
+    place_id?: string;   // IMPORTANT
+    lat?: number;        // IMPORTANT
+    lon?: number;        // IMPORTANT
   };
 }
 
@@ -302,8 +305,12 @@ export default function OnboardingForm({
         p_location_id: null;
         p_city?: string | null;
         p_state?: string | null;
+        p_zip?: string | null;
         p_country_code?: string;
         p_formatted?: string | null;
+        p_lat?: number | null;
+        p_lon?: number | null;
+        p_place_id?: string | null;
       } = {
         p_display_name: sanitizedDisplayName,
         p_handle: sanitizedHandle,
@@ -317,8 +324,12 @@ export default function OnboardingForm({
         
         rpcParams.p_city = city;
         rpcParams.p_state = selectedLocation.properties.state || null;
+        rpcParams.p_zip = selectedLocation.properties.postcode ?? null;
         rpcParams.p_country_code = 'us';
         rpcParams.p_formatted = selectedLocation.properties.formatted || null;
+        rpcParams.p_lat = selectedLocation.properties.lat ?? null;
+        rpcParams.p_lon = selectedLocation.properties.lon ?? null;
+        rpcParams.p_place_id = selectedLocation.properties.place_id || null;
       }
 
       const { data: profile, error: profileError } = await supabase.rpc('create_artist_profile', rpcParams);

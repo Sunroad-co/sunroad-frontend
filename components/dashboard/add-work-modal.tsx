@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
 import { UserProfile } from '@/hooks/use-user-profile'
 import Toast from '@/components/ui/toast'
 import { sanitizeAndTrim } from '@/lib/utils/sanitize'
@@ -41,6 +42,7 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
   const audioWorkFieldsRef = useRef<AudioWorkFieldsHandle>(null)
 
   const supabase = useMemo(() => createClient(), [])
+  const { refresh: refreshSnapshot } = useDashboardSnapshot()
 
   if (!isOpen) return null
 
@@ -107,6 +109,13 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
             .from('media')
             .remove([imageData.storagePath])
             .catch(() => {})
+          
+          // Check if it's a limit reached error
+          const errorMsg = insertError.message.toLowerCase()
+          if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+            refreshSnapshot()
+            throw new Error(insertError.message)
+          }
           throw new Error(`Failed to save work: ${insertError.message}`)
         }
 
@@ -139,6 +148,12 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
           })
 
         if (insertError) {
+          // Check if it's a limit reached error
+          const errorMsg = insertError.message.toLowerCase()
+          if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+            refreshSnapshot()
+            throw new Error(insertError.message)
+          }
           throw new Error(`Failed to save work: ${insertError.message}`)
         }
 
@@ -171,6 +186,12 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
           })
 
         if (insertError) {
+          // Check if it's a limit reached error
+          const errorMsg = insertError.message.toLowerCase()
+          if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+            refreshSnapshot()
+            throw new Error(insertError.message)
+          }
           throw new Error(`Failed to save work: ${insertError.message}`)
         }
       }
@@ -184,7 +205,8 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
         })
       }
 
-      // Success
+      // Success - refresh snapshot to update limits/usage
+      refreshSnapshot()
       setShowToast(true)
       onSuccess?.()
       setTimeout(() => {
@@ -192,7 +214,15 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
       }, 1500)
     } catch (err) {
       console.error('Error saving work:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save work. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save work. Please try again.'
+      setError(errorMessage)
+      
+      // Show toast for limit errors
+      const errorMsg = errorMessage.toLowerCase()
+      if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+        setShowToast(true)
+        setTimeout(() => setShowToast(false), 5000)
+      }
     } finally {
       setSaving(false)
     }

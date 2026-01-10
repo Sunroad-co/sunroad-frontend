@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateCache } from '@/lib/revalidate-client'
+import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
 import { UserProfile, Work } from '@/hooks/use-user-profile'
 import Toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
@@ -51,6 +52,7 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
   const audioWorkFieldsRef = useRef<AudioWorkFieldsHandle>(null)
 
   const supabase = useMemo(() => createClient(), [])
+  const { refresh: refreshSnapshot } = useDashboardSnapshot()
 
   // Track original values to detect changes
   const [originalTitle, setOriginalTitle] = useState(work.title)
@@ -171,6 +173,13 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
               .from('media')
               .remove([imageData.storagePath])
               .catch(() => {})
+          
+          // Check if it's a limit reached error
+          const errorMsg = updateError.message.toLowerCase()
+          if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+            refreshSnapshot()
+            throw new Error(updateError.message)
+          }
           throw new Error(`Failed to update work: ${updateError.message}`)
         }
 
@@ -242,6 +251,12 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
           .eq('id', work.id)
 
         if (updateError) {
+          // Check if it's a limit reached error
+          const errorMsg = updateError.message.toLowerCase()
+          if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+            refreshSnapshot()
+            throw new Error(updateError.message)
+          }
           throw new Error(`Failed to update work: ${updateError.message}`)
         }
 
@@ -292,6 +307,12 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
           .eq('id', work.id)
 
         if (updateError) {
+          // Check if it's a limit reached error
+          const errorMsg = updateError.message.toLowerCase()
+          if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+            refreshSnapshot()
+            throw new Error(updateError.message)
+          }
           throw new Error(`Failed to update work: ${updateError.message}`)
         }
 
@@ -324,7 +345,8 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
         })
       }
 
-      // Success
+      // Success - refresh snapshot to update limits/usage
+      refreshSnapshot()
       setToastMessage('Work updated successfully!')
       setShowToast(true)
       setHasUnsavedChanges(false)
@@ -334,9 +356,19 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
       }, 1500)
     } catch (err) {
       console.error('Error saving work:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save work. Please try again.'
+      
+      // Show toast for limit errors
+      const errorMsg = errorMessage.toLowerCase()
+      if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+        setToastMessage(errorMessage)
+        setShowToast(true)
+        setTimeout(() => setShowToast(false), 5000)
+      }
+      
       // Ensure error doesn't break the component
       try {
-        setError(err instanceof Error ? err.message : 'Failed to save work. Please try again.')
+        setError(errorMessage)
       } catch (errorStateErr) {
         console.error('Error setting error state:', errorStateErr)
         // Fallback - show error in console
