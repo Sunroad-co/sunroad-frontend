@@ -19,6 +19,8 @@ import { sanitizeAndTrim } from "@/lib/utils/sanitize";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { CheckCircle2, XCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import OnboardingCategorySelector from "@/components/onboarding/onboarding-category-selector";
 
 interface GeoapifySuggestion {
   properties: {
@@ -58,6 +60,8 @@ export default function OnboardingForm({
   const [isSearchingLocations, setIsSearchingLocations] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true); // Checked by default
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
   const router = useRouter();
   const locationRef = useRef<HTMLDivElement>(null);
 
@@ -281,6 +285,12 @@ export default function OnboardingForm({
       return;
     }
 
+    if (selectedCategoryIds.length === 0) {
+      setCategoryError("Please select at least one category");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Update password
       const { error: passwordError } = await supabase.auth.updateUser({
@@ -303,6 +313,7 @@ export default function OnboardingForm({
         p_display_name: string;
         p_handle: string;
         p_location_id: null;
+        p_category_ids: number[];
         p_city?: string | null;
         p_state?: string | null;
         p_zip?: string | null;
@@ -315,6 +326,7 @@ export default function OnboardingForm({
         p_display_name: sanitizedDisplayName,
         p_handle: sanitizedHandle,
         p_location_id: null,
+        p_category_ids: selectedCategoryIds,
       };
 
       if (selectedLocation) {
@@ -359,7 +371,16 @@ export default function OnboardingForm({
           setIsLoading(false);
           return;
         }
-        throw profileError;
+        // Check for PostgreSQL exception (P0001) - these contain user-friendly error messages
+        if (profileError.code === 'P0001') {
+          setError(profileError.message);
+          setIsLoading(false);
+          return;
+        }
+        // Generic error for other cases
+        setError('Something went wrong, try again.');
+        setIsLoading(false);
+        return;
       }
 
       // Success - redirect to dashboard
@@ -386,20 +407,32 @@ export default function OnboardingForm({
     setLocationSuggestions([]);
   };
 
+  const handleCategorySelect = (categoryId: number) => {
+    setCategoryError(null);
+    if (selectedCategoryIds.length < 2) {
+      setSelectedCategoryIds([...selectedCategoryIds, categoryId]);
+    }
+  };
+
+  const handleCategoryRemove = (categoryId: number) => {
+    setCategoryError(null);
+    setSelectedCategoryIds(selectedCategoryIds.filter(id => id !== categoryId));
+  };
+
   return (
     <div className={cn("flex flex-col gap-6 w-full pb-4 sm:pb-8", className)} {...props}>
-      <Card className="w-full">
+      <Card className="w-full max-w-5xl mx-auto">
         <CardHeader className="pb-4">
           <CardTitle className="text-2xl font-body">Complete your profile</CardTitle>
           <CardDescription className="font-body">
-            Set up your account to start connecting with local creatives
+            Join a community of creatives in your area and upload your portfolio today.
           </CardDescription>
         </CardHeader>
         <CardContent className="w-full">
           <form onSubmit={handleSubmit}>
-            <div className="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-8">
-              {/* Left Column: Name, Handle, Location */}
-              <div className="flex flex-col gap-6">
+            <div className="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-8 xl:gap-10">
+              {/* Column 1: Identity */}
+              <div className="flex flex-col gap-6 h-full relative">
                 {/* Name */}
                 <div className="grid gap-2">
                   <Label htmlFor="display-name" className="font-body">
@@ -414,7 +447,7 @@ export default function OnboardingForm({
                     onChange={(e) => setDisplayName(e.target.value)}
                     disabled={isLoading}
                     maxLength={100}
-                    className="h-12 font-body"
+                    className="h-12 font-body min-w-0"
                   />
                 </div>
 
@@ -445,7 +478,7 @@ export default function OnboardingForm({
                       disabled={isLoading}
                       maxLength={50}
                       className={cn(
-                        "h-12 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pl-0 pr-10 flex-1 min-w-0 font-body",
+                        "h-12 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pl-0 pr-10 flex-1 min-w-0 font-body"
                       )}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -536,7 +569,7 @@ export default function OnboardingForm({
                         }}
                         disabled={isLoading}
                         required
-                        className={cn("h-12 pr-10 font-body", locationError && "border-red-500 focus-visible:ring-red-500")}
+                        className={cn("h-12 pr-10 font-body min-w-0", locationError && "border-red-500 focus-visible:ring-red-500")}
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         {isSearchingLocations && (
@@ -574,10 +607,33 @@ export default function OnboardingForm({
                     </p>
                   )}
                 </div>
+
+                {/* Subtle Logo Watermark */}
+                <div className="hidden lg:block mt-10 pointer-events-none">
+                  <div className="flex justify-center">
+                    <Image
+                      src="/sunroad_logo.png"
+                      alt="Sunroad"
+                      width={180}
+                      height={180}
+                      className="opacity-10 grayscale w-48 h-auto"
+                      priority={false}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Right Column: Password, Confirm Password, Submit */}
+              {/* Column 2: Professional & Security */}
               <div className="flex flex-col gap-6">
+                {/* Categories - placed at top for prominence */}
+                <OnboardingCategorySelector
+                  selectedIds={selectedCategoryIds}
+                  onSelect={handleCategorySelect}
+                  onRemove={handleCategoryRemove}
+                  maxSelection={2}
+                  error={categoryError}
+                  disabled={isLoading}
+                />
                 {/* Password fields */}
                 <div className="grid gap-2">
                   <Label htmlFor="password" className="font-body">
@@ -593,7 +649,7 @@ export default function OnboardingForm({
                       onChange={(e) => handlePasswordChange(e.target.value)}
                       disabled={isLoading}
                       minLength={8}
-                      className={cn("h-12 pr-10 font-body", passwordError && "border-red-500 focus-visible:ring-red-500")}
+                      className={cn("h-12 pr-10 font-body min-w-0", passwordError && "border-red-500 focus-visible:ring-red-500")}
                     />
                     <button
                       type="button"
@@ -630,7 +686,7 @@ export default function OnboardingForm({
                       onChange={(e) => handleRepeatPasswordChange(e.target.value)}
                       disabled={isLoading}
                       minLength={8}
-                      className={cn("h-12 pr-10 font-body", repeatPasswordError && "border-red-500 focus-visible:ring-red-500")}
+                      className={cn("h-12 pr-10 font-body min-w-0", repeatPasswordError && "border-red-500 focus-visible:ring-red-500")}
                     />
                     <button
                       type="button"
@@ -702,7 +758,8 @@ export default function OnboardingForm({
                     !displayName.trim() ||
                     !handle.trim() ||
                     !agreedToTerms ||
-                    !selectedLocation
+                    !selectedLocation ||
+                    selectedCategoryIds.length === 0
                   }
                 >
                   {isLoading ? "Creating profile..." : "Complete setup"}

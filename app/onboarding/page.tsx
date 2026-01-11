@@ -39,7 +39,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <AuthLayout containerClassName="w-full max-w-3xl py-2 lg:py-4 mx-auto">
+    <AuthLayout containerClassName="w-full max-w-5xl py-2 lg:py-4 mx-auto">
       <OnboardingForm />
     </AuthLayout>
   )
