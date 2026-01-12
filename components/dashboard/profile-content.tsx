@@ -195,13 +195,13 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
               alignment="side"
             />
             {/* Edit Links Button - Desktop, appears on hover */}
-            <div className="absolute top-0 right-0 opacity-0 group-hover/social:opacity-100 transition-opacity -mt-1 flex items-center gap-2">
+            <div 
+              className="absolute top-0 right-0 opacity-0 group-hover/social:opacity-100 transition-opacity -mt-1 flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
               <span className="text-xs text-sunroad-brown-500">Edit</span>
               <EditButton
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowLinksModal(true)
-                }}
+                onClick={() => setShowLinksModal(true)}
                 label="Edit Links"
                 size="sm"
               />
