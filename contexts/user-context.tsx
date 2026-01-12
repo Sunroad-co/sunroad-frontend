@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
+import useSWR from 'swr'
+import { swrKeys } from '@/lib/swrKeys'
 
 interface BasicProfile {
   display_name: string | null
@@ -84,53 +86,52 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // 3. Fetch profile when user.id changes
-  useEffect(() => {
-    if (!user) {
-      setProfile(null)
-      setProfileLoading(false)
-      return
-    }
+  // 3. Fetch profile using SWR with same cache key as useUserProfile to avoid duplicate calls
+  // This reuses the SWR cache, so if useUserProfile is already fetching, this won't make a duplicate call
+  const swrKey = user ? swrKeys.userProfile(user.id) : null
+  
+  const fetchBasicProfile = async (userId: string): Promise<BasicProfile | null> => {
+    const supabase = createClient()
+    const { data, error: profileError } = await supabase
+      .from('artists_min')
+      .select('display_name, avatar_url')
+      .eq('auth_user_id', userId)
+      .maybeSingle()
 
-    const fetchProfile = async () => {
-      setProfileLoading(true)
-      try {
-        const supabase = createClient()
-        const { data, error: profileError } = await supabase
-          .from('artists_min')
-          .select('display_name, avatar_url')
-          .eq('auth_user_id', user.id)
-          .maybeSingle()
-
-        if (profileError) {
-          // Only log actual errors, not "no rows" (which is normal during onboarding)
-          if (profileError.code !== 'PGRST116') {
-            console.error('Error fetching basic profile:', profileError)
-          }
-          setProfile(null)
-          return
-        }
-
-        // Profile might not exist yet (during onboarding), that's normal
-        if (!data) {
-          setProfile(null)
-          return
-        }
-
-        setProfile({
-          display_name: data.display_name ?? null,
-          avatar_url: data.avatar_url ?? null,
-        })
-      } catch (err) {
-        console.error('Unexpected error fetching basic profile:', err)
-        setProfile(null)
-      } finally {
-        setProfileLoading(false)
+    if (profileError) {
+      // Only log actual errors, not "no rows" (which is normal during onboarding)
+      if (profileError.code !== 'PGRST116') {
+        console.error('Error fetching basic profile:', profileError)
       }
+      return null
     }
 
-    fetchProfile()
-  }, [user?.id])
+    // Profile might not exist yet (during onboarding), that's normal
+    if (!data) {
+      return null
+    }
+
+    return {
+      display_name: data.display_name ?? null,
+      avatar_url: data.avatar_url ?? null,
+    }
+  }
+
+  const { data: profileData, isLoading: profileDataLoading } = useSWR<BasicProfile | null>(
+    swrKey,
+    () => user ? fetchBasicProfile(user.id) : null,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 60000, // 60 seconds - same as useUserProfile
+    }
+  )
+
+  // Update profile state from SWR data
+  useEffect(() => {
+    setProfile(profileData ?? null)
+    setProfileLoading(profileDataLoading)
+  }, [profileData, profileDataLoading])
 
   return (
     <UserContext.Provider value={{ user, profile, loading, profileLoading, error }}>

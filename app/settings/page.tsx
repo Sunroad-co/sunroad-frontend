@@ -253,26 +253,34 @@ export default function SettingsPage() {
                             <h4 className="text-sm font-semibold text-amber-900 mb-1">
                               {usage.archived_tier_limit} work{usage.archived_tier_limit !== 1 ? 's' : ''} archived due to tier limits
                             </h4>
-                            <p className="text-sm text-amber-800 mb-3">
-                              Upgrade to Pro to restore these works and unlock up to {limits.max_works ?? 12} works and {limits.max_categories ?? 5} categories.
-                            </p>
-                            <button
-                              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
-                              onClick={() => {
-                                // Scroll to billing actions section
-                                const billingSection = document.querySelector('[data-billing-actions]')
-                                if (billingSection) {
-                                  billingSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                                  // Small delay to ensure scroll completes before focusing
-                                  setTimeout(() => {
-                                    const firstPriceButton = billingSection.querySelector('button')
-                                    firstPriceButton?.focus()
-                                  }, 500)
-                                }
-                              }}
-                            >
-                              Upgrade to Pro
-                            </button>
+                            {tier === 'pro' ? (
+                              <p className="text-sm text-amber-800">
+                                You've reached your current limit. Archive or remove older works to restore these.
+                              </p>
+                            ) : (
+                              <>
+                                <p className="text-sm text-amber-800 mb-3">
+                                  Upgrade to Pro to restore these works and unlock up to {limits.max_works ?? 12} works and {limits.max_categories ?? 5} categories.
+                                </p>
+                                <button
+                                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                                  onClick={() => {
+                                    // Scroll to billing actions section
+                                    const billingSection = document.querySelector('[data-billing-actions]')
+                                    if (billingSection) {
+                                      billingSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                      // Small delay to ensure scroll completes before focusing
+                                      setTimeout(() => {
+                                        const firstPriceButton = billingSection.querySelector('button')
+                                        firstPriceButton?.focus()
+                                      }, 500)
+                                    }
+                                  }}
+                                >
+                                  Upgrade to Pro
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

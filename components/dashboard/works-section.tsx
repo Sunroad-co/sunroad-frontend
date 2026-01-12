@@ -36,10 +36,10 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
 
   const supabase = useMemo(() => createClient(), [])
   const { allowed: canUploadWork, reason: uploadReason } = useFeature('upload_work')
-  const { refresh: refreshSnapshot } = useDashboardSnapshot()
+  const { tier, refresh: refreshSnapshot } = useDashboardSnapshot()
 
-  // Use real works from profile data
-  const works = profile.works
+  // Use real works from profile data (ensure it's always an array)
+  const works = profile?.works || []
 
   // Split works into active and archived
   const activeWorks = works.filter(work => !work.is_archived)
@@ -159,6 +159,10 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </EditButton>
+          ) : tier === 'pro' ? (
+            <span className="text-sm text-gray-600">
+              Limit reached
+            </span>
           ) : (
             <Link
               href="/settings#billing-actions"
@@ -175,12 +179,18 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
         {!canUploadWork && uploadReason && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm text-amber-800">{uploadReason}</p>
-            <Link
-              href="/settings#billing-actions"
-              className="text-sm font-medium text-amber-900 hover:text-amber-700 underline mt-1 inline-block"
-            >
-              Upgrade to Pro →
-            </Link>
+            {tier === 'pro' ? (
+              <p className="text-sm text-amber-700 mt-1">
+                You've reached your current limit. Archive or remove older works to add new ones.
+              </p>
+            ) : (
+              <Link
+                href="/settings#billing-actions"
+                className="text-sm font-medium text-amber-900 hover:text-amber-700 underline mt-1 inline-block"
+              >
+                Upgrade to Pro →
+              </Link>
+            )}
           </div>
         )}
 
@@ -258,14 +268,20 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
                             onOpen={handleOpenWork}
                           />
                         </div>
-                        {/* Upgrade CTA Overlay */}
+                        {/* Restore CTA Overlay */}
                         <div className="absolute bottom-2 left-2 right-2 z-10">
-                          <Link
-                            href="/settings#billing-actions"
-                            className="block px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-md hover:bg-amber-700 transition-colors text-center"
-                          >
-                            Upgrade to restore
-                          </Link>
+                          {tier === 'pro' ? (
+                            <div className="block px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded-md text-center">
+                              Archived (limit reached)
+                            </div>
+                          ) : (
+                            <Link
+                              href="/settings#billing-actions"
+                              className="block px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-md hover:bg-amber-700 transition-colors text-center"
+                            >
+                              Upgrade to restore
+                            </Link>
+                          )}
                         </div>
                       </div>
                     )
@@ -294,6 +310,10 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
                 </svg>
                 Add Work
               </EditButton>
+            ) : tier === 'pro' ? (
+              <p className="text-sm text-gray-600">
+                You've reached your current limit. Archive or remove older works to add new ones.
+              </p>
             ) : (
               <Link
                 href="/settings#billing-actions"

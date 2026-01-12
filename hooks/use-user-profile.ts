@@ -16,6 +16,13 @@ export interface UserProfile {
   instagram_url: string | null
   facebook_url: string | null
   categories: string[]
+  category_ids: number[]
+  location_id: number | null
+  location: {
+    city?: string
+    state?: string
+    formatted?: string
+  } | null
   works: Work[]
 }
 
@@ -53,7 +60,14 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
       website_url,
       instagram_url,
       facebook_url,
+      location_id,
+      locations:location_id (
+        city,
+        state,
+        formatted
+      ),
       artist_categories (
+        category_id,
         categories (
           name
         )
@@ -91,6 +105,8 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
 
   // Transform the data
   const categories = profileData.artist_categories?.map((ac: { categories?: { name: string } | null }) => ac.categories?.name).filter(Boolean) || []
+  const categoryIds = profileData.artist_categories?.map((ac: { category_id: number }) => ac.category_id).filter((id: number | undefined): id is number => typeof id === 'number') || []
+  const location = profileData.locations as { city?: string; state?: string; formatted?: string } | null
   const works = worksData || []
 
   return {
@@ -104,6 +120,9 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
     instagram_url: profileData.instagram_url,
     facebook_url: profileData.facebook_url,
     categories,
+    category_ids: categoryIds,
+    location_id: profileData.location_id ?? null,
+    location,
     works
   }
 }

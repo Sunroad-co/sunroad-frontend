@@ -38,10 +38,19 @@ const FEATURE_CONFIG: Record<FeatureName, {
       }
 
       // Generate user-facing reason using tier field
-      const tierName = tier === 'pro' ? 'Pro' : 'Free'
+      if (tier === 'pro') {
+        return {
+          allowed: false,
+          reason: `You have reached the limit of ${maxWorks} works for the Pro plan. Archive or remove older works to add new ones.`,
+          limit: maxWorks,
+          used: currentWorks,
+        }
+      }
+
+      // For Free users, show upgrade option
       return {
         allowed: false,
-        reason: `${tierName} plan allows ${maxWorks} works. Upgrade to add more.`,
+        reason: `Free plan allows ${maxWorks} works. Upgrade to add more.`,
         limit: maxWorks,
         used: currentWorks,
       }
