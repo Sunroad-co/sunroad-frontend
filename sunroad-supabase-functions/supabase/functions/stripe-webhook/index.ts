@@ -16,6 +16,7 @@ if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_S
 
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const DEBUG_STRIPE = Deno.env.get("DEBUG_STRIPE") === "true";
 
 function toIso(ts?: number | null) {
   if (!ts) return null;
@@ -35,7 +36,9 @@ function extractPeriodSeconds(sub: Stripe.Subscription, field: 'current_period_s
 }
 
 async function upsertCustomer(auth_user_id: string, customerId: string, email?: string | null) {
-  console.log('[upsertCustomer] Starting:', { auth_user_id, customerId, email });
+  if (DEBUG_STRIPE) {
+    console.log('[upsertCustomer] Starting:', { auth_user_id, customerId, email });
+  }
   const payload: {
     auth_user_id: string;
     stripe_customer_id: string;
@@ -52,7 +55,9 @@ async function upsertCustomer(auth_user_id: string, customerId: string, email?: 
     payload.email = email;
   }
 
-  console.log('[upsertCustomer] Payload:', JSON.stringify(payload, null, 2));
+  if (DEBUG_STRIPE) {
+    console.log('[upsertCustomer] Payload:', JSON.stringify(payload, null, 2));
+  }
   const { error } = await supabaseAdmin
     .from("billing_customers")
     .upsert(payload, { onConflict: "auth_user_id" });
@@ -61,7 +66,9 @@ async function upsertCustomer(auth_user_id: string, customerId: string, email?: 
     console.error('[upsertCustomer] Error:', error);
     throw error;
   }
-  console.log('[upsertCustomer] Success');
+  if (DEBUG_STRIPE) {
+    console.log('[upsertCustomer] Success');
+  }
 }
 
 async function upsertSubscription(params: {
@@ -76,7 +83,9 @@ async function upsertSubscription(params: {
   ended_at: string | null;
   event_created_at: string;
 }) {
-  console.log('[upsertSubscription] Starting with params:', JSON.stringify(params, null, 2));
+  if (DEBUG_STRIPE) {
+    console.log('[upsertSubscription] Starting with params:', JSON.stringify(params, null, 2));
+  }
   const rpcParams = {
     p_stripe_subscription_id: params.stripe_subscription_id,
     p_auth_user_id: params.auth_user_id,
@@ -89,7 +98,9 @@ async function upsertSubscription(params: {
     p_ended_at: params.ended_at,
     p_event_created_at: params.event_created_at,
   };
-  console.log('[upsertSubscription] RPC params:', JSON.stringify(rpcParams, null, 2));
+  if (DEBUG_STRIPE) {
+    console.log('[upsertSubscription] RPC params:', JSON.stringify(rpcParams, null, 2));
+  }
   
   const { data, error } = await supabaseAdmin.rpc("upsert_billing_subscription_safe", rpcParams);
 
@@ -97,11 +108,15 @@ async function upsertSubscription(params: {
     console.error('[upsertSubscription] RPC Error:', JSON.stringify(error, null, 2));
     throw error;
   }
-  console.log('[upsertSubscription] RPC Success, returned data:', JSON.stringify(data, null, 2));
+  if (DEBUG_STRIPE) {
+    console.log('[upsertSubscription] RPC Success, returned data:', JSON.stringify(data, null, 2));
+  }
 }
 
 async function getAuthUserIdFromCustomer(customerId: string): Promise<string | null> {
-  console.log('[getAuthUserIdFromCustomer] Looking up customer:', customerId);
+  if (DEBUG_STRIPE) {
+    console.log('[getAuthUserIdFromCustomer] Looking up customer:', customerId);
+  }
   const { data, error } = await supabaseAdmin
     .from("billing_customers")
     .select("auth_user_id")
@@ -113,18 +128,24 @@ async function getAuthUserIdFromCustomer(customerId: string): Promise<string | n
     throw error;
   }
   const auth_user_id = data?.auth_user_id ?? null;
-  console.log('[getAuthUserIdFromCustomer] Result:', auth_user_id);
+  if (DEBUG_STRIPE) {
+    console.log('[getAuthUserIdFromCustomer] Result:', auth_user_id);
+  }
   return auth_user_id;
 }
 
 async function callSyncEntitlement(auth_user_id: string) {
-  console.log('[callSyncEntitlement] Starting for auth_user_id:', auth_user_id);
+  if (DEBUG_STRIPE) {
+    console.log('[callSyncEntitlement] Starting for auth_user_id:', auth_user_id);
+  }
   const { error } = await supabaseAdmin.rpc("sync_stripe_entitlement", { p_auth_user_id: auth_user_id });
   if (error) {
     console.error('[callSyncEntitlement] Error:', error);
     throw error;
   }
-  console.log('[callSyncEntitlement] Success');
+  if (DEBUG_STRIPE) {
+    console.log('[callSyncEntitlement] Success');
+  }
 }
 
 async function getArtistHandle(auth_user_id: string): Promise<string | null> {
@@ -204,15 +225,18 @@ serve(async (req) => {
   }
 
   try {
-    console.log('='.repeat(80));
-    console.log('[WEBHOOK] Received event:', {
-      id: event.id,
-      type: event.type,
-      created: new Date(event.created * 1000).toISOString(),
-      livemode: event.livemode,
-    });
-    console.log('[WEBHOOK] Full event object:', JSON.stringify(event, null, 2));
-    console.log('='.repeat(80));
+    if (DEBUG_STRIPE) {
+      console.log('='.repeat(80));
+      console.log('[WEBHOOK] Full event object:', JSON.stringify(event, null, 2));
+      console.log('='.repeat(80));
+    } else {
+      console.log('[WEBHOOK] Received event:', {
+        id: event.id,
+        type: event.type,
+        created: new Date(event.created * 1000).toISOString(),
+        livemode: event.livemode,
+      });
+    }
 
     // Idempotency: only process each event once
     console.log('[WEBHOOK] Checking idempotency for event:', event.id);
@@ -235,13 +259,17 @@ serve(async (req) => {
       case "checkout.session.completed": {
         console.log('[WEBHOOK] Handling checkout.session.completed');
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log('[WEBHOOK] Full session object:', JSON.stringify(session, null, 2));
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Full session object:', JSON.stringify(session, null, 2));
+        }
 
         // We set this during checkout creation
         const auth_user_id = (session.metadata?.auth_user_id ?? session.client_reference_id) as string | undefined;
         const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
 
-        console.log('[WEBHOOK] Extracted values:', { auth_user_id, customerId, email: session.customer_details?.email });
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Extracted values:', { auth_user_id, customerId, email: session.customer_details?.email });
+        }
 
         if (!auth_user_id || !customerId) {
           console.warn('[WEBHOOK] Missing auth_user_id or customerId, skipping');
@@ -249,8 +277,48 @@ serve(async (req) => {
         }
 
         await upsertCustomer(auth_user_id, customerId, session.customer_details?.email ?? null);
-        // subscription upsert usually comes via customer.subscription.created/updated.
-        // We still sync entitlement here because sometimes it arrives first.
+
+        // Eager subscription upsert to eliminate race condition
+        const subscriptionId = typeof session.subscription === "string" 
+          ? session.subscription 
+          : session.subscription?.id;
+
+        if (subscriptionId) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+              expand: ["items.data.price"],
+            });
+
+            if (DEBUG_STRIPE) {
+              console.log('[WEBHOOK] Retrieved subscription from Stripe:', JSON.stringify(sub, null, 2));
+            }
+
+            const priceId = sub.items.data?.[0]?.price?.id;
+            if (priceId) {
+              const periodStart = extractPeriodSeconds(sub, 'current_period_start');
+              const periodEnd = extractPeriodSeconds(sub, 'current_period_end');
+
+              await upsertSubscription({
+                stripe_subscription_id: sub.id,
+                auth_user_id,
+                stripe_customer_id: customerId,
+                stripe_price_id: priceId,
+                status: sub.status,
+                cancel_at_period_end: sub.cancel_at_period_end ?? false,
+                current_period_start: toIso(periodStart),
+                current_period_end: toIso(periodEnd),
+                ended_at: toIso(sub.ended_at ?? null),
+                event_created_at: new Date(event.created * 1000).toISOString(),
+              });
+            } else {
+              console.warn('[WEBHOOK] No price id found for subscription', sub.id);
+            }
+          } catch (err) {
+            console.error("[WEBHOOK] Failed to retrieve subscription from Stripe:", err);
+            // Continue processing - subscription events will handle it
+          }
+        }
+
         await callSyncEntitlement(auth_user_id);
         await revalidateArtistCache(auth_user_id);
         console.log('[WEBHOOK] checkout.session.completed processing complete');
@@ -262,16 +330,22 @@ serve(async (req) => {
       case "customer.subscription.deleted": {
         console.log(`[WEBHOOK] Handling ${event.type}`);
         const sub = event.data.object as Stripe.Subscription;
-        console.log('[WEBHOOK] Full subscription object:', JSON.stringify(sub, null, 2));
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Full subscription object:', JSON.stringify(sub, null, 2));
+        }
 
         const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-        console.log('[WEBHOOK] Extracted customerId:', customerId);
-        console.log('[WEBHOOK] Subscription metadata:', JSON.stringify(sub.metadata, null, 2));
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Extracted customerId:', customerId);
+          console.log('[WEBHOOK] Subscription metadata:', JSON.stringify(sub.metadata, null, 2));
+        }
 
         const auth_user_id =
           (sub.metadata?.auth_user_id as string | undefined) ?? (await getAuthUserIdFromCustomer(customerId));
 
-        console.log('[WEBHOOK] Resolved auth_user_id:', auth_user_id);
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Resolved auth_user_id:', auth_user_id);
+        }
 
         if (!auth_user_id) {
           console.warn("[WEBHOOK] No auth_user_id found for subscription", sub.id);
@@ -279,8 +353,10 @@ serve(async (req) => {
         }
 
         const priceId = sub.items.data?.[0]?.price?.id;
-        console.log('[WEBHOOK] Extracted priceId:', priceId);
-        console.log('[WEBHOOK] Subscription items:', JSON.stringify(sub.items.data, null, 2));
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Extracted priceId:', priceId);
+          console.log('[WEBHOOK] Subscription items:', JSON.stringify(sub.items.data, null, 2));
+        }
 
         if (!priceId) {
           console.warn("[WEBHOOK] No price id found for subscription", sub.id);
@@ -289,11 +365,13 @@ serve(async (req) => {
 
         const periodStart = extractPeriodSeconds(sub, 'current_period_start');
         const periodEnd = extractPeriodSeconds(sub, 'current_period_end');
-        console.log('[WEBHOOK] Period dates (raw):', { periodStart, periodEnd });
-        console.log('[WEBHOOK] Period dates (ISO):', {
-          current_period_start: toIso(periodStart),
-          current_period_end: toIso(periodEnd),
-        });
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Period dates (raw):', { periodStart, periodEnd });
+          console.log('[WEBHOOK] Period dates (ISO):', {
+            current_period_start: toIso(periodStart),
+            current_period_end: toIso(periodEnd),
+          });
+        }
 
         await upsertCustomer(auth_user_id, customerId);
 
@@ -309,7 +387,9 @@ serve(async (req) => {
           ended_at: toIso(sub.ended_at ?? null),
           event_created_at: new Date(event.created * 1000).toISOString(),
         };
-        console.log('[WEBHOOK] Subscription params before upsert:', JSON.stringify(subscriptionParams, null, 2));
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Subscription params before upsert:', JSON.stringify(subscriptionParams, null, 2));
+        }
 
         await upsertSubscription(subscriptionParams);
 
@@ -323,7 +403,9 @@ serve(async (req) => {
       case "invoice.payment_succeeded": {
         console.log(`[WEBHOOK] Handling ${event.type}`);
         const invoice = event.data.object as Stripe.Invoice;
-        console.log('[WEBHOOK] Full invoice object:', JSON.stringify(invoice, null, 2));
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Full invoice object:', JSON.stringify(invoice, null, 2));
+        }
 
         // Extract subscription and customer IDs
         const subscriptionId = typeof invoice.subscription === "string" 
@@ -333,7 +415,9 @@ serve(async (req) => {
           ? invoice.customer 
           : invoice.customer?.id;
 
-        console.log('[WEBHOOK] Extracted IDs:', { subscriptionId, customerId, invoiceId: invoice.id });
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Extracted IDs:', { subscriptionId, customerId, invoiceId: invoice.id });
+        }
 
         if (!subscriptionId || !customerId) {
           console.warn("[WEBHOOK] Missing subscription or customer ID in invoice event", invoice.id);
@@ -344,25 +428,35 @@ serve(async (req) => {
         let auth_user_id: string | null = null;
         
         // a) Try subscription_details metadata
-        console.log('[WEBHOOK] Checking subscription_details metadata:', JSON.stringify(invoice.subscription_details?.metadata, null, 2));
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Checking subscription_details metadata:', JSON.stringify(invoice.subscription_details?.metadata, null, 2));
+        }
         if (invoice.subscription_details?.metadata?.auth_user_id) {
           auth_user_id = invoice.subscription_details.metadata.auth_user_id as string;
-          console.log('[WEBHOOK] Found auth_user_id in subscription_details.metadata:', auth_user_id);
+          if (DEBUG_STRIPE) {
+            console.log('[WEBHOOK] Found auth_user_id in subscription_details.metadata:', auth_user_id);
+          }
         }
         
         // b) Try first line item metadata
         if (!auth_user_id && invoice.lines?.data?.[0]?.metadata?.auth_user_id) {
           auth_user_id = invoice.lines.data[0].metadata.auth_user_id as string;
-          console.log('[WEBHOOK] Found auth_user_id in line item metadata:', auth_user_id);
+          if (DEBUG_STRIPE) {
+            console.log('[WEBHOOK] Found auth_user_id in line item metadata:', auth_user_id);
+          }
         }
         
         // c) Fallback to customer lookup
         if (!auth_user_id) {
-          console.log('[WEBHOOK] Falling back to customer lookup');
+          if (DEBUG_STRIPE) {
+            console.log('[WEBHOOK] Falling back to customer lookup');
+          }
           auth_user_id = await getAuthUserIdFromCustomer(customerId);
         }
 
-        console.log('[WEBHOOK] Final resolved auth_user_id:', auth_user_id);
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Final resolved auth_user_id:', auth_user_id);
+        }
 
         if (!auth_user_id) {
           console.warn("[WEBHOOK] No auth_user_id found for invoice", invoice.id);
@@ -370,20 +464,26 @@ serve(async (req) => {
         }
 
         // Retrieve fresh subscription from Stripe
-        console.log('[WEBHOOK] Retrieving subscription from Stripe:', subscriptionId);
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Retrieving subscription from Stripe:', subscriptionId);
+        }
         let sub: Stripe.Subscription;
         try {
           sub = await stripe.subscriptions.retrieve(subscriptionId, {
             expand: ['items.data.price'],
           });
-          console.log('[WEBHOOK] Retrieved subscription from Stripe:', JSON.stringify(sub, null, 2));
+          if (DEBUG_STRIPE) {
+            console.log('[WEBHOOK] Retrieved subscription from Stripe:', JSON.stringify(sub, null, 2));
+          }
         } catch (err) {
           console.error("[WEBHOOK] Failed to retrieve subscription from Stripe:", err);
           break;
         }
 
         const priceId = sub.items.data?.[0]?.price?.id;
-        console.log('[WEBHOOK] Extracted priceId from retrieved subscription:', priceId);
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Extracted priceId from retrieved subscription:', priceId);
+        }
         if (!priceId) {
           console.warn("[WEBHOOK] No price id found for subscription", sub.id);
           break;
@@ -391,12 +491,14 @@ serve(async (req) => {
 
         const periodStart = extractPeriodSeconds(sub, 'current_period_start');
         const periodEnd = extractPeriodSeconds(sub, 'current_period_end');
-        console.log('[WEBHOOK] Period dates from retrieved subscription:', {
-          periodStart,
-          periodEnd,
-          current_period_start: toIso(periodStart),
-          current_period_end: toIso(periodEnd),
-        });
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Period dates from retrieved subscription:', {
+            periodStart,
+            periodEnd,
+            current_period_start: toIso(periodStart),
+            current_period_end: toIso(periodEnd),
+          });
+        }
 
         const subscriptionParams = {
           stripe_subscription_id: sub.id,
@@ -410,7 +512,9 @@ serve(async (req) => {
           ended_at: toIso(sub.ended_at ?? null),
           event_created_at: new Date(event.created * 1000).toISOString(),
         };
-        console.log('[WEBHOOK] Subscription params before upsert (from invoice):', JSON.stringify(subscriptionParams, null, 2));
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Subscription params before upsert (from invoice):', JSON.stringify(subscriptionParams, null, 2));
+        }
 
         // Upsert subscription using invoice event timestamp
         await upsertSubscription(subscriptionParams);
@@ -422,8 +526,47 @@ serve(async (req) => {
       }
 
       case "invoice.payment_failed": {
-        // Optional: you can use this to tighten access rules or show banners.
-        // Subscription events already update status.
+        console.log('[WEBHOOK] Handling invoice.payment_failed');
+        const invoice = event.data.object as Stripe.Invoice;
+        if (DEBUG_STRIPE) {
+          console.log('[WEBHOOK] Full invoice object:', JSON.stringify(invoice, null, 2));
+        }
+
+        // Extract customer ID
+        const customerId = typeof invoice.customer === "string" 
+          ? invoice.customer 
+          : invoice.customer?.id;
+
+        if (!customerId) {
+          console.warn("[WEBHOOK] Missing customer ID in invoice.payment_failed event", invoice.id);
+          break;
+        }
+
+        // Resolve auth_user_id via customer lookup (no Stripe API call needed)
+        const auth_user_id = await getAuthUserIdFromCustomer(customerId);
+
+        if (auth_user_id) {
+          // Sync entitlement to reflect payment failure status
+          try {
+            await callSyncEntitlement(auth_user_id);
+          } catch (err) {
+            console.error("[WEBHOOK] Failed to sync entitlement for payment_failed:", err);
+            // Continue - best effort
+          }
+
+          // Best-effort cache revalidation
+          try {
+            await revalidateArtistCache(auth_user_id);
+          } catch (err) {
+            console.error("[WEBHOOK] Failed to revalidate cache for payment_failed:", err);
+            // Continue - best effort
+          }
+        } else {
+          console.warn("[WEBHOOK] No auth_user_id found for invoice.payment_failed", invoice.id);
+          // Don't throw - safe to continue
+        }
+
+        console.log('[WEBHOOK] invoice.payment_failed processing complete');
         break;
       }
 

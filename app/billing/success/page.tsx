@@ -29,6 +29,7 @@ export default function BillingSuccessPage() {
   const mountedRef = useRef(true)
   const startTimeRef = useRef<number>(0)
   const attemptIndexRef = useRef<number>(0)
+  const redirectStartedRef = useRef(false)
 
   // Cleanup all timers on unmount
   useEffect(() => {
@@ -48,6 +49,22 @@ export default function BillingSuccessPage() {
 
   // Start redirect countdown when success is detected
   const startRedirectCountdown = useCallback(() => {
+    // Prevent multiple redirect countdowns from starting
+    if (redirectStartedRef.current) {
+      return
+    }
+    redirectStartedRef.current = true
+
+    // Clear any existing timers defensively
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
+    }
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current)
+      redirectTimeoutRef.current = null
+    }
+
     let countdown = Math.floor(REDIRECT_DELAY_MS / 1000)
     setRedirectCountdown(countdown)
 
@@ -61,6 +78,7 @@ export default function BillingSuccessPage() {
       } else {
         if (countdownIntervalRef.current) {
           clearInterval(countdownIntervalRef.current)
+          countdownIntervalRef.current = null
         }
         setRedirectCountdown(null)
         // Redirect
@@ -73,6 +91,7 @@ export default function BillingSuccessPage() {
       if (mountedRef.current) {
         if (countdownIntervalRef.current) {
           clearInterval(countdownIntervalRef.current)
+          countdownIntervalRef.current = null
         }
         setRedirectCountdown(null)
         router.push(REDIRECT_TARGET)
@@ -87,6 +106,11 @@ export default function BillingSuccessPage() {
     // Check if tier is already pro (success condition) - check before scheduling next poll
     if (tier === 'pro') {
       if (mountedRef.current) {
+        // Clear polling timeout
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
         setPollingState('success')
         startRedirectCountdown()
       }
@@ -97,6 +121,11 @@ export default function BillingSuccessPage() {
     const elapsed = Date.now() - startTimeRef.current
     if (elapsed >= MAX_TOTAL_DURATION_MS) {
       if (mountedRef.current) {
+        // Clear polling timeout
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
         setPollingState('timeout')
       }
       return
@@ -105,17 +134,31 @@ export default function BillingSuccessPage() {
     // Get next backoff delay
     const nextDelay = BACKOFF_SCHEDULE[attemptIndexRef.current] ?? BACKOFF_SCHEDULE[BACKOFF_SCHEDULE.length - 1]
     
+    // Clear any existing timeout before creating a new one
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    
     // Schedule next poll
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = setTimeout(async () => {
       if (!mountedRef.current) return
       
       attemptIndexRef.current += 1
       
-      // Call refresh only here (single source of truth)
-      refresh()
+      // Call refresh and wait for it to complete
+      try {
+        await refresh()
+      } catch (err) {
+        // On error, still continue polling
+        console.error('Refresh error during polling:', err)
+      }
       
-      // Schedule next poll check (recursive)
-      poll()
+      // After refresh completes, schedule next poll with backoff
+      // Don't call poll() immediately - let the next iteration handle it
+      if (mountedRef.current) {
+        poll()
+      }
     }, nextDelay)
   }, [tier, refresh, startRedirectCountdown])
 
@@ -124,17 +167,21 @@ export default function BillingSuccessPage() {
     // Clear any existing timers
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
     }
     if (redirectTimeoutRef.current) {
       clearTimeout(redirectTimeoutRef.current)
+      redirectTimeoutRef.current = null
     }
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
     }
 
-    // Reset state
+    // Reset state and refs
     setPollingState('polling')
     setRedirectCountdown(null)
+    redirectStartedRef.current = false
     attemptIndexRef.current = 0
     startTimeRef.current = Date.now()
 
@@ -152,6 +199,11 @@ export default function BillingSuccessPage() {
 
     // If tier is already pro, show success immediately
     if (tier === 'pro') {
+      // Clear polling timeout if it exists
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
       setPollingState('success')
       startRedirectCountdown()
       return
