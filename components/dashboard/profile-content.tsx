@@ -93,8 +93,10 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
   const [showProfileBasicsModal, setShowProfileBasicsModal] = useState(false)
 
-  // Derive category IDs and location from profile (no extra queries needed)
+  // Derive category IDs, category names, and location from snapshot.profile (no extra queries)
+  // Ensure empty-state decisions are based on snapshot.profile (not on local state that starts empty)
   const currentCategoryIds = profile?.category_ids || []
+  const categoryNames = profile?.categories || []
   const currentLocationId = profile?.location_id ?? null
   const currentLocationFormatted = profile?.location?.formatted || null
   const currentLocationCity = profile?.location?.city || null
@@ -158,9 +160,9 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
           )}
 
           {/* Categories */}
-          {profile.categories && profile.categories.length > 0 && (
+          {categoryNames && categoryNames.length > 0 && (
             <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-4" role="list" aria-label="Artist categories">
-              {profile.categories.map((category, i) => (
+              {categoryNames.map((category, i) => (
                 <span
                   key={i}
                   role="listitem"

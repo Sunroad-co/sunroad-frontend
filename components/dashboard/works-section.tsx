@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { revalidateCache } from '@/lib/revalidate-client'
 import { useFeature } from '@/hooks/use-feature'
 import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
+import { useWorks } from '@/hooks/use-works'
 import Link from 'next/link'
 import EditButton from './edit-button'
 import AddWorkModal from './add-work-modal'
@@ -37,24 +38,26 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
   const supabase = useMemo(() => createClient(), [])
   const { allowed: canUploadWork, reason: uploadReason } = useFeature('upload_work')
   const { tier, refresh: refreshSnapshot } = useDashboardSnapshot()
+  const { works, isLoading: worksLoading, error: worksError, refresh: refreshWorks } = useWorks(profile?.id || null)
 
-  // Use real works from profile data (ensure it's always an array)
-  const works = profile?.works || []
+  // Use works from hook (ensure it's always an array)
+  const worksList = works || []
 
   // Split works into active and archived
-  const activeWorks = works.filter(work => !work.is_archived)
-  const archivedWorks = works.filter(work => work.is_archived && work.archived_reason === 'tier_limit')
+  const activeWorks = worksList.filter(work => !work.is_archived)
+  const archivedWorks = worksList.filter(work => work.is_archived && work.archived_reason === 'tier_limit')
 
   // Helper to check if work is archived and tier-limited
   const isArchivedTierLimited = (work: Work) => {
     return work.is_archived === true && work.archived_reason === 'tier_limit'
   }
 
-  // Refresh both profile and snapshot after operations
+  // Refresh profile, snapshot, and works after operations
   const handleRefresh = useCallback(() => {
     onRefreshProfile?.()
     refreshSnapshot()
-  }, [onRefreshProfile, refreshSnapshot])
+    refreshWorks()
+  }, [onRefreshProfile, refreshSnapshot, refreshWorks])
 
   const handleEditWork = (work: Work) => {
     // Don't allow editing archived tier-limited works
@@ -194,7 +197,29 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
           </div>
         )}
 
-        {activeWorks.length > 0 || archivedWorks.length > 0 ? (
+        {/* Loading state */}
+        {worksLoading && (
+          <div className="text-center py-8">
+            <p className="text-sm text-gray-500">Loading works...</p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {worksError && !worksLoading && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800 mb-2">
+              {worksError.message || 'Failed to load works'}
+            </p>
+            <button
+              onClick={() => refreshWorks()}
+              className="text-sm font-medium text-red-900 hover:text-red-700 underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!worksLoading && !worksError && (activeWorks.length > 0 || archivedWorks.length > 0) && (
           <div className="space-y-8">
             {/* Active Works */}
             {activeWorks.length > 0 && (
@@ -290,7 +315,10 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
               </div>
             )}
           </div>
-        ) : (
+        )}
+
+        {/* Empty state - only show when not loading, no error, and no works */}
+        {!worksLoading && !worksError && activeWorks.length === 0 && archivedWorks.length === 0 && (
           <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <div className="text-gray-400 mb-4">
               <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">

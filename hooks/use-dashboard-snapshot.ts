@@ -5,9 +5,34 @@ import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { swrKeys } from '@/lib/swrKeys'
 
+export interface SnapshotProfileLocation {
+  location_id: number
+  formatted: string
+  city: string | null
+  state: string | null
+}
+
+export interface SnapshotProfileCategory {
+  id: number
+  name: string
+}
+
+export interface SnapshotProfile {
+  artist_id: string
+  handle: string
+  display_name: string
+  bio: string | null
+  avatar_url: string | null
+  banner_url: string | null
+  categories: SnapshotProfileCategory[]
+  location: SnapshotProfileLocation | null
+  is_listed: boolean
+  updated_at: string
+}
+
 interface DashboardSnapshot {
-  snapshot: any // RPC return type - adjust based on actual RPC function
-  profile: any
+  has_profile: boolean
+  profile: SnapshotProfile | null
   tier: any
   limits: any
   usage: any
@@ -16,7 +41,7 @@ interface DashboardSnapshot {
 
 interface UseDashboardSnapshotReturn {
   snapshot: DashboardSnapshot | null
-  profile: any
+  profile: SnapshotProfile | null
   tier: any
   limits: any
   usage: any
@@ -76,9 +101,18 @@ export function useDashboardSnapshot(): UseDashboardSnapshotReturn {
     }
   )
 
+  // Ensure stable defaults: categories = [] and location = null if missing
+  const profile = data?.profile
+    ? {
+        ...data.profile,
+        categories: data.profile.categories || [],
+        location: data.profile.location || null,
+      }
+    : null
+
   return {
     snapshot: data || null,
-    profile: data?.profile || null,
+    profile,
     tier: data?.tier || null,
     limits: data?.limits || null,
     usage: data?.usage || null,
