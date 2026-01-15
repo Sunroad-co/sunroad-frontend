@@ -131,8 +131,35 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
             </button>
           </div>
           
+          {/* Mobile View Public Profile Button */}
+          <div className="flex justify-center md:hidden mb-3">
+            <a
+              href={`/artists/${profile.handle}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sunroad-brown-600 hover:text-sunroad-brown-900 hover:bg-sunroad-amber-50 rounded transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              <span>View public profile</span>
+            </a>
+          </div>
+          
           {/* Desktop Edit Profile Button - Always visible, more prominent on hover */}
           <div className="absolute top-0 right-0 hidden md:flex items-center gap-2">
+            <a
+              href={`/artists/${profile.handle}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-sunroad-brown-600 hover:text-sunroad-brown-900 hover:bg-sunroad-amber-50 rounded transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              <span>View public profile</span>
+            </a>
             <span className="text-xs text-sunroad-brown-500 opacity-0 group-hover:opacity-100 transition-opacity">
               Edit
             </span>

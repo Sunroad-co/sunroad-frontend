@@ -168,13 +168,10 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
             </span>
           ) : (
             <Link
-              href="/settings#billing-actions"
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-sunroad-amber-700 bg-sunroad-amber-50 border border-sunroad-amber-200 rounded-lg hover:bg-sunroad-amber-100 transition-colors"
+              href="/settings"
+              className="text-sm text-sunroad-brown-600 hover:text-sunroad-brown-900 transition-colors"
             >
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Upgrade to Add More
+              View limits in settings
             </Link>
           )}
         </div>
@@ -187,12 +184,9 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
                 You've reached your current limit. Archive or remove older works to add new ones.
               </p>
             ) : (
-              <Link
-                href="/settings#billing-actions"
-                className="text-sm font-medium text-amber-900 hover:text-amber-700 underline mt-1 inline-block"
-              >
-                Upgrade to Pro →
-              </Link>
+              <p className="text-sm text-amber-700 mt-1">
+                Upgrade to Pro for more works. <Link href="/settings" className="font-medium underline">View plans</Link>
+              </p>
             )}
           </div>
         )}
@@ -343,15 +337,9 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
                 You've reached your current limit. Archive or remove older works to add new ones.
               </p>
             ) : (
-              <Link
-                href="/settings#billing-actions"
-                className="inline-flex items-center px-4 py-2 bg-sunroad-amber-600 text-white rounded-lg hover:bg-sunroad-amber-700 transition-colors font-medium"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Upgrade to Add Works
-              </Link>
+              <p className="text-sm text-gray-600">
+                Upgrade to Pro to add works. <Link href="/settings" className="font-medium text-sunroad-amber-700 hover:text-sunroad-amber-800 underline">View plans</Link>
+              </p>
             )}
           </div>
         )}

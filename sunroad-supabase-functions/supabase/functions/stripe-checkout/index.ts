@@ -108,6 +108,32 @@ serve(async (req) => {
     return new Response("Invalid price", { status: 400, headers });
   }
 
+  // Check profile completion eligibility before allowing upgrade
+  const { data: eligibilityData, error: eligibilityError } = await supabaseUserClient
+    .rpc("get_profile_upgrade_eligibility", { p_auth_user_id: auth_user_id });
+
+  if (eligibilityError) {
+    console.error("Error checking profile eligibility:", eligibilityError);
+    return new Response(
+      JSON.stringify({ error: "Failed to check profile eligibility" }),
+      { status: 500, headers: { ...headers, "content-type": "application/json" } }
+    );
+  }
+
+  if (!eligibilityData?.eligible) {
+    const missing = eligibilityData?.missing || [];
+    return new Response(
+      JSON.stringify({
+        code: "PROFILE_INCOMPLETE",
+        missing,
+      }),
+      {
+        status: 400,
+        headers: { ...headers, "content-type": "application/json" },
+      }
+    );
+  }
+
   // Find or create Stripe customer
   const { data: existingCustomer } = await supabaseAdmin
     .from("billing_customers")

@@ -9,6 +9,7 @@ import ProfileHeader from '@/components/dashboard/profile-header'
 import ProfileContent from '@/components/dashboard/profile-content'
 import WorksSection from '@/components/dashboard/works-section'
 import ProfilePageSkeleton from '@/components/dashboard/profile-page-skeleton'
+import ProfileCompletionWidget from '@/components/profile-completion-widget'
 
 export default function DashboardProfilePage() {
   const router = useRouter()
@@ -102,6 +103,9 @@ export default function DashboardProfilePage() {
         {/* Works Section */}
         <WorksSection user={user} profile={profile} onRefreshProfile={refresh} />
       </article>
+
+      {/* Profile Completion Widget - Floating on desktop, sticky on mobile */}
+      <ProfileCompletionWidget />
     </main>
   )
 }
