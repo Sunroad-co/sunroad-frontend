@@ -81,7 +81,7 @@ export default function BlogCard({ post }: BlogCardProps) {
             {post.categories.map((category, index) => (
               <span
                 key={index}
-                className="inline-block bg-sunroad-amber-50 text-sunroad-amber-700 text-xs font-medium px-3 py-1 rounded-full"
+                className="inline-block bg-sunroad-amber-50 text-sunroad-amber-700 text-xs font-medium px-3 py-1 rounded-full border border-sunroad-amber-200"
               >
                 {category.title}
               </span>
