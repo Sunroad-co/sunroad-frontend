@@ -6,6 +6,7 @@ import WorksGallery from '@/components/works-gallery'
 import ShareButton from '@/components/share-button'
 import TruncatedBio from '@/components/truncated-bio'
 import ArtistSocialLinks from '@/components/artist-social-links'
+import ContactArtistCTA from '@/components/contact-artist-cta'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getMediaUrl } from '@/lib/media'
 import { Work } from '@/hooks/use-user-profile'
@@ -20,6 +21,7 @@ interface ArtistWithCategories {
   website_url?: string
   instagram_url?: string
   facebook_url?: string
+  can_receive_contact?: boolean
   locations?: {
     city?: string
     state?: string
@@ -56,6 +58,7 @@ async function fetchArtist(handle: string) {
       .from('artists_min')
       .select(`
         *,
+        can_receive_contact,
         locations:location_id (
           city,
           state,
@@ -240,6 +243,9 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
     const state = location?.state
     const locationText = city && state ? `${city}, ${state}` : city || state || null
 
+    // Check if artist can receive contact
+    const canReceiveContact = artist?.can_receive_contact === true
+
     return (
       <main className="min-h-screen bg-sunroad-cream">
         {/* Hero Section */}
@@ -295,9 +301,16 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           {/* Artist Info Section - Centered on mobile, left-aligned on desktop */}
           <header className="mt-0 md:mt-0 md:flex md:items-start md:gap-6 text-center md:text-left relative">
             {/* Spacer for avatar on desktop - matches avatar width + gap */}
-            <div className="hidden md:block w-40 flex-shrink-0 relative">
-              {/* Social Links - Desktop Only, aligned with location */}
-              <div className="absolute top-[3.5rem]">
+            <div className="hidden md:block w-40 flex-shrink-0">
+              <div className="flex flex-col gap-4 mt-14">
+                {/* Contact Button - Desktop Only */}
+                {canReceiveContact && (
+                  <ContactArtistCTA
+                    artistHandle={artist.handle}
+                    displayName={artist.display_name}
+                  />
+                )}
+                {/* Social Links - Desktop Only */}
                 <ArtistSocialLinks
                   websiteUrl={artist.website_url}
                   instagramUrl={artist.instagram_url}
@@ -354,57 +367,42 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           </header>
 
           {/* Bio Section - Aligned with name section on desktop */}
-          
           {artist.bio && (
             <section className="mb-8 md:flex md:items-start md:gap-6">
               {/* Spacer for alignment */}
               <div className="hidden md:block w-40 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                
                 <TruncatedBio bio={artist.bio} />
-                
-                {/* Share Button - Mobile Only, Below Bio */}
-                <div className="flex justify-center mt-4 md:hidden">
-                  <ShareButton 
-                    artistName={artist.display_name}
-                    artistHandle={artist.handle}
-                    className="border border-sunroad-amber-700/30 shadow-[0_0_10px_rgba(217,119,6,0.3)] px-5 py-2.5"
-                  />
-                </div>
-                
-                {/* Social Links - Mobile Only, Below Share Button */}
-                <div className="flex justify-center mt-4 md:hidden">
-                  <ArtistSocialLinks
-                    websiteUrl={artist.website_url}
-                    instagramUrl={artist.instagram_url}
-                    facebookUrl={artist.facebook_url}
-                    artistName={artist.display_name}
-                    alignment="center"
-                  />
-                </div>
               </div>
             </section>
           )}
-          
-          {/* Share Button + Social Links - Mobile Only, Below Bio (when no bio) */}
-          {!artist.bio && (
-            <section className="mb-8 md:hidden">
-              <div className="flex flex-col items-center gap-4">
-                <ShareButton 
-                  artistName={artist.display_name}
+
+          {/* Mobile: CTA, Share, Social Links */}
+          <section className="mb-8 md:hidden">
+            <div className="flex flex-col items-center gap-4">
+              {/* Contact Button - Mobile Only, Below Bio (if bio exists) or at top (if no bio) */}
+              {canReceiveContact && (
+                <ContactArtistCTA
                   artistHandle={artist.handle}
-                  className="border border-sunroad-amber-700/30 shadow-[0_0_10px_rgba(217,119,6,0.3)] px-5 py-2.5"
+                  displayName={artist.display_name}
                 />
-                <ArtistSocialLinks
-                  websiteUrl={artist.website_url}
-                  instagramUrl={artist.instagram_url}
-                  facebookUrl={artist.facebook_url}
-                  artistName={artist.display_name}
-                  alignment="center"
-                />
-              </div>
-            </section>
-          )}
+              )}
+              {/* Share Button - Mobile Only */}
+              <ShareButton 
+                artistName={artist.display_name}
+                artistHandle={artist.handle}
+                className="border border-sunroad-amber-700/30 shadow-[0_0_10px_rgba(217,119,6,0.3)] px-5 py-2.5"
+              />
+              {/* Social Links - Mobile Only */}
+              <ArtistSocialLinks
+                websiteUrl={artist.website_url}
+                instagramUrl={artist.instagram_url}
+                facebookUrl={artist.facebook_url}
+                artistName={artist.display_name}
+                alignment="center"
+              />
+            </div>
+          </section>
           
 
 

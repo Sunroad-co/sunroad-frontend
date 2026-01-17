@@ -16,37 +16,20 @@ const CONTACT_FROM_EMAIL =
 const IDENTIFIER_PEPPER = Deno.env.get("CONTACT_IDENTIFIER_PEPPER")!;
 
 // rate limits
-const MAX_PER_IP_24H = Number(Deno.env.get("CONTACT_MAX_PER_IP_24H") ?? "20");
-const MAX_PER_EMAIL_24H = Number(
-  Deno.env.get("CONTACT_MAX_PER_EMAIL_24H") ?? "10"
-);
-const MAX_PER_IP_ARTIST_24H = Number(
-  Deno.env.get("CONTACT_MAX_PER_IP_ARTIST_24H") ?? "5"
-);
+const MAX_PER_IP_24H = Number(Deno.env.get("CONTACT_MAX_PER_IP_24H") ?? "30");
+const MAX_PER_EMAIL_24H = Number(Deno.env.get("CONTACT_MAX_PER_EMAIL_24H") ?? "15");
+const MAX_PER_IP_ARTIST_24H = Number(Deno.env.get("CONTACT_MAX_PER_IP_ARTIST_24H") ?? "3");
+const MAX_PER_EMAIL_ARTIST_24H = Number(Deno.env.get("CONTACT_MAX_PER_EMAIL_ARTIST_24H") ?? "3");
 
 // -----------------------------
 // Helpers
 // -----------------------------
-function jsonResponse(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-    },
-  });
-}
-
 function getClientIp(req: Request): string | null {
-  // Prefer Cloudflare / proxy headers; fallback to x-forwarded-for.
   const cf = req.headers.get("cf-connecting-ip");
   if (cf && cf.trim()) return cf.trim();
 
   const xff = req.headers.get("x-forwarded-for");
-  if (xff && xff.trim()) {
-    // x-forwarded-for can be "client, proxy1, proxy2"
-    return xff.split(",")[0].trim();
-  }
-
+  if (xff && xff.trim()) return xff.split(",")[0].trim();
   return null;
 }
 
@@ -55,18 +38,16 @@ function normalizeEmail(email: string): string {
 }
 
 function isValidEmail(email: string): boolean {
-  // simple practical validation (not perfect RFC)
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// Secure Peppered Hash (keep pepper!)
 async function sha256Hex(input: string): Promise<string> {
   const enc = new TextEncoder();
   const data = enc.encode(input);
   const digest = await crypto.subtle.digest("SHA-256", data);
   const bytes = new Uint8Array(digest);
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function verifyTurnstile(token: string, remoteip?: string | null) {
@@ -75,17 +56,14 @@ async function verifyTurnstile(token: string, remoteip?: string | null) {
   form.append("response", token);
   if (remoteip) form.append("remoteip", remoteip);
 
-  const res = await fetch(
-    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-    { method: "POST", body: form }
-  );
+  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    body: form,
+  });
 
-  if (!res.ok) {
-    return { ok: false, error: "turnstile_http_error" as const };
-  }
+  if (!res.ok) return { ok: false, error: "turnstile_http_error" as const };
 
-  const data = await res.json();
-  // data: { success: boolean, ... }
+  const data = await res.json().catch(() => null);
   if (data?.success === true) return { ok: true };
   return { ok: false, error: "turnstile_failed" as const };
 }
@@ -95,6 +73,7 @@ async function sendResendEmail(params: {
   replyTo: string;
   subject: string;
   html: string;
+  text: string;
 }) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -103,45 +82,97 @@ async function sendResendEmail(params: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: `Sunroad Notifications <${CONTACT_FROM_EMAIL}>`,
+      from: `Sun Road <${CONTACT_FROM_EMAIL}>`,
       to: [params.to],
       reply_to: params.replyTo,
       subject: params.subject,
       html: params.html,
+      text: params.text,
     }),
   });
 
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return { ok: false, error: "resend_failed" as const, details: json };
+  if (!res.ok) return { ok: false, error: "resend_failed" as const, details: json };
+  return { ok: true, id: (json as any)?.id as string | undefined };
+}
+
+// -----------------------------
+// CORS Allowlist
+// -----------------------------
+const ALLOWED_ORIGINS = [
+  "https://sunroad.io",
+  "https://www.sunroad.io",
+  // Add Vercel domain(s) here - e.g., "https://sunroad-frontend.vercel.app"
+  // For local dev
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : null;
+  
+  const headers: Record<string, string> = {
+    "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
+    "access-control-allow-methods": "POST, OPTIONS",
+  };
+  
+  if (allowedOrigin) {
+    headers["access-control-allow-origin"] = allowedOrigin;
+    headers["access-control-allow-credentials"] = "true";
   }
-  return { ok: true, id: json?.id as string | undefined };
+  
+  return headers;
+}
+
+// -----------------------------
+// HTML Sanitization
+// -----------------------------
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function stripNewlines(text: string): string {
+  return text.replace(/\r\n/g, "").replace(/\n/g, "").replace(/\r/g, "");
+}
+
+// Make text safe for email subject (not HTML-escaped, but safe for headers)
+function makeTextSafeForSubject(text: string): string {
+  return text
+    .replace(/</g, " ")
+    .replace(/>/g, " ")
+    .replace(/&/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // -----------------------------
 // Main
 // -----------------------------
 Deno.serve(async (req) => {
-  // CORS (adjust origins to your domains)
-  const origin = req.headers.get("origin") ?? "*";
-  const corsHeaders = {
-    "access-control-allow-origin": origin,
-    "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
-    "access-control-allow-methods": "POST, OPTIONS",
-  };
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", {
-      status: 405,
-      headers: corsHeaders,
+  // CORS check for non-OPTIONS requests
+  if (req.method !== "OPTIONS" && origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return new Response(JSON.stringify({ error: "forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "content-type": "application/json" },
     });
   }
 
-  // Service-role client (bypasses RLS)
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
+  }
+
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
@@ -153,21 +184,41 @@ Deno.serve(async (req) => {
   try {
     payload = await req.json();
   } catch {
-    return new Response(
-      JSON.stringify({ error: "invalid_json" }),
-      { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "invalid_json" }), {
+      status: 400,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
   }
 
   const artistHandle = String(payload?.artist_handle ?? "").trim();
+  const fromNameRaw = String(payload?.from_name ?? "").trim();
   const fromEmailRaw = String(payload?.from_email ?? "").trim();
-  const subject = String(payload?.subject ?? "").trim();
-  const message = String(payload?.message ?? "").trim();
+  const subjectRaw = String(payload?.subject ?? "").trim();
+  const messageRaw = String(payload?.message ?? "").trim();
   const turnstileToken = String(payload?.turnstile_token ?? "").trim();
 
-  // quick validation (cheap)
+  // Strip newlines from name and subject to prevent header injection
+  const fromName = stripNewlines(fromNameRaw);
+  const subject = stripNewlines(subjectRaw);
+  // Keep message as-is for now (will trim before escaping for email)
+  const message = messageRaw;
+
+  // Quick validation
   if (!artistHandle || artistHandle.length > 64) {
     return new Response(JSON.stringify({ error: "invalid_artist" }), {
+      status: 400,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
+  }
+  if (!fromName || fromName.length < 1 || fromName.length > 120) {
+    return new Response(JSON.stringify({ error: "invalid_name" }), {
+      status: 400,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
+  }
+  // Check for newlines in name (should be stripped, but double-check)
+  if (fromName.includes("\n") || fromName.includes("\r")) {
+    return new Response(JSON.stringify({ error: "invalid_name" }), {
       status: 400,
       headers: { ...corsHeaders, "content-type": "application/json" },
     });
@@ -178,13 +229,27 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "content-type": "application/json" },
     });
   }
-  if (!subject || subject.length > 160) {
+  if (!subject || subject.length < 1 || subject.length > 160) {
     return new Response(JSON.stringify({ error: "invalid_subject" }), {
       status: 400,
       headers: { ...corsHeaders, "content-type": "application/json" },
     });
   }
-  if (!message || message.length > 4000) {
+  // Check for newlines in subject (should be stripped, but double-check)
+  if (subject.includes("\n") || subject.includes("\r")) {
+    return new Response(JSON.stringify({ error: "invalid_subject" }), {
+      status: 400,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
+  }
+  const messageTrimmed = message.trim();
+  if (!messageTrimmed || messageTrimmed.length < 10) {
+    return new Response(JSON.stringify({ error: "invalid_message" }), {
+      status: 400,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
+  }
+  if (message.length > 4000) {
     return new Response(JSON.stringify({ error: "invalid_message" }), {
       status: 400,
       headers: { ...corsHeaders, "content-type": "application/json" },
@@ -197,7 +262,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  // verify captcha (server-side)
+  // Verify Captcha
   const turnstile = await verifyTurnstile(turnstileToken, ip);
   if (!turnstile.ok) {
     return new Response(JSON.stringify({ error: "captcha_failed" }), {
@@ -239,10 +304,10 @@ Deno.serve(async (req) => {
     .limit(1);
 
   if (blockEmail.data && blockEmail.data.length > 0) {
-    // log + generic response
     await supabase.from("contact_messages").insert({
       artist_id: artistId,
       artist_auth_user_id: artistAuthUserId,
+      from_name: fromName,
       from_email: fromEmailNorm,
       subject,
       message,
@@ -259,7 +324,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Block by IP (if present)
+  // Block by IP
   if (ipHash) {
     const blockIp = await supabase
       .from("contact_blocklist")
@@ -272,6 +337,7 @@ Deno.serve(async (req) => {
       await supabase.from("contact_messages").insert({
         artist_id: artistId,
         artist_auth_user_id: artistAuthUserId,
+        from_name: fromName,
         from_email: fromEmailNorm,
         subject,
         message,
@@ -289,17 +355,23 @@ Deno.serve(async (req) => {
     }
   }
 
-  // contact gating: only Pro/grandfather Pro
-  const { data: canReceive, error: canErr } = await supabase.rpc(
-    "can_receive_contact",
-    { p_auth_user_id: artistAuthUserId }
-  );
+  // -----------------------------
+  // ✅ UPDATED CONTACT GATING
+  // Old: supabase.rpc("can_receive_contact", { p_auth_user_id })
+  // New: supabase.rpc("get_effective_limits", { p_auth_user_id }) and read can_receive_contact
+  // -----------------------------
+  const { data: limits, error: limitsErr } = await supabase.rpc("get_effective_limits", {
+    p_auth_user_id: artistAuthUserId,
+  });
 
-  if (canErr || canReceive !== true) {
-    // log attempt but don't reveal why
+  const limitRow = Array.isArray(limits) ? limits[0] : limits;
+  const canReceive = !limitsErr && limitRow?.can_receive_contact === true;
+
+  if (!canReceive) {
     await supabase.from("contact_messages").insert({
       artist_id: artistId,
       artist_auth_user_id: artistAuthUserId,
+      from_name: fromName,
       from_email: fromEmailNorm,
       subject,
       message,
@@ -311,6 +383,7 @@ Deno.serve(async (req) => {
       error_code: "contact_unavailable",
     });
 
+    // keep behavior: don't reveal details
     return new Response(JSON.stringify({ error: "contact_unavailable" }), {
       status: 404,
       headers: { ...corsHeaders, "content-type": "application/json" },
@@ -318,14 +391,30 @@ Deno.serve(async (req) => {
   }
 
   // rate limit counts (last 24h)
+  // Only count statuses that should consume quota: 'accepted', 'sent', 'failed'
+  // Exclude 'throttled' and 'rejected' from rate-limit counts
+  const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
   // per email
   const emailCountRes = await supabase
     .from("contact_messages")
     .select("id", { count: "exact", head: true })
     .eq("from_email_hash", fromEmailHash)
-    .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    .in("status", ["accepted", "sent", "failed"])
+    .gte("created_at", sinceIso);
 
   const emailCount = emailCountRes.count ?? 0;
+
+  // per email per artist
+  const emailArtistCountRes = await supabase
+    .from("contact_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("from_email_hash", fromEmailHash)
+    .eq("artist_id", artistId)
+    .in("status", ["accepted", "sent", "failed"])
+    .gte("created_at", sinceIso);
+
+  const emailArtistCount = emailArtistCountRes.count ?? 0;
 
   // per ip
   let ipCount = 0;
@@ -336,8 +425,8 @@ Deno.serve(async (req) => {
       .from("contact_messages")
       .select("id", { count: "exact", head: true })
       .eq("ip_hash", ipHash)
-      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
+      .in("status", ["accepted", "sent", "failed"])
+      .gte("created_at", sinceIso);
     ipCount = ipCountRes.count ?? 0;
 
     const ipArtistCountRes = await supabase
@@ -345,19 +434,21 @@ Deno.serve(async (req) => {
       .select("id", { count: "exact", head: true })
       .eq("ip_hash", ipHash)
       .eq("artist_id", artistId)
-      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
+      .in("status", ["accepted", "sent", "failed"])
+      .gte("created_at", sinceIso);
     ipArtistCount = ipArtistCountRes.count ?? 0;
   }
 
   const throttled =
     emailCount >= MAX_PER_EMAIL_24H ||
+    emailArtistCount >= MAX_PER_EMAIL_ARTIST_24H ||
     (ipHash ? ipCount >= MAX_PER_IP_24H || ipArtistCount >= MAX_PER_IP_ARTIST_24H : false);
 
   if (throttled) {
     await supabase.from("contact_messages").insert({
       artist_id: artistId,
       artist_auth_user_id: artistAuthUserId,
+      from_name: fromName,
       from_email: fromEmailNorm,
       subject,
       message,
@@ -369,19 +460,46 @@ Deno.serve(async (req) => {
       error_code: "rate_limited",
     });
 
-    // generic ok to avoid giving signal to attackers
+    // soft response (avoid telling attacker they're throttled)
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { ...corsHeaders, "content-type": "application/json" },
     });
   }
 
-  // insert accepted row
+  // fetch artist email
+  const userRes = await supabase.auth.admin.getUserById(artistAuthUserId);
+  const artistEmail = userRes?.data?.user?.email ?? null;
+
+  if (!artistEmail) {
+    await supabase.from("contact_messages").insert({
+      artist_id: artistId,
+      artist_auth_user_id: artistAuthUserId,
+      from_name: fromName,
+      from_email: fromEmailNorm,
+      subject,
+      message,
+      ip_hash: ipHash,
+      from_email_hash: fromEmailHash,
+      user_agent: userAgent,
+      turnstile_ok: true,
+      status: "failed",
+      error_code: "artist_email_missing",
+    });
+
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
+  }
+
+  // Insert first as accepted so we always have a row
   const { data: row, error: insErr } = await supabase
     .from("contact_messages")
     .insert({
       artist_id: artistId,
       artist_auth_user_id: artistAuthUserId,
+      from_name: fromName,
       from_email: fromEmailNorm,
       subject,
       message,
@@ -401,53 +519,116 @@ Deno.serve(async (req) => {
     });
   }
 
-  const msgId = row.id as number;
+  const msgId = row.id as string;
 
-  // fetch artist email via Admin API
-  const userRes = await supabase.auth.admin.getUserById(artistAuthUserId);
-  const artistEmail = userRes?.data?.user?.email ?? null;
+  // Trim message before escaping
+  const messageTrimmedForEmail = message.trim();
 
-  if (!artistEmail) {
-    await supabase
-      .from("contact_messages")
-      .update({ status: "failed", error_code: "artist_email_missing" })
-      .eq("id", msgId);
+  // Sanitize HTML for email body
+  const safeName = escapeHtml(fromName);
+  const safeSubject = escapeHtml(subject);
+  const safeMessage = escapeHtml(messageTrimmedForEmail);
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...corsHeaders, "content-type": "application/json" },
-    });
-  }
+  // Email subject: use text-safe name (not HTML-escaped)
+  // Replace < > & with spaces to prevent header injection
+  // Truncate to max 40 chars to avoid crazy-long subjects
+  const safeNameForSubject = makeTextSafeForSubject(fromName);
+  const truncatedName = safeNameForSubject && safeNameForSubject.length > 40
+    ? safeNameForSubject.substring(0, 40).trim()
+    : safeNameForSubject;
+  const emailSubject = truncatedName
+    ? `Sun Road: New message from ${truncatedName}`
+    : `Sun Road: New message from ${fromEmailNorm}`;
 
-  // Compose email (simple HTML, you can style later)
-  const html = `
-    <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;">
-      <h2 style="margin: 0 0 12px;">New message from Sunroad</h2>
-      <p style="margin: 0 0 8px;"><strong>From:</strong> ${fromEmailNorm}</p>
-      <p style="margin: 0 0 16px;"><strong>Subject:</strong> ${subject}</p>
-      <div style="white-space: pre-wrap; border: 1px solid_tf #eee; padding: 12px; border-radius: 8px;">
-${message.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}
-      </div>
-      <p style="margin: 16px 0 0; color: #666; font-size: 13px;">
-        Reply to this email to respond directly.
-      </p>
-    </div>
-  `;
+  // Generate plain text version
+  // Use sanitized fromName and subject (already stripped of newlines)
+  // Strip null chars from message for text version
+  const messageForText = messageTrimmedForEmail.replace(/\0/g, '');
+  const text = `New message via Sun Road
+
+From: ${fromName} <${fromEmailNorm}>
+Subject: ${subject}
+Profile: https://sunroad.io/artists/${artistHandle}
+
+${messageForText}
+
+---
+Reply to this email to respond directly.
+`;
+
+  // Generate HTML version
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .preheader { display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+  <div class="preheader">New message from ${safeName} via Sun Road.</div>
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-collapse: collapse; border-radius: 8px; overflow: hidden;">
+          <tr>
+            <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff;">
+              <img src="https://sunroad.io/assets/img/sunroad-logo.png" alt="Sun Road" width="120" style="display: block; margin: 0 auto; max-width: 120px; height: auto;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 30px;">
+              <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 600; color: #111827; line-height: 1.3;">
+                New message from ${safeName}
+              </h1>
+              <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280; line-height: 1.5;">
+                Sent via Sun Road
+              </p>
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 8px 0; font-size: 14px; color: #374151;">
+                    <strong style="color: #111827;">From:</strong> ${safeName} &lt;${fromEmailNorm}&gt;
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-size: 14px; color: #374151;">
+                    <strong style="color: #111827;">Subject:</strong> ${safeSubject}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-size: 14px; color: #374151;">
+                    <strong style="color: #111827;">Profile:</strong> <a href="https://sunroad.io/artists/${artistHandle}" style="color: #d97706; text-decoration: none;">https://sunroad.io/artists/${artistHandle}</a>
+                  </td>
+                </tr>
+              </table>
+              <pre style="margin: 0; white-space: pre-wrap; border: 1px solid #e5e7eb; padding: 16px; border-radius: 6px; background-color: #f9fafb; font-size: 14px; line-height: 1.6; color: #111827; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">${safeMessage}</pre>
+              <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.5;">
+                Reply to this email to respond directly.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   const sent = await sendResendEmail({
     to: artistEmail,
     replyTo: fromEmailNorm,
-    subject: `Sunroad: ${subject}`,
+    subject: emailSubject,
     html,
+    text,
   });
 
   if (!sent.ok) {
     await supabase
       .from("contact_messages")
-      .update({ status: "failed", error_code: sent.error })
+      .update({ status: "failed", error_code: "resend_failed" })
       .eq("id", msgId);
 
-    // still return ok to avoid signal to attacker
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { ...corsHeaders, "content-type": "application/json" },

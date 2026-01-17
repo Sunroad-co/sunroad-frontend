@@ -10,6 +10,7 @@ import EditProfileBasicsModal from './edit-profile-basics-modal'
 import TruncatedBio from '@/components/truncated-bio'
 import ArtistSocialLinks from '@/components/artist-social-links'
 import { UserProfile } from '@/hooks/use-user-profile'
+import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
 import { Pencil } from 'lucide-react'
 
 interface ProfileContentProps {
@@ -92,6 +93,10 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
   const [showLinksModal, setShowLinksModal] = useState(false)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
   const [showProfileBasicsModal, setShowProfileBasicsModal] = useState(false)
+
+  // Get limits from dashboard snapshot to check can_receive_contact
+  const { limits } = useDashboardSnapshot()
+  const canReceiveContact = limits?.can_receive_contact === true
 
   // Derive category IDs, category names, and location from snapshot.profile (no extra queries)
   // Ensure empty-state decisions are based on snapshot.profile (not on local state that starts empty)
@@ -350,6 +355,38 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
         </section>
       )}
 
+      {/* Contact Form Info Card */}
+      {canReceiveContact && (
+        <section className="mb-8">
+          <div className="bg-sunroad-amber-50/60 border border-sunroad-amber-200/60 rounded-xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg
+                  className="w-6 h-6 text-sunroad-amber-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-sunroad-brown-900 mb-1">
+                  Contact Form Enabled
+                </h3>
+                <p className="text-sm text-sunroad-brown-700">
+                  Visitors can reach you via a contact form on your public profile. Messages go to your Sun Road account email.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Modals */}
       {showBioModal && (
