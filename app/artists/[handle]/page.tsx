@@ -7,6 +7,7 @@ import ShareButton from '@/components/share-button'
 import TruncatedBio from '@/components/truncated-bio'
 import ArtistSocialLinks from '@/components/artist-social-links'
 import ContactArtistCTA from '@/components/contact-artist-cta'
+import ScrollableCategories from '@/components/scrollable-categories'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getMediaUrl } from '@/lib/media'
 import { Work } from '@/hooks/use-user-profile'
@@ -243,6 +244,11 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
     const state = location?.state
     const locationText = city && state ? `${city}, ${state}` : city || state || null
 
+    // Extract categories for display
+    const categoryNames = artist.artist_categories
+      ?.map(ac => ac.categories?.name)
+      .filter((name): name is string => Boolean(name)) || []
+
     // Check if artist can receive contact
     const canReceiveContact = artist?.can_receive_contact === true
 
@@ -301,25 +307,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           {/* Artist Info Section - Centered on mobile, left-aligned on desktop */}
           <header className="mt-0 md:mt-0 md:flex md:items-start md:gap-6 text-center md:text-left relative">
             {/* Spacer for avatar on desktop - matches avatar width + gap */}
-            <div className="hidden md:block w-40 flex-shrink-0">
-              <div className="flex flex-col gap-4 mt-14">
-                {/* Contact Button - Desktop Only */}
-                {canReceiveContact && (
-                  <ContactArtistCTA
-                    artistHandle={artist.handle}
-                    displayName={artist.display_name}
-                  />
-                )}
-                {/* Social Links - Desktop Only */}
-                <ArtistSocialLinks
-                  websiteUrl={artist.website_url}
-                  instagramUrl={artist.instagram_url}
-                  facebookUrl={artist.facebook_url}
-                  artistName={artist.display_name}
-                  alignment="side"
-                />
-              </div>
-            </div>
+            <div className="hidden md:block w-40 flex-shrink-0" />
             
             {/* Name and Info Section */}
             <div className="flex-1 min-w-0">
@@ -350,30 +338,65 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
               )}
 
               {/* Categories */}
-              {artist.artist_categories && artist.artist_categories.length > 0 && (
-                <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-4" role="list" aria-label="Artist categories">
-                  {artist.artist_categories.map((ac: { categories?: { name: string } }, i: number) => (
-                    <span
-                      key={i}
-                      role="listitem"
-                      className="inline-block bg-sunroad-amber-50 text-sunroad-amber-700 text-xs font-medium px-3 py-1 rounded-full"
-                    >
-                      {ac.categories?.name}
-                    </span>
-                  ))}
-                </div>
+              {categoryNames.length > 0 && (
+                <ScrollableCategories 
+                  categories={categoryNames}
+                  aria-label="Artist categories"
+                />
               )}
             </div>
           </header>
 
           {/* Bio Section - Aligned with name section on desktop */}
-          {artist.bio && (
-            <section className="mb-8 md:flex md:items-start md:gap-6">
-              {/* Spacer for alignment */}
-              <div className="hidden md:block w-40 flex-shrink-0" />
+          {artist.bio ? (
+            <section className="relative mb-8 md:flex md:items-start md:gap-6">
+              {/* Desktop CTA + Social Links in left column */}
+              <div className="hidden md:block w-40 flex-shrink-0">
+                <div className="flex flex-col gap-4 absolute top-[-2.5rem] left-0">
+                  {/* Contact Button - Desktop Only */}
+                  {canReceiveContact && (
+                    <ContactArtistCTA
+                      artistHandle={artist.handle}
+                      displayName={artist.display_name}
+                    />
+                  )}
+                  {/* Social Links - Desktop Only */}
+                  <ArtistSocialLinks
+                    websiteUrl={artist.website_url}
+                    instagramUrl={artist.instagram_url}
+                    facebookUrl={artist.facebook_url}
+                    artistName={artist.display_name}
+                    alignment="side"
+                  />
+                </div>
+              </div>
               <div className="flex-1 min-w-0">
                 <TruncatedBio bio={artist.bio} />
               </div>
+            </section>
+          ) : (
+            /* Desktop-only CTA + Social Links section when no bio */
+            <section className="mb-8 hidden md:flex md:items-start md:gap-6">
+              <div className="w-40 flex-shrink-0">
+                <div className="flex flex-col gap-4">
+                  {/* Contact Button - Desktop Only */}
+                  {canReceiveContact && (
+                    <ContactArtistCTA
+                      artistHandle={artist.handle}
+                      displayName={artist.display_name}
+                    />
+                  )}
+                  {/* Social Links - Desktop Only */}
+                  <ArtistSocialLinks
+                    websiteUrl={artist.website_url}
+                    instagramUrl={artist.instagram_url}
+                    facebookUrl={artist.facebook_url}
+                    artistName={artist.display_name}
+                    alignment="side"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0" />
             </section>
           )}
 

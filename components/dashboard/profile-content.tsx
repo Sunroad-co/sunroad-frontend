@@ -9,6 +9,7 @@ import EditCategoriesModal from './edit-categories-modal'
 import EditProfileBasicsModal from './edit-profile-basics-modal'
 import TruncatedBio from '@/components/truncated-bio'
 import ArtistSocialLinks from '@/components/artist-social-links'
+import ScrollableCategories from '@/components/scrollable-categories'
 import { UserProfile } from '@/hooks/use-user-profile'
 import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
 import { Pencil } from 'lucide-react'
@@ -193,17 +194,10 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
 
           {/* Categories */}
           {categoryNames && categoryNames.length > 0 && (
-            <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-4" role="list" aria-label="Artist categories">
-              {categoryNames.map((category, i) => (
-                <span
-                  key={i}
-                  role="listitem"
-                  className="inline-block bg-sunroad-amber-50 text-sunroad-amber-700 text-xs font-medium px-3 py-1 rounded-full"
-                >
-                  {category}
-                </span>
-              ))}
-            </div>
+            <ScrollableCategories 
+              categories={categoryNames}
+              aria-label="Artist categories"
+            />
           )}
         </div>
       </header>

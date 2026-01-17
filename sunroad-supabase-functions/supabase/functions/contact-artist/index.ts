@@ -16,10 +16,10 @@ const CONTACT_FROM_EMAIL =
 const IDENTIFIER_PEPPER = Deno.env.get("CONTACT_IDENTIFIER_PEPPER")!;
 
 // rate limits
-const MAX_PER_IP_24H = Number(Deno.env.get("CONTACT_MAX_PER_IP_24H") ?? "30");
-const MAX_PER_EMAIL_24H = Number(Deno.env.get("CONTACT_MAX_PER_EMAIL_24H") ?? "15");
-const MAX_PER_IP_ARTIST_24H = Number(Deno.env.get("CONTACT_MAX_PER_IP_ARTIST_24H") ?? "3");
-const MAX_PER_EMAIL_ARTIST_24H = Number(Deno.env.get("CONTACT_MAX_PER_EMAIL_ARTIST_24H") ?? "3");
+const MAX_PER_IP_24H = Number(Deno.env.get("CONTACT_MAX_PER_IP_24H") ?? "50");
+const MAX_PER_EMAIL_24H = Number(Deno.env.get("CONTACT_MAX_PER_EMAIL_24H") ?? "25");
+const MAX_PER_IP_ARTIST_24H = Number(Deno.env.get("CONTACT_MAX_PER_IP_ARTIST_24H") ?? "25");
+const MAX_PER_EMAIL_ARTIST_24H = Number(Deno.env.get("CONTACT_MAX_PER_EMAIL_ARTIST_24H") ?? "25");
 
 // -----------------------------
 // Helpers
@@ -102,6 +102,7 @@ async function sendResendEmail(params: {
 const ALLOWED_ORIGINS = [
   "https://sunroad.io",
   "https://www.sunroad.io",
+  "https://sunroad-frontend.vercel.app",
   // Add Vercel domain(s) here - e.g., "https://sunroad-frontend.vercel.app"
   // For local dev
   "http://localhost:3000",
