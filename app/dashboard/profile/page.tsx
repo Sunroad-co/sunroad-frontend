@@ -39,6 +39,9 @@ export default function DashboardProfilePage() {
     }
 
     const snapshotProfile = snapshot.profile
+    // Map snapshot.profile.links to artist_links (RPC returns 'links', we need 'artist_links')
+    const links = (snapshotProfile as any).links ?? snapshotProfile.artist_links ?? []
+    
     return {
       id: snapshotProfile.artist_id,
       handle: snapshotProfile.handle,
@@ -46,9 +49,9 @@ export default function DashboardProfilePage() {
       bio: snapshotProfile.bio,
       avatar_url: snapshotProfile.avatar_url,
       banner_url: snapshotProfile.banner_url,
-      website_url: null, // Not in snapshot, will be fetched separately if needed
-      instagram_url: null, // Not in snapshot, will be fetched separately if needed
-      facebook_url: null, // Not in snapshot, will be fetched separately if needed
+      website_url: null, // Legacy field, not used
+      instagram_url: null, // Legacy field, not used
+      facebook_url: null, // Legacy field, not used
       categories: snapshotProfile.categories.map(cat => cat.name),
       category_ids: snapshotProfile.categories.map(cat => cat.id),
       location_id: snapshotProfile.location?.location_id ?? null,
@@ -60,6 +63,7 @@ export default function DashboardProfilePage() {
           }
         : null,
       works: [], // Works are fetched separately in WorksSection
+      artist_links: links,
     }
   }, [snapshot])
 

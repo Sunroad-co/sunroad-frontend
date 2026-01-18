@@ -5,5 +5,6 @@
 export const swrKeys = {
   dashboardSnapshot: (userId: string) => ['dashboardSnapshot', userId] as const,
   userProfile: (userId: string) => ['user-profile', userId] as const,
+  socialPlatforms: () => ['social-platforms'] as const,
 }
 

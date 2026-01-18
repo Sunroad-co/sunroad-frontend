@@ -69,6 +69,21 @@ async function fetchArtist(handle: string) {
           categories (
             name
           )
+        ),
+        artist_links:artist_links (
+          id,
+          platform_key,
+          url,
+          label,
+          sort_order,
+          is_public,
+          platform:social_platforms (
+            key,
+            display_name,
+            icon_key,
+            sort_order,
+            is_active
+          )
         )
       `)
       .eq('handle', handle)
@@ -84,14 +99,48 @@ async function fetchArtist(handle: string) {
     }
 
     // Extract categories from the nested structure
-    const typedArtist = artist as ArtistWithCategories
+    const typedArtist = artist as ArtistWithCategories & {
+      artist_links?: Array<{
+        id: number
+        platform_key: string
+        url: string
+        label: string | null
+        sort_order: number
+        is_public: boolean
+        platform?: {
+          key: string
+          display_name: string
+          icon_key: string
+          sort_order: number
+          is_active: boolean
+        } | null
+      }>
+    }
+    
+    // Process and sort artist_links
+    const rawLinks = typedArtist.artist_links || []
+    const artistLinks = rawLinks
+      .filter(l => l.is_public !== false && (l.platform?.is_active ?? true))
+      .sort((a, b) => {
+        const aPlatformOrder = a.platform?.sort_order ?? 999
+        const bPlatformOrder = b.platform?.sort_order ?? 999
+        if (aPlatformOrder !== bPlatformOrder) {
+          return aPlatformOrder - bPlatformOrder
+        }
+        if (a.sort_order !== b.sort_order) {
+          return a.sort_order - b.sort_order
+        }
+        return a.id - b.id
+      })
+    
     const categories = typedArtist.artist_categories
       ?.map(ac => ac.categories?.name)
       .filter((name): name is string => Boolean(name)) || ['Artist']
     
     return {
       ...typedArtist,
-      categories
+      categories,
+      artist_links: artistLinks
     }
   } catch (error) {
     console.error('Unexpected error fetching artist:', error)
@@ -362,9 +411,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
                   )}
                   {/* Social Links - Desktop Only */}
                   <ArtistSocialLinks
-                    websiteUrl={artist.website_url}
-                    instagramUrl={artist.instagram_url}
-                    facebookUrl={artist.facebook_url}
+                    links={artist.artist_links || []}
                     artistName={artist.display_name}
                     alignment="side"
                   />
@@ -388,9 +435,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
                   )}
                   {/* Social Links - Desktop Only */}
                   <ArtistSocialLinks
-                    websiteUrl={artist.website_url}
-                    instagramUrl={artist.instagram_url}
-                    facebookUrl={artist.facebook_url}
+                    links={artist.artist_links || []}
                     artistName={artist.display_name}
                     alignment="side"
                   />
@@ -418,9 +463,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
               />
               {/* Social Links - Mobile Only */}
               <ArtistSocialLinks
-                websiteUrl={artist.website_url}
-                instagramUrl={artist.instagram_url}
-                facebookUrl={artist.facebook_url}
+                links={artist.artist_links || []}
                 artistName={artist.display_name}
                 alignment="center"
               />
@@ -431,7 +474,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
 
 
           {/* Works */}
-          <section className="mb-12">
+          <section className="mb-12 mt-12">
             <h2 className="text-xl font-display font-semibold text-sunroad-brown-900 mb-4">Work</h2>
             <WorksGallery works={works} />
           </section>

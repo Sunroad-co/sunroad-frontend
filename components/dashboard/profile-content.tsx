@@ -23,9 +23,16 @@ interface ProfileContentProps {
 // Social Links Block Component - Extracted to avoid duplication
 interface SocialLinksBlockProps {
   hasSocialLinks: boolean
-  websiteUrl: string | null
-  instagramUrl: string | null
-  facebookUrl: string | null
+  links: Array<{
+    id?: number
+    platform_key: string
+    url: string
+    label?: string | null
+    platform?: {
+      display_name?: string
+      icon_key?: string
+    } | null
+  }>
   artistName: string
   onEditClick: (e?: React.MouseEvent) => void
   alignment: 'side' | 'center'
@@ -34,9 +41,7 @@ interface SocialLinksBlockProps {
 
 function SocialLinksBlock({
   hasSocialLinks,
-  websiteUrl,
-  instagramUrl,
-  facebookUrl,
+  links,
   artistName,
   onEditClick,
   alignment,
@@ -46,9 +51,7 @@ function SocialLinksBlock({
     return (
       <>
         <ArtistSocialLinks
-          websiteUrl={websiteUrl}
-          instagramUrl={instagramUrl}
-          facebookUrl={facebookUrl}
+          links={links}
           artistName={artistName}
           alignment={alignment}
         />
@@ -108,8 +111,9 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
   const currentLocationCity = profile?.location?.city || null
   const currentLocationState = profile?.location?.state || null
 
-  // Check if social links are empty
-  const hasSocialLinks = !!(profile.website_url || profile.instagram_url || profile.facebook_url)
+  // Compute links from artist_links (filter public and active platforms)
+  const links = (profile.artist_links ?? []).filter(l => l.is_public !== false && (l.platform?.is_active ?? true))
+  const hasSocialLinks = links.length > 0
 
   return (
     <>
@@ -212,9 +216,7 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
           >
             <SocialLinksBlock
               hasSocialLinks={hasSocialLinks}
-              websiteUrl={profile.website_url}
-              instagramUrl={profile.instagram_url}
-              facebookUrl={profile.facebook_url}
+              links={links}
               artistName={profile.display_name}
               onEditClick={(e) => {
                 e?.stopPropagation()
@@ -256,9 +258,7 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
             <div className="flex flex-col items-center mt-4 md:hidden gap-3">
               <SocialLinksBlock
                 hasSocialLinks={hasSocialLinks}
-                websiteUrl={profile.website_url}
-                instagramUrl={profile.instagram_url}
-                facebookUrl={profile.facebook_url}
+                links={links}
                 artistName={profile.display_name}
                 onEditClick={() => setShowLinksModal(true)}
                 alignment="center"
@@ -288,9 +288,7 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
           >
             <SocialLinksBlock
               hasSocialLinks={hasSocialLinks}
-              websiteUrl={profile.website_url}
-              instagramUrl={profile.instagram_url}
-              facebookUrl={profile.facebook_url}
+              links={links}
               artistName={profile.display_name}
               onEditClick={() => setShowLinksModal(true)}
               alignment="side"
@@ -326,9 +324,7 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
             <div className="flex flex-col items-center mt-4 md:hidden gap-3">
               <SocialLinksBlock
                 hasSocialLinks={hasSocialLinks}
-                websiteUrl={profile.website_url}
-                instagramUrl={profile.instagram_url}
-                facebookUrl={profile.facebook_url}
+                links={links}
                 artistName={profile.display_name}
                 onEditClick={() => setShowLinksModal(true)}
                 alignment="center"
@@ -402,11 +398,7 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
         <EditLinksModal
           isOpen={showLinksModal}
           onClose={() => setShowLinksModal(false)}
-          currentLinks={{
-            website: profile.website_url || undefined,
-            instagram: profile.instagram_url || undefined,
-            facebook: profile.facebook_url || undefined
-          }}
+          currentLinks={profile.artist_links}
           profile={profile}
           onSuccess={() => {
             // Trigger refetch to update profile

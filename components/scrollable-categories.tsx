@@ -67,10 +67,10 @@ export default function ScrollableCategories({
       {/* Scroll container - always reserve space for arrows when overflowing to prevent layout shift */}
       <div
         ref={scrollContainerRef}
-        className={`flex flex-nowrap md:flex-wrap gap-2 justify-start overflow-x-auto no-scrollbar overscroll-x-contain touch-pan-x scroll-smooth md:pl-0 md:pr-0 ${
+        className={`flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto no-scrollbar overscroll-x-contain touch-pan-x scroll-smooth md:pl-0 md:pr-0 md:justify-start ${
           isOverflowing 
-            ? 'pl-12 pr-12 sm:pl-12 sm:pr-12' 
-            : 'pl-4 pr-4 sm:pl-6 sm:pr-6'
+            ? 'justify-start pl-12 pr-12 sm:pl-12 sm:pr-12' 
+            : 'justify-center pl-4 pr-4 sm:pl-6 sm:pr-6'
         } ${className}`}
         role="list"
         aria-label={ariaLabel}

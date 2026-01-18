@@ -24,6 +24,21 @@ export interface UserProfile {
     formatted?: string
   } | null
   works: Work[]
+  artist_links?: Array<{
+    id: number
+    platform_key: string
+    url: string
+    label: string | null
+    sort_order: number
+    is_public: boolean
+    platform?: {
+      key: string
+      display_name: string
+      icon_key: string
+      sort_order: number
+      is_active: boolean
+    } | null
+  }>
 }
 
 export type MediaType = 'image' | 'video' | 'audio'
@@ -47,7 +62,7 @@ export interface Work {
 async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
   const supabase = createClient()
 
-  // Fetch user profile from artists_min table
+  // Fetch user profile from artists_min table with artist_links joined
   const { data: profileData, error: profileError } = await supabase
     .from('artists_min')
     .select(`
@@ -70,6 +85,21 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
         category_id,
         categories (
           name
+        )
+      ),
+      artist_links:artist_links (
+        id,
+        platform_key,
+        url,
+        label,
+        sort_order,
+        is_public,
+        platform:social_platforms (
+          key,
+          display_name,
+          icon_key,
+          sort_order,
+          is_active
         )
       )
     `)
@@ -109,6 +139,38 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
   const location = profileData.locations as { city?: string; state?: string; formatted?: string } | null
   const works = worksData || []
 
+  // Process artist_links: sort by platform.sort_order, then artist_links.sort_order, then id
+  const rawLinks = (profileData.artist_links as Array<{
+    id: number
+    platform_key: string
+    url: string
+    label: string | null
+    sort_order: number
+    is_public: boolean
+    platform?: {
+      key: string
+      display_name: string
+      icon_key: string
+      sort_order: number
+      is_active: boolean
+    } | null
+  }>) || []
+
+  const artistLinks = rawLinks.sort((a, b) => {
+    // First sort by platform.sort_order
+    const aPlatformOrder = a.platform?.sort_order ?? 999
+    const bPlatformOrder = b.platform?.sort_order ?? 999
+    if (aPlatformOrder !== bPlatformOrder) {
+      return aPlatformOrder - bPlatformOrder
+    }
+    // Then by artist_links.sort_order
+    if (a.sort_order !== b.sort_order) {
+      return a.sort_order - b.sort_order
+    }
+    // Finally by id
+    return a.id - b.id
+  })
+
   return {
     id: profileData.id,
     handle: profileData.handle,
@@ -123,7 +185,8 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
     category_ids: categoryIds,
     location_id: profileData.location_id ?? null,
     location,
-    works
+    works,
+    artist_links: artistLinks
   }
 }
 
