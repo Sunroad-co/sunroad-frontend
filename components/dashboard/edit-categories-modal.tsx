@@ -128,6 +128,9 @@ export default function EditCategoriesModal({
   }
 
   const handleSave = async () => {
+    // Early guard: prevent double-save
+    if (saving) return
+    
     // Check if unchanged
     const originalSet = new Set(currentCategoryIds)
     const nextSet = new Set(selectedCategoryIds)

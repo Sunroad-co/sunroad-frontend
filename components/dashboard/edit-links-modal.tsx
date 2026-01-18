@@ -221,6 +221,9 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
   const [validationErrors, setValidationErrors] = useState<Record<number | string, string>>({})
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  
+  // Stable supabase client
+  const supabase = useMemo(() => createClient(), [])
 
   // Initialize links when modal opens
   useEffect(() => {
@@ -377,6 +380,12 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
   }
 
   const handleSave = async () => {
+    // Early guard: prevent double-save
+    if (saving) return
+    
+    // Get visible links (non-deleted) for validation
+    const visibleLinks = links.filter(l => !l.isDeleted)
+    
     // Validate all links before saving
     const errors: Record<number | string, string> = {}
     visibleLinks.forEach((link, index) => {
@@ -392,12 +401,11 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
       setError('Please fix validation errors before saving')
       return
     }
-
-      setSaving(true)
-      setError(null)
+    
+    setSaving(true)
+    setError(null)
 
     try {
-      const supabase = createClient()
 
       // Process deletions first
       const toDelete = links.filter(l => l.isDeleted && l.id)

@@ -398,10 +398,10 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
 
           {/* Bio Section - Aligned with name section on desktop */}
           {artist.bio ? (
-            <section className="relative mb-8 md:flex md:items-start md:gap-6">
+            <section className="mb-8 md:flex md:items-start md:gap-6">
               {/* Desktop CTA + Social Links in left column */}
               <div className="hidden md:block w-40 flex-shrink-0">
-                <div className="flex flex-col gap-4 absolute top-[-2.5rem] left-0">
+                <div className="flex flex-col gap-4 -mt-10 md:sticky md:top-6 md:self-start">
                   {/* Contact Button - Desktop Only */}
                   {canReceiveContact && (
                     <ContactArtistCTA
@@ -425,7 +425,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
             /* Desktop-only CTA + Social Links section when no bio */
             <section className="mb-8 hidden md:flex md:items-start md:gap-6">
               <div className="w-40 flex-shrink-0">
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 md:sticky md:top-6 md:self-start">
                   {/* Contact Button - Desktop Only */}
                   {canReceiveContact && (
                     <ContactArtistCTA
