@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import * as simpleIcons from 'simple-icons'
 import { Link, Globe } from 'lucide-react'
 import LinkedInIcon from './social-icons/linkedin-icon'
@@ -110,6 +111,39 @@ export default function ArtistSocialLinks({
   className = '',
 }: ArtistSocialLinksProps) {
   const [showModal, setShowModal] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Ensure we only render portal on client side
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showModal])
+
+  // Handle escape key
+  useEffect(() => {
+    if (!showModal) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowModal(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showModal])
 
   // Filter and transform links
   const processedLinks = useMemo(() => {
@@ -193,24 +227,27 @@ export default function ArtistSocialLinks({
         </div>
       </div>
 
-      {/* Modal for additional links */}
-      {showModal && (
+      {/* Modal for additional links - Rendered via portal to document.body */}
+      {showModal && isMounted && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={() => setShowModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="social-links-modal-title"
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4"
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+              <h2 id="social-links-modal-title" className="text-xl font-semibold text-gray-900">
                 Connect with {artistName}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
                 aria-label="Close modal"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,7 +257,7 @@ export default function ArtistSocialLinks({
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1">
               <div className="space-y-4">
                 {processedLinks.map((link) => {
                   const originalLink = links.find(l => l.id === link.id)
@@ -267,7 +304,8 @@ export default function ArtistSocialLinks({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

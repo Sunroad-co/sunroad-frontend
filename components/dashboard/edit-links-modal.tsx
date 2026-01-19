@@ -242,8 +242,9 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
       return
     }
 
-    // Validate platform-specific URL
-    const validation = validatePlatformUrl(normalizedUrl, newLinkPlatform)
+    // Validate platform-specific URL using backend host_patterns
+    const selectedPlatform = platforms.find(p => p.key === newLinkPlatform)
+    const validation = validatePlatformUrl(normalizedUrl, newLinkPlatform, selectedPlatform?.host_patterns)
     if (!validation.valid) {
       setValidationErrors({ new: validation.error || 'Invalid URL for this platform' })
       return
@@ -294,9 +295,10 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
       }
     }
     
-    // Validate platform-specific URL if URL changed
+    // Validate platform-specific URL if URL changed (using backend host_patterns)
     if (updates.url !== undefined) {
-      const validation = validatePlatformUrl(updatedLink.url, updatedLink.platform_key)
+      const linkPlatform = platforms.find(p => p.key === updatedLink.platform_key)
+      const validation = validatePlatformUrl(updatedLink.url, updatedLink.platform_key, linkPlatform?.host_patterns)
       if (!validation.valid) {
         setValidationErrors({ ...validationErrors, [linkKey]: validation.error || 'Invalid URL for this platform' })
         return
@@ -336,11 +338,12 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
     // Get visible links (non-deleted) for validation
     const visibleLinks = links.filter(l => !l.isDeleted)
     
-    // Validate all links before saving
+    // Validate all links before saving (using backend host_patterns)
     const errors: Record<number | string, string> = {}
     visibleLinks.forEach((link, index) => {
       const linkKey = link.id || `new-${index}`
-      const validation = validatePlatformUrl(link.url, link.platform_key)
+      const linkPlatform = platforms.find(p => p.key === link.platform_key)
+      const validation = validatePlatformUrl(link.url, link.platform_key, linkPlatform?.host_patterns)
       if (!validation.valid) {
         errors[linkKey] = validation.error || 'Invalid URL for this platform'
       }
@@ -685,15 +688,25 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
                         <button
                           key={platform.key}
                           onClick={() => setNewLinkPlatform(platform.key)}
-                          className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-gray-200 hover:border-sunroad-amber-300 hover:bg-sunroad-amber-50/40 transition-colors"
+                          className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-gray-200 hover:border-sunroad-amber-300 hover:bg-sunroad-amber-50/40 transition-colors relative group"
+                          title={platform.key === 'link-in-bio' ? 'Link in Bio services like Linktree, Beacons, etc.' : undefined}
                         >
                           <div className="w-8 h-8 rounded-full flex items-center justify-center bg-sunroad-amber-50/60 border border-sunroad-amber-200/60 text-sunroad-brown-600">
                             {renderPlatformIcon(platform.key, platform.icon_key, 'sm')}
                           </div>
                           <span className="text-xs text-gray-700 text-center leading-tight">{platform.display_name}</span>
+                          {platform.key === 'link-in-bio' && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" title="Link aggregation services" />
+                          )}
                         </button>
                       ))}
                     </div>
+                    {/* Link-in-bio clarification */}
+                    {availablePlatformsForPicker.some(p => p.key === 'link-in-bio') && (
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        <span className="font-medium">Link in Bio:</span> For services like Linktree, Beacons, Bio.link, and similar link aggregation pages
+                      </p>
+                    )}
                   </div>
                 ) : (
                   // URL input form (after platform selected)
@@ -722,6 +735,11 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
                     {/* URL input */}
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">URL</label>
+                      {newLinkPlatform === 'link-in-bio' && (
+                        <p className="text-xs text-gray-500 mb-2">
+                          Enter your Link in Bio page URL (e.g., linktr.ee, beacons.ai, bio.link, msha.ke, or linktree.com)
+                        </p>
+                      )}
                 <input
                   type="url"
                         value={newLinkUrl}
@@ -734,7 +752,11 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
                             setValidationErrors(newErrors)
                           }
                         }}
-                        placeholder="https://..."
+                        placeholder={
+                          newLinkPlatform === 'link-in-bio' 
+                            ? 'https://linktr.ee/yourname or https://beacons.ai/yourname'
+                            : 'https://...'
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sunroad-amber-500 text-sm"
                       />
             </div>
