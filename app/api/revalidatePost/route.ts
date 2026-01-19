@@ -6,14 +6,15 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Sanity webhook handler for revalidating blog posts
+ * Sanity webhook handler for revalidating blog posts, authors, and categories
  * 
  * Webhook configuration:
  * - URL: https://sunroad-frontent.vercel.app/api/revalidatePost
+ * - Filter: _type in ["post","author","category"]
  * - Header: X-Sanity-Webhook-Secret: <secret>
  * - Body projection: { "_type": _type, "_id": _id, "slug": slug.current }
  * 
- * Note: For delete/unpublish events, slug may be null
+ * Note: For author/category payloads, slug will be null. For delete/unpublish events, slug may also be null.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -44,11 +45,12 @@ export async function POST(request: NextRequest) {
     // Log the incoming webhook
     console.log('[revalidatePost] Received webhook:', { _type, _id, slug })
 
-    // Ignore non-post types (return 200 OK to acknowledge receipt)
-    if (_type !== 'post') {
-      console.log(`[revalidatePost] Ignoring non-post type: ${_type}`)
+    // Accept only post, author, or category types. Ignore others with 200 OK.
+    const allowedTypes = ['post', 'author', 'category']
+    if (!_type || !allowedTypes.includes(_type)) {
+      console.log(`[revalidatePost] Ignoring unsupported type: ${_type}`)
       return NextResponse.json(
-        { ok: true, message: `Ignored: _type is '${_type}', expected 'post'` },
+        { ok: true, message: `Ignored: _type is '${_type}', expected one of: ${allowedTypes.join(', ')}` },
         { status: 200 }
       )
     }
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
     const revalidatedPaths: string[] = []
     
     // Always revalidate blog listing (sync, no await)
-    // TypeScript types may be outdated - revalidateTag takes one arg in Next.js 16
+    // Type assertion to use single-arg signature as per requirements
     ;(revalidateTag as (tag: string) => void)('sanity:blog')
     revalidatePath('/blog')
     revalidatedTags.push('sanity:blog')
@@ -68,8 +70,8 @@ export async function POST(request: NextRequest) {
     ;(revalidateTag as (tag: string) => void)('sanity:post')
     revalidatedTags.push('sanity:post')
 
-    // If slug exists, revalidate the specific post page
-    if (slug && typeof slug === 'string') {
+    // Only when _type === 'post' AND slug is string, revalidate specific post
+    if (_type === 'post' && slug && typeof slug === 'string') {
       const postTag = `sanity:post:${slug}`
       const postPath = `/blog/${slug}`
       
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest) {
       
       console.log(`[revalidatePost] Revalidated post: ${slug}`)
     } else {
-      console.log('[revalidatePost] No slug provided (likely delete/unpublish), only revalidated listing')
+      console.log(`[revalidatePost] Revalidated ${_type} (no specific post revalidation)`)
     }
 
     return NextResponse.json(

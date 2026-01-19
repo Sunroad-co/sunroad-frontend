@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import SRImage from '@/components/media/SRImage'
 import { BlogPostListItem } from '@/lib/sanity/queries'
-import { urlForImage } from '@/lib/sanity/image'
+import { urlForImage, urlForImageWithSize } from '@/lib/sanity/image'
 
 interface BlogCardProps {
   post: BlogPostListItem
@@ -20,76 +20,88 @@ export default function BlogCard({ post }: BlogCardProps) {
   const imageUrl = post.mainImage ? urlForImage(post.mainImage) : null
   const authorName = post.author?.name || 'Anonymous'
   const excerpt = post.excerpt || ''
+  const authorImageUrl = post.author?.image ? urlForImageWithSize(post.author.image, 64, 64) : null
 
   return (
-    <Link
-      href={`/blog/${post.slug}`}
-      className="block bg-white rounded-lg border border-sunroad-brown-200/50 hover:border-sunroad-amber-400 hover:shadow-md transition-all duration-200 overflow-hidden h-full"
-    >
-      {/* Hero Image */}
-      {imageUrl && (
-        <div className="relative w-full h-48 sm:h-56 overflow-hidden">
-          <SRImage
-            src={imageUrl}
-            alt={post.mainImage?.alt || post.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            mode="raw"
-          />
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="p-4 sm:p-6">
-        {/* Title */}
-        <h2 className="text-xl sm:text-2xl font-display font-semibold text-sunroad-brown-900 mb-2 line-clamp-2">
-          {post.title}
-        </h2>
-
-        {/* Excerpt */}
-        {excerpt && (
-          <p className="text-sm sm:text-base text-sunroad-brown-600 mb-4 line-clamp-3">
-            {excerpt}
-          </p>
+    <article className="flex flex-col bg-white rounded-lg border border-sunroad-brown-200/50 hover:border-sunroad-amber-400 hover:shadow-md transition-all duration-200 overflow-hidden h-full">
+      <Link
+        href={`/blog/${post.slug}`}
+        className="flex flex-col h-full"
+        aria-label={`Read article: ${post.title}`}
+      >
+        {/* Hero Image */}
+        {imageUrl && (
+          <div className="relative w-full h-48 sm:h-56 overflow-hidden flex-shrink-0">
+            <SRImage
+              src={imageUrl}
+              alt={post.mainImage?.alt || post.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              mode="raw"
+            />
+          </div>
         )}
 
-        {/* Meta Info */}
-        <div className="flex flex-wrap items-center gap-3 text-sm text-sunroad-brown-500">
-          {/* Date */}
-          <div className="flex items-center gap-1.5">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <time dateTime={post.publishedAt}>
+        {/* Content */}
+        <div className="flex flex-col flex-1 p-4 sm:p-6">
+          {/* Title */}
+          <h2 className="text-xl sm:text-2xl font-display font-semibold text-sunroad-brown-900 mb-3 line-clamp-2">
+            {post.title}
+          </h2>
+
+          {/* Excerpt - Dynamic line clamping based on available space */}
+          {excerpt && (
+            <p className="text-sm sm:text-base text-sunroad-brown-600 mb-4 line-clamp-[4] flex-shrink-0">
+              {excerpt}
+            </p>
+          )}
+
+          {/* Spacer to push meta to bottom */}
+          <div className="flex-1" />
+
+          {/* Meta Info - Pinned to bottom (Author + Date on right) */}
+          <div className="flex items-center justify-between gap-3 text-sm text-sunroad-brown-500 mt-auto pt-4 border-t border-sunroad-brown-100">
+            {/* Author - Left */}
+            <div className="flex items-center gap-2 min-w-0">
+              {authorImageUrl ? (
+                <div className="flex-shrink-0">
+                  <SRImage
+                    src={authorImageUrl}
+                    alt={`${authorName} avatar`}
+                    width={28}
+                    height={28}
+                    className="w-7 h-7 rounded-full object-cover"
+                    mode="raw"
+                    sizes="28px"
+                  />
+                </div>
+              ) : null}
+              <span className="truncate" itemProp="author" itemScope itemType="https://schema.org/Person">
+                <span itemProp="name">{authorName}</span>
+              </span>
+            </div>
+
+            {/* Date - Right */}
+            <time 
+              dateTime={post.publishedAt}
+              className="flex items-center gap-1.5 text-xs flex-shrink-0 whitespace-nowrap"
+            >
+              <svg 
+                className="h-3.5 w-3.5" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
               {formatDate(post.publishedAt)}
             </time>
           </div>
-
-          {/* Author */}
-          <div className="flex items-center gap-1.5">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span>{authorName}</span>
-          </div>
         </div>
-
-        {/* Categories */}
-        {post.categories && post.categories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {post.categories.map((category, index) => (
-              <span
-                key={index}
-                className="inline-block bg-sunroad-amber-50 text-sunroad-amber-700 text-xs font-medium px-3 py-1 rounded-full border border-sunroad-amber-200"
-              >
-                {category.title}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    </Link>
+      </Link>
+    </article>
   )
 }
 

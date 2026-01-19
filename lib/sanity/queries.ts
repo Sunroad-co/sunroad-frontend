@@ -4,6 +4,8 @@ import { sanityClient } from './client'
 export interface BlogPostAuthor {
   name: string
   sunroadHandle?: string
+  image?: BlogPostImage
+  bio?: any // Portable Text content (array)
 }
 
 export interface BlogPostCategory {
@@ -43,6 +45,11 @@ export interface BlogPost extends BlogPostListItem {
   body: any // Portable Text content
 }
 
+export interface BlogPostWithOtherReads {
+  post: BlogPost | null
+  otherReads: BlogPostListItem[]
+}
+
 // GROQ query for listing blog posts
 export const blogPostsListQuery = `
   *[_type == "post" && defined(publishedAt) && publishedAt <= now() && !(_id in path("drafts.**"))] | order(publishedAt desc) {
@@ -61,7 +68,15 @@ export const blogPostsListQuery = `
     },
     author-> {
       name,
-      sunroadHandle
+      sunroadHandle,
+      image {
+        asset {
+          _ref,
+          _type
+        },
+        alt
+      },
+      bio
     },
     categories[]-> {
       title,
@@ -76,36 +91,65 @@ export const blogPostsListQuery = `
   }
 `
 
-// GROQ query for a single blog post by slug
+// GROQ query for a single blog post by slug with other reads
 export const blogPostBySlugQuery = `
-  *[_type == "post" && slug.current == $slug && defined(publishedAt) && publishedAt <= now() && !(_id in path("drafts.**"))][0] {
-    _id,
-    "slug": slug.current,
-    title,
-    excerpt,
-    publishedAt,
-    mainImage {
-      asset {
-        _ref,
-        _type
+  {
+    "post": *[_type == "post" && slug.current == $slug && defined(publishedAt) && publishedAt <= now() && !(_id in path("drafts.**"))][0] {
+      _id,
+      "slug": slug.current,
+      title,
+      excerpt,
+      publishedAt,
+      mainImage {
+        asset {
+          _ref,
+          _type
+        },
+        alt,
+        caption
       },
-      alt,
-      caption
+      author-> {
+        name,
+        sunroadHandle,
+        image {
+          asset {
+            _ref,
+            _type
+          },
+          alt
+        },
+        bio
+      },
+      categories[]-> {
+        title,
+        "slug": slug.current
+      },
+      body,
+      seo {
+        title,
+        description,
+        noIndex,
+        canonicalUrl
+      }
     },
-    author-> {
-      name,
-      sunroadHandle
-    },
-    categories[]-> {
+    "otherReads": *[_type == "post" && slug.current != $slug && defined(publishedAt) && publishedAt <= now() && !(_id in path("drafts.**"))] | order(publishedAt desc) [0...4] {
+      _id,
+      "slug": slug.current,
       title,
-      "slug": slug.current
-    },
-    body,
-    seo {
-      title,
-      description,
-      noIndex,
-      canonicalUrl
+      excerpt,
+      publishedAt,
+      mainImage {
+        asset {
+          _ref,
+          _type
+        },
+        alt,
+        caption
+      },
+      categories[]-> {
+        title,
+        "slug": slug.current
+      }
     }
   }
 `
@@ -131,15 +175,75 @@ export async function fetchBlogPosts(limit?: number): Promise<BlogPostListItem[]
 
 /**
  * Fetch a single blog post by slug with caching
+ * Returns the post and other reads in a single query
  */
-export async function fetchBlogPostBySlug(slug: string): Promise<BlogPost | null> {
-  const post = await sanityClient.fetch<BlogPost | null>(
+export async function fetchBlogPostBySlug(slug: string): Promise<BlogPostWithOtherReads> {
+  const result = await sanityClient.fetch<BlogPostWithOtherReads>(
     blogPostBySlugQuery,
     { slug },
     {
       next: {
-        tags: ['sanity:post', `sanity:post:${slug}`],
+        tags: ['sanity:post', `sanity:post:${slug}`, 'sanity:blog'],
         // Cache indefinitely, revalidate only via revalidateTag
+        revalidate: false,
+      }
+    }
+  )
+
+  return result || { post: null, otherReads: [] }
+}
+
+/**
+ * Legacy function for backward compatibility (used in generateMetadata)
+ */
+export async function fetchBlogPostBySlugLegacy(slug: string): Promise<BlogPost | null> {
+  const query = `
+    *[_type == "post" && slug.current == $slug && defined(publishedAt) && publishedAt <= now() && !(_id in path("drafts.**"))][0] {
+      _id,
+      "slug": slug.current,
+      title,
+      excerpt,
+      publishedAt,
+      mainImage {
+        asset {
+          _ref,
+          _type
+        },
+        alt,
+        caption
+      },
+      author-> {
+        name,
+        sunroadHandle,
+        image {
+          asset {
+            _ref,
+            _type
+          },
+          alt
+        },
+        bio
+      },
+      categories[]-> {
+        title,
+        "slug": slug.current
+      },
+      body,
+      seo {
+        title,
+        description,
+        noIndex,
+        canonicalUrl
+      }
+    }
+  `
+  
+  const post = await sanityClient.fetch<BlogPost | null>(
+    query,
+    { slug },
+    {
+      next: {
+        tags: ['sanity:post', `sanity:post:${slug}`],
         revalidate: false,
       }
     }

@@ -23,8 +23,15 @@ export const metadata: Metadata = {
 }
 
 export default async function BlogPage() {
-  // Fetch initial posts for SSG (first page)
-  const initialPosts = await fetchBlogPosts(12) // Load first 12 posts
+  let initialPosts: Awaited<ReturnType<typeof fetchBlogPosts>> = []
+  
+  try {
+    // Fetch initial posts for SSG (first page)
+    initialPosts = await fetchBlogPosts(12) // Load first 12 posts
+  } catch (error) {
+    console.error('[BlogPage] Error fetching initial posts:', error)
+    // Continue with empty array - BlogListClient will handle fetching
+  }
 
   return (
     <main className="min-h-screen bg-sunroad-cream">
@@ -40,11 +47,21 @@ export default async function BlogPage() {
         </header>
 
         {/* Initial Posts - Rendered server-side for SEO */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {initialPosts.map((post) => (
-            <BlogCard key={post._id} post={post} />
-          ))}
-        </div>
+        {initialPosts.length > 0 ? (
+          <section aria-label="Blog posts">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {initialPosts.map((post) => (
+                <BlogCard key={post._id} post={post} />
+              ))}
+            </div>
+          </section>
+        ) : (
+          <div className="text-center py-12" role="status" aria-live="polite">
+            <p className="text-sunroad-brown-600 text-lg">
+              Unable to load blog posts at this time. Please try again later.
+            </p>
+          </div>
+        )}
 
         {/* Client component handles infinite scroll for additional posts */}
         <BlogListClient initialPosts={initialPosts} />
