@@ -452,7 +452,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
                   }}
                 />
                 {/* Click overlay for cards - prevents interaction with player */}
-                <div className="absolute inset-0 z-20 cursor-pointer" aria-hidden="true" />
+                <div className="absolute inset-0 z-10 cursor-pointer" aria-hidden="true" />
               </>
             )}
           </>
@@ -635,7 +635,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
                     }}
                   />
                   {/* Click overlay for cards - prevents interaction with player */}
-                  <div className="absolute inset-0 z-20 cursor-pointer" aria-hidden="true" />
+                  <div className="absolute inset-0 z-10 cursor-pointer" aria-hidden="true" />
                 </>
               )}
             </>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import ContactArtistForm from './contact-artist-form'
 
 interface ContactArtistModalProps {
@@ -18,6 +19,12 @@ export default function ContactArtistModal({
 }: ContactArtistModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Ensure we only render portal on client side
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -100,11 +107,11 @@ export default function ContactArtistModal({
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !isMounted) return null
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-3 sm:p-4 md:p-6 transition-opacity duration-200"
+      className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-md p-3 sm:p-4 md:p-6 transition-opacity duration-200"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
@@ -142,4 +149,9 @@ export default function ContactArtistModal({
       </div>
     </div>
   )
+
+  // Render to document.body via portal to escape parent stacking contexts
+  return typeof document !== 'undefined' 
+    ? createPortal(modalContent, document.body)
+    : null
 }

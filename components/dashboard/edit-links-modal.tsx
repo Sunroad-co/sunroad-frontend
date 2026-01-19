@@ -7,6 +7,8 @@ import { revalidateCache } from '@/lib/revalidate-client'
 import { useSocialPlatforms } from '@/hooks/use-social-platforms'
 import * as simpleIcons from 'simple-icons'
 import { Link, Globe } from 'lucide-react'
+import LinkedInIcon from '@/components/social-icons/linkedin-icon'
+import { validatePlatformUrl } from '@/lib/utils/platform-url-validation'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 
 interface EditLinksModalProps {
@@ -48,66 +50,7 @@ function normalizeUrl(input: string): string {
   }
 }
 
-// Platform-specific URL validation
-function validatePlatformUrl(url: string, platformKey: string): { valid: boolean; error?: string } {
-  if (!url) return { valid: false, error: 'URL is required' }
-  
-  let urlObj: URL
-  try {
-    urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
-  } catch {
-    return { valid: false, error: 'Invalid URL format' }
-  }
-  
-  const hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '')
-  
-  // Platform-specific validation rules
-  const platformRules: Record<string, string[]> = {
-    instagram: ['instagram.com'],
-    facebook: ['facebook.com', 'fb.com'],
-    linkedin: ['linkedin.com'],
-    youtube: ['youtube.com', 'youtu.be'],
-    x: ['x.com', 'twitter.com'],
-    twitter: ['x.com', 'twitter.com'],
-    pinterest: ['pinterest.com'],
-    tiktok: ['tiktok.com'],
-    etsy: ['etsy.com'],
-    vimeo: ['vimeo.com'],
-    soundcloud: ['soundcloud.com'],
-    bandcamp: ['bandcamp.com'], // Also matches *.bandcamp.com
-    website: [], // Any valid URL
-    custom: [], // Any valid URL
-  }
-  
-  const allowedHosts = platformRules[platformKey.toLowerCase()]
-  
-  // website and custom allow any hostname
-  if (platformKey === 'website' || platformKey === 'custom') {
-    return { valid: true }
-  }
-  
-  // Check if hostname matches allowed hosts
-  if (!allowedHosts || allowedHosts.length === 0) {
-    return { valid: true } // Unknown platform, allow it
-  }
-  
-  const matches = allowedHosts.some(allowed => {
-    if (platformKey === 'bandcamp') {
-      return hostname === allowed || hostname.endsWith(`.${allowed}`)
-    }
-    return hostname === allowed || hostname.endsWith(`.${allowed}`)
-  })
-  
-  if (!matches) {
-    const platformName = platformKey.charAt(0).toUpperCase() + platformKey.slice(1)
-    return { 
-      valid: false, 
-      error: `This URL doesn't appear to be a ${platformName} link. Expected: ${allowedHosts.join(' or ')}` 
-    }
-  }
-  
-  return { valid: true }
-}
+// Platform-specific URL validation is now imported from shared utility
 
 // Icon rendering helpers (reused from ArtistSocialLinks)
 function getSimpleIcon(platformKey: string, iconKey?: string | null) {
@@ -147,8 +90,14 @@ function getSimpleIcon(platformKey: string, iconKey?: string | null) {
 }
 
 function renderPlatformIcon(platformKey: string, iconKey?: string | null, size: 'sm' | 'md' = 'md') {
-  const icon = getSimpleIcon(platformKey, iconKey)
   const iconSize = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'
+  
+  // Handle LinkedIn manually (not in simple-icons)
+  if (platformKey.toLowerCase() === 'linkedin') {
+    return <LinkedInIcon className={iconSize} />
+  }
+
+  const icon = getSimpleIcon(platformKey, iconKey)
   
   if (icon) {
     return (
@@ -178,6 +127,7 @@ const PREFIX_MODE_PLATFORMS: Record<string, string> = {
   linkedin: 'linkedin.com',
   tiktok: 'tiktok.com',
   pinterest: 'pinterest.com',
+  facebook: 'facebook.com',
   x: 'x.com',
   twitter: 'x.com', // Treat twitter as x
 }
@@ -622,22 +572,22 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
                           ) : (
                             // Link row
                             <div className="space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                {/* Platform icon + name (locked) */}
+                              <div className="flex items-center gap-2 md:gap-2">
+                                {/* Platform icon + name (locked) - hide name on mobile */}
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
                                   <div className="w-7 h-7 rounded-full flex items-center justify-center bg-sunroad-amber-50/60 border border-sunroad-amber-200/60 text-sunroad-brown-600">
                                     {renderPlatformIcon(link.platform_key, platform?.icon_key, 'sm')}
                                   </div>
-                                  <span className="text-xs font-medium text-gray-700 truncate max-w-[80px]">
+                                  <span className="hidden md:inline text-xs font-medium text-gray-700 truncate max-w-[80px]">
                                     {platform?.display_name || link.platform_key}
                                   </span>
                                 </div>
                                 
                                 {/* URL input - prefix mode or full */}
                                 {usePrefixMode && prefixHost ? (
-                                  <div className="flex-1 min-w-0 flex items-center gap-1">
+                                  <div className="flex-1 min-w-0 flex items-center gap-0">
                                     {/* Prefix chip */}
-                                    <div className="flex-shrink-0 px-2 py-1.5 bg-gray-100 border border-gray-300 rounded-l-lg text-xs text-gray-600 font-mono">
+                                    <div className="flex-shrink-0 px-2 py-1.5 bg-gray-100 border border-gray-300 rounded-l-lg text-xs text-gray-600 font-mono whitespace-nowrap">
                                       {prefixHost}/
                                     </div>
                                     {/* Suffix input */}
@@ -685,7 +635,7 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
                                 {/* Delete button */}
                                 <button
                                   onClick={() => setDeletingIndex(originalIndex)}
-                                  className="text-red-600 hover:text-red-800 transition-colors flex-shrink-0"
+                                  className="text-red-600 hover:text-red-800 transition-colors flex-shrink-0 p-1"
                                   aria-label="Delete link"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -730,7 +680,7 @@ export default function EditLinksModal({ isOpen, onClose, currentLinks, profile,
                   // Platform picker (icon grid)
                   <div className="border border-gray-200 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-3">Select a platform:</p>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {availablePlatformsForPicker.map(platform => (
                         <button
                           key={platform.key}

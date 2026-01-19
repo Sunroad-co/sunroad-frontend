@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk, Outfit, Poppins } from "next/font/google";
 // import { ThemeProvider } from "next-themes";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import { UserProvider } from "@/contexts/user-context";
 import "./globals.css";
 
@@ -58,8 +59,13 @@ export default function RootLayout({
           disableTransitionOnChange
         > */}
         <UserProvider>
-          <Navbar />
-          {children}
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </div>
         </UserProvider>
         {/* </ThemeProvider> */}
       </body>
