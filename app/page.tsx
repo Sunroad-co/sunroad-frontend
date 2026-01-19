@@ -4,6 +4,7 @@ import FeaturedArtists from "@/components/featured-artists";
 import FeaturedBlog from "@/components/featured-blog";
 import PopularCategories from "@/components/popular-categories";
 import SocialProof from "@/components/social-proof";
+import CoLockup from "@/components/home/CoLockup";
 
 export default function Home() {
   return (
@@ -66,9 +67,12 @@ export default function Home() {
     </div>
   </div>
 </section>
-
+ {/* Animated Co Lockup */}
+ <CoLockup />
       {/* Social Proof Section */}
       <SocialProof />
+
+     
 
       {/* Featured Artists Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
