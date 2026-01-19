@@ -75,7 +75,7 @@ export default function MobileMenuOverlay({ isOpen, onClose, user, onLogout }: M
           <Link href="/" onClick={handleLinkClick} className="flex items-center space-x-2">
             <Image 
               src="/sunroad_logo.png" 
-              alt="Sun Road" 
+              alt="Sun Road Logo" 
               width={100} 
               height={32}
               className="h-10 w-auto"

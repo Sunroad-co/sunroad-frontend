@@ -38,7 +38,7 @@ export default function Navbar({ variant }: NavbarProps = {}) {
             <Link href="/" className="flex items-center space-x-2">
               <Image 
                 src="/sunroad_logo.png" 
-                alt="Sun Road" 
+                alt="Sun Road Logo" 
                 width={120} 
                 height={60}
                 className="h-14 w-auto"
