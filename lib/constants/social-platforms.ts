@@ -118,6 +118,12 @@ export const PLATFORM_HOST_PATTERNS: Record<string, PlatformHostPatterns> = {
     host_patterns: ['vimeo.com'],
     sort_order: 150,
   },
+  imdb: {
+    key: 'imdb',
+    display_name: 'IMDb',
+    host_patterns: ['imdb.com'],
+    sort_order: 155,
+  },
   'link-in-bio': {
     key: 'link-in-bio',
     display_name: 'Link in Bio',

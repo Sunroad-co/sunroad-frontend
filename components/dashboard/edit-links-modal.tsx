@@ -79,6 +79,7 @@ function getSimpleIcon(platformKey: string, iconKey?: string | null) {
     behance: 'siBehance',
     dribbble: 'siDribbble',
     vimeo: 'siVimeo',
+    imdb: 'siImdb',
   }
 
   const iconName = keyMap[platformKey.toLowerCase()]

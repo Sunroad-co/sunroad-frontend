@@ -62,6 +62,7 @@ function getSimpleIcon(platformKey: string, iconKey?: string | null) {
     gitlab: 'siGitlab',
     bitbucket: 'siBitbucket',
     codewars: 'siCodewars',
+    imdb: 'siImdb',
   }
 
   const iconName = keyMap[platformKey.toLowerCase()]

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 
 const suffixes = ['llaboration', 'nnection', 'mmunity']
-const DISPLAY_TIME = 4000 // 4 seconds per word
+const DISPLAY_TIME = 3200 // 4 seconds per word
 const TRANSITION_DURATION = 800 // 800ms transition (between 600-900ms)
 
 export default function CoLockup() {
