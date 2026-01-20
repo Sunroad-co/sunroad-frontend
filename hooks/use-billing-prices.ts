@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import useSWRImmutable from 'swr/immutable'
 import { createClient } from '@/lib/supabase/client'
 
 interface BillingPrice {
@@ -25,38 +25,39 @@ interface UseBillingPricesReturn {
  * Hook to fetch active Pro billing prices
  */
 export function useBillingPrices(): UseBillingPricesReturn {
-  const [prices, setPrices] = useState<BillingPrice[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  // Immutable cache: prices rarely change and should not refetch aggressively.
+  const swrKey = 'billing_prices'
 
-  useEffect(() => {
-    async function fetchPrices() {
-      try {
-        setLoading(true)
-        setError(null)
+  const fetchPrices = async (): Promise<BillingPrice[]> => {
+    const supabase = createClient()
+    const { data, error: fetchError } = await supabase
+      .from('billing_prices')
+      .select('*')
+      .eq('is_active', true)
+      .eq('tier', 'pro')
+      .order('interval', { ascending: true })
 
-        const supabase = createClient()
-        const { data, error: fetchError } = await supabase
-          .from('billing_prices')
-          .select('*')
-          .eq('is_active', true)
-          .eq('tier', 'pro')
-          .order('interval', { ascending: true })
-
-        if (fetchError) {
-          throw new Error(fetchError.message || 'Failed to fetch billing prices')
-        }
-
-        setPrices((data as BillingPrice[]) || [])
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch billing prices'))
-      } finally {
-        setLoading(false)
-      }
+    if (fetchError) {
+      throw new Error(fetchError.message || 'Failed to fetch billing prices')
     }
 
-    fetchPrices()
-  }, [])
+    return ((data as BillingPrice[]) || []) satisfies BillingPrice[]
+  }
+
+  const { data, error } = useSWRImmutable<BillingPrice[]>(
+    swrKey,
+    fetchPrices,
+    {
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60 * 60 * 1000, // 1 hour
+      keepPreviousData: true,
+    }
+  )
+
+  const prices = data ?? []
+  const loading = !error && data === undefined
 
   const monthlyPrice = prices.find(p => p.interval === 'month') || null
   const yearlyPrice = prices.find(p => p.interval === 'year') || null
@@ -66,7 +67,7 @@ export function useBillingPrices(): UseBillingPricesReturn {
     monthlyPrice,
     yearlyPrice,
     loading,
-    error,
+    error: error ?? null,
   }
 }
 

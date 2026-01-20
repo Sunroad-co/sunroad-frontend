@@ -64,7 +64,8 @@ export function useWorks(artistId: string | null): UseWorksReturn {
     () => fetchWorks(artistId!),
     {
       revalidateOnFocus: false,
-      dedupingInterval: 5000,
+      // Reduce refetch aggressiveness; works don't need to refetch multiple times within a few seconds.
+      dedupingInterval: 60000,
       keepPreviousData: true,
     }
   )

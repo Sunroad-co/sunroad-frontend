@@ -121,23 +121,13 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
     return null
   }
 
-  // Fetch user's works
-  const { data: worksData, error: worksError } = await supabase
-    .from('artworks_min')
-    .select('id, title, description, thumb_url, src_url, media_type, media_source, is_archived, archived_reason')
-    .eq('artist_id', profileData.id)
-    .order('created_at', { ascending: false })
-
-  if (worksError) {
-    console.error('Error fetching works:', worksError)
-    // Don't throw for works errors, just log it
-  }
-
   // Transform the data
   const categories = profileData.artist_categories?.map((ac: { categories?: { name: string } | null }) => ac.categories?.name).filter(Boolean) || []
   const categoryIds = profileData.artist_categories?.map((ac: { category_id: number }) => ac.category_id).filter((id: number | undefined): id is number => typeof id === 'number') || []
   const location = profileData.locations as { city?: string; state?: string; formatted?: string } | null
-  const works = worksData || []
+  // NOTE: Works are intentionally NOT fetched here to avoid duplicate network calls.
+  // If a caller needs works, use `useWorks(profile.id)`.
+  const works: Work[] = []
 
   // Process artist_links: sort by platform.sort_order, then artist_links.sort_order, then id
   const rawLinks = (profileData.artist_links as Array<{
@@ -201,7 +191,7 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
  */
 export function useUserProfile(user: User | null) {
   // SWR key: null when no user (disables fetching)
-  const swrKey = user ? swrKeys.userProfile(user.id) : null
+  const swrKey = user?.id ? swrKeys.userProfile(user.id) : null
 
   const {
     data,
