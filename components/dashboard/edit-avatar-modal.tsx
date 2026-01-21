@@ -6,9 +6,11 @@ import dynamic from 'next/dynamic'
 import type { Area, Point } from 'react-easy-crop'
 import SRImage from '@/components/media/SRImage'
 import { createClient } from '@/lib/supabase/client'
-import { getCroppedImg } from '@/lib/image-crop'
+import { getCroppedImg, generateJpegFromCanvas } from '@/lib/image-crop'
+import { toThumbKey } from '@/lib/utils/storage'
 import { decodeAndDownscale } from '@/lib/utils/decode-and-downscale'
 import { validateImageFile } from '@/lib/utils/image-validation'
+import { buildCleanupPathsWithThumbFallback } from '@/lib/media'
 import { UserProfile } from '@/hooks/use-user-profile'
 import { revalidateCache } from '@/lib/revalidate-client'
 import Toast from '@/components/ui/toast'
@@ -34,6 +36,7 @@ interface EditAvatarModalProps {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const OUTPUT_SIZE = 600 // Square output size
+const THUMB_SIZE = 256 // Avatar thumbnail size
 
 export default function EditAvatarModal({ 
   isOpen, 
@@ -215,8 +218,8 @@ export default function EditAvatarModal({
       setSaving(true)
       setError(null)
 
-      // Generate cropped image blob using decoded canvas
-      const croppedBlob = await getCroppedImg(
+      // Generate full-size cropped image blob
+      const fullBlob = await getCroppedImg(
         decodedCanvas,
         croppedAreaPixels,
         OUTPUT_SIZE,
@@ -227,46 +230,104 @@ export default function EditAvatarModal({
           background: '#fff'
         }
       )
+
+      // Generate thumbnail blob
+      const thumbBlob = await generateJpegFromCanvas(
+        decodedCanvas,
+        croppedAreaPixels,
+        THUMB_SIZE,
+        THUMB_SIZE,
+        0.82
+      )
       
-      // Use single timestamp for filename and path
+      // Use single timestamp for filename
       const timestamp = Date.now()
       const fileName = `${timestamp}-avatar.jpg`
       
-      // Create file from blob
-      const croppedFile = new File([croppedBlob], fileName, {
+      // Create files from blobs (thumb uses same filename)
+      const fullFile = new File([fullBlob], fileName, {
+        type: 'image/jpeg',
+      })
+      const thumbFile = new File([thumbBlob], fileName, {
         type: 'image/jpeg',
       })
 
-      // Upload to Supabase Storage
-      const storagePath = `avatars/${profile.id}/${fileName}`
-      const { error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(storagePath, croppedFile, {
-          contentType: 'image/jpeg',
-          upsert: false,
-          cacheControl: '31536000',
-        })
+      // Upload both files to Supabase Storage
+      const fullPath = `avatars/${profile.id}/${fileName}`
+      const thumbPath = toThumbKey(fullPath)
 
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!thumbPath) {
+        throw new Error('Failed to generate thumbnail storage path')
       }
 
-      // Update database
+      const [fullUploadResult, thumbUploadResult] = await Promise.all([
+        supabase.storage
+          .from('media')
+          .upload(fullPath, fullFile, {
+            contentType: 'image/jpeg',
+            upsert: false,
+            cacheControl: '31536000',
+          }),
+        supabase.storage
+          .from('media')
+          .upload(thumbPath, thumbFile, {
+            contentType: 'image/jpeg',
+            upsert: false,
+            cacheControl: '31536000',
+          })
+      ])
+
+      if (fullUploadResult.error) {
+        throw new Error(`Upload failed: ${fullUploadResult.error.message}`)
+      }
+      if (thumbUploadResult.error) {
+        // Cleanup full upload if thumb fails
+        await supabase.storage
+          .from('media')
+          .remove([fullPath])
+          .catch(() => {})
+        throw new Error(`Thumbnail upload failed: ${thumbUploadResult.error.message}`)
+      }
+
+      // Store old paths for cleanup (use raw DB keys, not props that may be full URLs)
+      const oldAvatarKey = profile.avatar_url
+      const oldAvatarThumbKey = profile.avatar_thumb_url
+
+      // Update database with both paths
       const { error: updateError } = await supabase
         .from('artists_min')
-        .update({ avatar_url: storagePath })
+        .update({ 
+          avatar_url: fullPath,
+          avatar_thumb_url: thumbPath
+        })
         .eq('id', profile.id)
 
       if (updateError) {
-        // Attempt to clean up uploaded file
-        await supabase.storage
-          .from('media')
-          .remove([storagePath])
-          .catch(() => {
-            // Ignore cleanup errors
-          })
+        // Attempt to clean up uploaded files
+        await Promise.all([
+          supabase.storage
+            .from('media')
+            .remove([fullPath])
+            .catch(() => {}),
+          supabase.storage
+            .from('media')
+            .remove([thumbPath])
+            .catch(() => {})
+        ])
         
         throw new Error(`Failed to update profile: ${updateError.message}`)
+      }
+
+      // Cleanup old files after successful DB update
+      // Use buildCleanupPathsWithThumbFallback to ensure thumb is deleted even if thumb_url is missing
+      const pathsToRemove = buildCleanupPathsWithThumbFallback(oldAvatarKey, oldAvatarThumbKey)
+      if (pathsToRemove.length > 0) {
+        await supabase.storage
+          .from('media')
+          .remove(pathsToRemove)
+          .catch((err: unknown) => {
+            console.error('Error cleaning up old avatar files:', err)
+          })
       }
 
       // Revalidate the artist profile page cache
@@ -298,17 +359,17 @@ export default function EditAvatarModal({
   }
 
   const handleCancel = () => {
-    // Clean up object URLs
-    if (previewUrl) {
+    // Clean up object URLs (only revoke blob: URLs, not data: URLs)
+    if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl)
     }
-    if (croppedPreviewUrl) {
+    if (croppedPreviewUrl && croppedPreviewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(croppedPreviewUrl)
     }
-    if (previewCleanupRef.current) {
+    if (previewCleanupRef.current && previewCleanupRef.current.startsWith('blob:')) {
       URL.revokeObjectURL(previewCleanupRef.current)
-      previewCleanupRef.current = null
     }
+    previewCleanupRef.current = null
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current)
       previewTimeoutRef.current = null

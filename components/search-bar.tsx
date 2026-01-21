@@ -5,6 +5,7 @@ import Link from 'next/link'
 import SRImage from '@/components/media/SRImage'
 import { useRouter } from 'next/navigation'
 import { useSearch } from '@/hooks/use-search'
+import { getAvatarUrl } from '@/lib/media'
 
 interface SearchBarProps {
   placeholder?: string
@@ -226,7 +227,7 @@ export default function SearchBar({
                 >
                   <div className="flex items-center space-x-3">
                     <div className="flex-shrink-0">
-                      <ArtistAvatar src={artist.avatar_url} name={artist.display_name} />
+                      <ArtistAvatar src={getAvatarUrl(artist, 'small')} name={artist.display_name} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
@@ -616,7 +617,7 @@ export default function SearchBar({
                     >
                       <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0">
-                          <ArtistAvatar src={artist.avatar_url} name={artist.display_name} />
+                          <ArtistAvatar src={getAvatarUrl(artist, 'small')} name={artist.display_name} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2">
@@ -798,7 +799,7 @@ export default function SearchBar({
                     <div className="flex items-center space-x-3">
                       {/* Avatar */}
                       <div className="flex-shrink-0">
-                        <ArtistAvatar src={artist.avatar_url} name={artist.display_name} />
+                        <ArtistAvatar src={getAvatarUrl(artist, 'small')} name={artist.display_name} />
                       </div>
 
                       {/* Artist Info */}

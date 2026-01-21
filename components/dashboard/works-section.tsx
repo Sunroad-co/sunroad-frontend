@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateCache } from '@/lib/revalidate-client'
+import { buildCleanupPathsWithThumbFallback } from '@/lib/media'
 import { useFeature } from '@/hooks/use-feature'
 import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
 import { useWorks } from '@/hooks/use-works'
@@ -83,27 +84,8 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
     try {
       setDeleting(true)
 
-      // If it's an uploaded image, attempt to remove from storage
-      if (workToDelete.media_source === 'upload') {
-        const pathsToRemove: string[] = []
-        if (workToDelete.thumb_url && workToDelete.thumb_url.startsWith('artworks/')) {
-          pathsToRemove.push(workToDelete.thumb_url)
-        }
-        if (workToDelete.src_url && workToDelete.src_url.startsWith('artworks/') && workToDelete.src_url !== workToDelete.thumb_url) {
-          pathsToRemove.push(workToDelete.src_url)
-        }
-
-        if (pathsToRemove.length > 0) {
-          await supabase.storage
-            .from('media')
-            .remove(pathsToRemove)
-            .catch(() => {
-              // Ignore cleanup errors
-            })
-        }
-      }
-
-      // Delete from database
+      // STEP 1: Delete from database FIRST
+      // This prevents "ghost record with missing file" if DB delete fails
       const { error: deleteError } = await supabase
         .from('artworks_min')
         .delete()
@@ -111,6 +93,23 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
 
       if (deleteError) {
         throw new Error(`Failed to delete work: ${deleteError.message}`)
+      }
+
+      // STEP 2: Best-effort delete storage files AFTER DB success
+      // Only for uploaded images - external URLs don't have storage files
+      if (workToDelete.media_source === 'upload') {
+        // Use buildCleanupPathsWithThumbFallback to ensure thumb is deleted even if thumb_url is missing
+        const pathsToRemove = buildCleanupPathsWithThumbFallback(workToDelete.src_url, workToDelete.thumb_url)
+
+        if (pathsToRemove.length > 0) {
+          // Fire and forget - don't block UI success on storage cleanup
+          supabase.storage
+            .from('media')
+            .remove(pathsToRemove)
+            .catch((err: unknown) => {
+              console.error('Error cleaning up work image files on delete:', err)
+            })
+        }
       }
 
       // Revalidate cache

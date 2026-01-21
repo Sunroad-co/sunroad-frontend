@@ -7,9 +7,11 @@ import type { Area, Point } from 'react-easy-crop'
 import SRImage from '@/components/media/SRImage'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateCache } from '@/lib/revalidate-client'
-import { getCroppedImg } from '@/lib/image-crop'
+import { getCroppedImg, generateJpegFromCanvas } from '@/lib/image-crop'
+import { toThumbKey } from '@/lib/utils/storage'
 import { decodeAndDownscale } from '@/lib/utils/decode-and-downscale'
 import { validateImageFile } from '@/lib/utils/image-validation'
+import { buildCleanupPathsWithThumbFallback } from '@/lib/media'
 import { UserProfile } from '@/hooks/use-user-profile'
 import Toast from '@/components/ui/toast'
 import CropperSkeleton from './cropper-skeleton'
@@ -36,6 +38,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const BANNER_WIDTH = 1200
 const BANNER_HEIGHT = 400
 const BANNER_ASPECT = BANNER_WIDTH / BANNER_HEIGHT // 3:1
+const BANNER_THUMB_WIDTH = 640 // Banner thumbnail width
 
 export default function EditBannerModal({ 
   isOpen, 
@@ -217,8 +220,8 @@ export default function EditBannerModal({
       setSaving(true)
       setError(null)
 
-      // Generate cropped image blob using decoded canvas
-      const croppedBlob = await getCroppedImg(
+      // Generate full-size cropped image blob
+      const fullBlob = await getCroppedImg(
         decodedCanvas,
         croppedAreaPixels,
         BANNER_WIDTH,
@@ -229,46 +232,107 @@ export default function EditBannerModal({
           background: '#fff'
         }
       )
+
+      // Calculate thumbnail height maintaining aspect ratio
+      const thumbHeight = Math.round(BANNER_THUMB_WIDTH / BANNER_ASPECT)
+
+      // Generate thumbnail blob
+      const thumbBlob = await generateJpegFromCanvas(
+        decodedCanvas,
+        croppedAreaPixels,
+        BANNER_THUMB_WIDTH,
+        thumbHeight,
+        0.82
+      )
       
-      // Use single timestamp for filename and path
+      // Use single timestamp for filename
       const timestamp = Date.now()
       const fileName = `${timestamp}-banner.jpg`
       
-      // Create file from blob
-      const croppedFile = new File([croppedBlob], fileName, {
+      // Create files from blobs (thumb uses same filename)
+      const fullFile = new File([fullBlob], fileName, {
+        type: 'image/jpeg',
+      })
+      const thumbFile = new File([thumbBlob], fileName, {
         type: 'image/jpeg',
       })
 
-      // Upload to Supabase Storage
-      const storagePath = `banners/${profile.id}/${fileName}`
-      const { error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(storagePath, croppedFile, {
-          contentType: 'image/jpeg',
-          upsert: false,
-          cacheControl: '31536000',
-        })
+      // Upload both files to Supabase Storage
+      const fullPath = `banners/${profile.id}/${fileName}`
+      const thumbPath = toThumbKey(fullPath)
 
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!thumbPath) {
+        throw new Error('Failed to generate thumbnail storage path')
       }
 
-      // Update database
+      const [fullUploadResult, thumbUploadResult] = await Promise.all([
+        supabase.storage
+          .from('media')
+          .upload(fullPath, fullFile, {
+            contentType: 'image/jpeg',
+            upsert: false,
+            cacheControl: '31536000',
+          }),
+        supabase.storage
+          .from('media')
+          .upload(thumbPath, thumbFile, {
+            contentType: 'image/jpeg',
+            upsert: false,
+            cacheControl: '31536000',
+          })
+      ])
+
+      if (fullUploadResult.error) {
+        throw new Error(`Upload failed: ${fullUploadResult.error.message}`)
+      }
+      if (thumbUploadResult.error) {
+        // Cleanup full upload if thumb fails
+        await supabase.storage
+          .from('media')
+          .remove([fullPath])
+          .catch(() => {})
+        throw new Error(`Thumbnail upload failed: ${thumbUploadResult.error.message}`)
+      }
+
+      // Store old paths for cleanup (use raw DB keys, not props that may be full URLs)
+      const oldBannerKey = profile.banner_url
+      const oldBannerThumbKey = profile.banner_thumb_url
+
+      // Update database with both paths
       const { error: updateError } = await supabase
         .from('artists_min')
-        .update({ banner_url: storagePath })
+        .update({ 
+          banner_url: fullPath,
+          banner_thumb_url: thumbPath
+        })
         .eq('id', profile.id)
 
       if (updateError) {
-        // Attempt to clean up uploaded file
-        await supabase.storage
-          .from('media')
-          .remove([storagePath])
-          .catch(() => {
-            // Ignore cleanup errors
-          })
+        // Attempt to clean up uploaded files
+        await Promise.all([
+          supabase.storage
+            .from('media')
+            .remove([fullPath])
+            .catch(() => {}),
+          supabase.storage
+            .from('media')
+            .remove([thumbPath])
+            .catch(() => {})
+        ])
         
         throw new Error(`Failed to update profile: ${updateError.message}`)
+      }
+
+      // Cleanup old files after successful DB update
+      // Use buildCleanupPathsWithThumbFallback to ensure thumb is deleted even if thumb_url is missing
+      const pathsToRemove = buildCleanupPathsWithThumbFallback(oldBannerKey, oldBannerThumbKey)
+      if (pathsToRemove.length > 0) {
+        await supabase.storage
+          .from('media')
+          .remove(pathsToRemove)
+          .catch((err) => {
+            console.error('Error cleaning up old banner files:', err)
+          })
       }
 
       // Revalidate the artist profile page cache
@@ -300,17 +364,17 @@ export default function EditBannerModal({
   }
 
   const handleCancel = () => {
-    // Clean up object URLs
-    if (previewUrl) {
+    // Clean up object URLs (only revoke blob: URLs, not data: URLs)
+    if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl)
     }
-    if (croppedPreviewUrl) {
+    if (croppedPreviewUrl && croppedPreviewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(croppedPreviewUrl)
     }
-    if (previewCleanupRef.current) {
+    if (previewCleanupRef.current && previewCleanupRef.current.startsWith('blob:')) {
       URL.revokeObjectURL(previewCleanupRef.current)
-      previewCleanupRef.current = null
     }
+    previewCleanupRef.current = null
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current)
       previewTimeoutRef.current = null

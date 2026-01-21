@@ -9,6 +9,7 @@ import { swrKeys } from '@/lib/swrKeys'
 interface BasicProfile {
   display_name: string | null
   avatar_url: string | null
+  avatar_thumb_url: string | null
 }
 
 interface UserContextType {
@@ -94,7 +95,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const supabase = createClient()
     const { data, error: profileError } = await supabase
       .from('artists_min')
-      .select('display_name, avatar_url')
+      .select('display_name, avatar_url, avatar_thumb_url')
       .eq('auth_user_id', userId)
       .maybeSingle()
 
@@ -114,6 +115,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return {
       display_name: data.display_name ?? null,
       avatar_url: data.avatar_url ?? null,
+      avatar_thumb_url: data.avatar_thumb_url ?? null,
     }
   }
 

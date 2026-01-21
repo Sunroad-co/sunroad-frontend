@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import SRImage from '@/components/media/SRImage'
 import type { SearchResult } from '@/lib/search-artists'
+import { getAvatarUrl } from '@/lib/media'
 
 interface ArtistResultCardProps {
   artist: SearchResult
@@ -31,6 +32,7 @@ function formatDistance(distanceKm: number): string {
 export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
   const location = formatLocation(artist.city, artist.state)
   const categories = formatCategories(artist.categories)
+  const avatarSrc = getAvatarUrl(artist, 'small')
 
   return (
     <Link
@@ -40,9 +42,9 @@ export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
       <div className="flex items-start space-x-4 min-w-0">
         {/* Avatar */}
         <div className="flex-shrink-0">
-          {artist.avatar_url ? (
+          {avatarSrc ? (
             <SRImage
-              src={artist.avatar_url}
+              src={avatarSrc}
               alt={artist.display_name}
               width={64}
               height={64}

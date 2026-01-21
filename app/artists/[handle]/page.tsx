@@ -9,7 +9,7 @@ import ArtistSocialLinks from '@/components/artist-social-links'
 import ContactArtistCTA from '@/components/contact-artist-cta'
 import ScrollableCategories from '@/components/scrollable-categories'
 import { createAnonClient } from '@/lib/supabase/anon'
-import { getMediaUrl } from '@/lib/media'
+import { getMediaUrl, getAvatarUrl, getBannerUrl } from '@/lib/media'
 import { Work } from '@/hooks/use-user-profile'
 
 interface ArtistWithCategories {
@@ -308,7 +308,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           {/* Banner */}
           <div className="relative h-48 sm:h-72 md:h-88 rounded-2xl overflow-hidden">
             {(() => {
-              const bannerSrc = artist.banner_url;
+              const bannerSrc = getBannerUrl(artist, 'full');
               return bannerSrc ? (
                 <SRImage
                   src={bannerSrc}
@@ -330,7 +330,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
             {/* Avatar */}
             <div className="w-24 h-24 md:w-40 md:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
               {(() => {
-                const avatarSrc = artist.avatar_url;
+                const avatarSrc = getAvatarUrl(artist, 'full');
                 return avatarSrc ? (
                   <SRImage
                     src={avatarSrc}

@@ -7,6 +7,7 @@ import EditButton from './edit-button'
 import EditBannerModal from './edit-banner-modal'
 import EditAvatarModal from './edit-avatar-modal'
 import { UserProfile } from '@/hooks/use-user-profile'
+import { getAvatarUrl, getBannerUrl } from '@/lib/media'
 
 interface ProfileHeaderProps {
   user: User
@@ -24,7 +25,7 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
         {/* Banner */}
         <div className="relative h-48 sm:h-72 md:h-88 rounded-2xl overflow-hidden group">
           {(() => {
-            const bannerSrc = profile.banner_url;
+            const bannerSrc = getBannerUrl(profile, 'full');
             return bannerSrc ? (
               <SRImage
                 src={bannerSrc}
@@ -68,7 +69,7 @@ export default function ProfileHeader({ user, profile, onProfileUpdate }: Profil
           {/* Avatar */}
           <div className="relative w-24 h-24 md:w-40 md:h-40 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white group">
             {(() => {
-              const avatarSrc = profile.avatar_url;
+              const avatarSrc = getAvatarUrl(profile, 'full');
               return avatarSrc ? (
                 <SRImage
                   src={avatarSrc}

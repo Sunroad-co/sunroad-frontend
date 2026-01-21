@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateCache } from '@/lib/revalidate-client'
+import { buildCleanupPathsWithThumbFallback } from '@/lib/media'
 import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
 import { UserProfile, Work } from '@/hooks/use-user-profile'
 import Toast from '@/components/ui/toast'
@@ -141,64 +142,86 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
             return
           }
 
-          // Upload to Supabase Storage
-          const { error: uploadError } = await supabase.storage
-            .from('media')
-            .upload(imageData.storagePath, imageData.file, {
-              contentType: 'image/jpeg',
-              upsert: false,
-              cacheControl: '31536000',
-            })
+          // Upload both full and thumb to Supabase Storage
+          const [fullUploadResult, thumbUploadResult] = await Promise.all([
+            supabase.storage
+              .from('media')
+              .upload(imageData.full.storagePath, imageData.full.file, {
+                contentType: 'image/jpeg',
+                upsert: false,
+                cacheControl: '31536000',
+              }),
+            supabase.storage
+              .from('media')
+              .upload(imageData.thumb.storagePath, imageData.thumb.file, {
+                contentType: 'image/jpeg',
+                upsert: false,
+                cacheControl: '31536000',
+              })
+          ])
 
-          if (uploadError) {
-            throw new Error(`Upload failed: ${uploadError.message}`)
+          if (fullUploadResult.error) {
+            throw new Error(`Upload failed: ${fullUploadResult.error.message}`)
+          }
+          if (thumbUploadResult.error) {
+            // Cleanup full upload if thumb fails
+            await supabase.storage
+              .from('media')
+              .remove([imageData.full.storagePath])
+              .catch(() => {})
+            throw new Error(`Thumbnail upload failed: ${thumbUploadResult.error.message}`)
           }
 
+          // Store old paths for cleanup
+          const oldThumbUrl = work.thumb_url
+          const oldSrcUrl = work.src_url
+
           // Update database with new image
-        const { error: updateError } = await supabase
-          .from('artworks_min')
-          .update({
+          const { error: updateError } = await supabase
+            .from('artworks_min')
+            .update({
               title: sanitizeAndTrim(title),
               description: sanitizeAndTrim(description),
               media_type: 'image',
               media_source: 'upload',
-              thumb_url: imageData.storagePath,
-              src_url: imageData.storagePath,
-          })
-          .eq('id', work.id)
-
-        if (updateError) {
-            // Attempt cleanup
-            await supabase.storage
-              .from('media')
-              .remove([imageData.storagePath])
-              .catch(() => {})
-          
-          // Check if it's a limit reached error
-          const errorMsg = updateError.message.toLowerCase()
-          if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
-            refreshSnapshot()
-            throw new Error(updateError.message)
-          }
-          throw new Error(`Failed to update work: ${updateError.message}`)
-        }
-
-          // Attempt to remove old image if it was an uploaded image
-          if (work.media_source === 'upload') {
-            const pathsToRemove: string[] = []
-            if (work.thumb_url && work.thumb_url.startsWith('artworks/')) {
-              pathsToRemove.push(work.thumb_url)
-            }
-            if (work.src_url && work.src_url.startsWith('artworks/') && work.src_url !== work.thumb_url) {
-            pathsToRemove.push(work.src_url)
-          }
-            if (pathsToRemove.length > 0) {
-          await supabase.storage
-            .from('media')
-            .remove(pathsToRemove)
-            .catch(() => {
-              // Ignore cleanup errors
+              thumb_url: imageData.thumb.storagePath,
+              src_url: imageData.full.storagePath,
             })
+            .eq('id', work.id)
+
+          if (updateError) {
+            // Attempt cleanup of newly uploaded files
+            await Promise.all([
+              supabase.storage
+                .from('media')
+                .remove([imageData.full.storagePath])
+                .catch(() => {}),
+              supabase.storage
+                .from('media')
+                .remove([imageData.thumb.storagePath])
+                .catch(() => {})
+            ])
+          
+            // Check if it's a limit reached error
+            const errorMsg = updateError.message.toLowerCase()
+            if (errorMsg.includes('limit') || errorMsg.includes('maximum') || errorMsg.includes('exceeded')) {
+              refreshSnapshot()
+              throw new Error(updateError.message)
+            }
+            throw new Error(`Failed to update work: ${updateError.message}`)
+          }
+
+          // Cleanup old files after successful DB update
+          if (work.media_source === 'upload') {
+            // Use buildCleanupPathsWithThumbFallback to ensure thumb is deleted even if thumb_url is missing
+            const pathsToRemove = buildCleanupPathsWithThumbFallback(oldSrcUrl, oldThumbUrl)
+            if (pathsToRemove.length > 0) {
+              await supabase.storage
+                .from('media')
+                .remove(pathsToRemove)
+                .catch((err: unknown) => {
+                  console.error('Error cleaning up old work image files:', err)
+                })
             }
           }
         } else {
@@ -262,20 +285,15 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
 
         // Attempt to remove old image if previous media was an uploaded image
         if (work.media_source === 'upload') {
-          const pathsToRemove: string[] = []
-          if (work.thumb_url && work.thumb_url.startsWith('artworks/')) {
-            pathsToRemove.push(work.thumb_url)
-          }
-          if (work.src_url && work.src_url.startsWith('artworks/') && work.src_url !== work.thumb_url) {
-            pathsToRemove.push(work.src_url)
-          }
+          // Use buildCleanupPathsWithThumbFallback to ensure thumb is deleted even if thumb_url is missing
+          const pathsToRemove = buildCleanupPathsWithThumbFallback(work.src_url, work.thumb_url)
           if (pathsToRemove.length > 0) {
-          await supabase.storage
-            .from('media')
-            .remove(pathsToRemove)
-            .catch(() => {
-              // Ignore cleanup errors
-            })
+            await supabase.storage
+              .from('media')
+              .remove(pathsToRemove)
+              .catch((err: unknown) => {
+                console.error('Error cleaning up old work image files:', err)
+              })
           }
         }
 
@@ -318,13 +336,8 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
 
         // Attempt to remove old image if previous media was an uploaded image
         if (work.media_source === 'upload') {
-          const pathsToRemove: string[] = []
-          if (work.thumb_url && work.thumb_url.startsWith('artworks/')) {
-            pathsToRemove.push(work.thumb_url)
-          }
-          if (work.src_url && work.src_url.startsWith('artworks/') && work.src_url !== work.thumb_url) {
-            pathsToRemove.push(work.src_url)
-          }
+          // Use buildCleanupPathsWithThumbFallback to ensure thumb is deleted even if thumb_url is missing
+          const pathsToRemove = buildCleanupPathsWithThumbFallback(work.src_url, work.thumb_url)
           if (pathsToRemove.length > 0) {
             await supabase.storage
               .from('media')
@@ -388,27 +401,8 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
       setDeleting(true)
       setError(null)
 
-      // If it's an uploaded image, attempt to remove from storage
-      if (work.media_source === 'upload') {
-        const pathsToRemove: string[] = []
-        if (work.thumb_url && work.thumb_url.startsWith('artworks/')) {
-          pathsToRemove.push(work.thumb_url)
-        }
-        if (work.src_url && work.src_url.startsWith('artworks/') && work.src_url !== work.thumb_url) {
-          pathsToRemove.push(work.src_url)
-        }
-
-        if (pathsToRemove.length > 0) {
-          await supabase.storage
-            .from('media')
-            .remove(pathsToRemove)
-            .catch(() => {
-              // Ignore cleanup errors
-            })
-        }
-      }
-
-      // Delete from database
+      // STEP 1: Delete from database FIRST
+      // This prevents "ghost record with missing file" if DB delete fails
       const { error: deleteError } = await supabase
         .from('artworks_min')
         .delete()
@@ -416,6 +410,23 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
 
       if (deleteError) {
         throw new Error(`Failed to delete work: ${deleteError.message}`)
+      }
+
+      // STEP 2: Best-effort delete storage files AFTER DB success
+      // Only for uploaded images - external URLs don't have storage files
+      if (work.media_source === 'upload') {
+        // Use buildCleanupPathsWithThumbFallback to ensure thumb is deleted even if thumb_url is missing
+        const pathsToRemove = buildCleanupPathsWithThumbFallback(work.src_url, work.thumb_url)
+
+        if (pathsToRemove.length > 0) {
+          // Fire and forget - don't block UI success on storage cleanup
+          supabase.storage
+            .from('media')
+            .remove(pathsToRemove)
+            .catch((err: unknown) => {
+              console.error('Error cleaning up work image files on delete:', err)
+            })
+        }
       }
 
       // Revalidate cache
@@ -428,6 +439,7 @@ export default function EditWorkModal({ isOpen, onClose, profile, work, onSucces
       }
 
       // Success
+      refreshSnapshot()
       setToastMessage('Work deleted successfully!')
       setShowToast(true)
       setHasUnsavedChanges(false)

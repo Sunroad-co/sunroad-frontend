@@ -76,17 +76,34 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
           return
         }
 
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('media')
-          .upload(imageData.storagePath, imageData.file, {
-            contentType: 'image/jpeg',
-            upsert: false,
-            cacheControl: '31536000',
-          })
+        // Upload both full and thumb to Supabase Storage
+        const [fullUploadResult, thumbUploadResult] = await Promise.all([
+          supabase.storage
+            .from('media')
+            .upload(imageData.full.storagePath, imageData.full.file, {
+              contentType: 'image/jpeg',
+              upsert: false,
+              cacheControl: '31536000',
+            }),
+          supabase.storage
+            .from('media')
+            .upload(imageData.thumb.storagePath, imageData.thumb.file, {
+              contentType: 'image/jpeg',
+              upsert: false,
+              cacheControl: '31536000',
+            })
+        ])
 
-        if (uploadError) {
-          throw new Error(`Upload failed: ${uploadError.message}`)
+        if (fullUploadResult.error) {
+          throw new Error(`Upload failed: ${fullUploadResult.error.message}`)
+        }
+        if (thumbUploadResult.error) {
+          // Cleanup full upload if thumb fails
+          await supabase.storage
+            .from('media')
+            .remove([imageData.full.storagePath])
+            .catch(() => {})
+          throw new Error(`Thumbnail upload failed: ${thumbUploadResult.error.message}`)
         }
 
         // Insert into database
@@ -96,19 +113,25 @@ export default function AddWorkModal({ isOpen, onClose, profile, onSuccess }: Ad
             artist_id: profile.id,
             title: sanitizeAndTrim(title),
             description: sanitizeAndTrim(description),
-            thumb_url: imageData.storagePath,
-            src_url: imageData.storagePath,
+            thumb_url: imageData.thumb.storagePath,
+            src_url: imageData.full.storagePath,
             media_type: 'image',
             media_source: 'upload',
             visibility: 'public',
           })
 
         if (insertError) {
-          // Attempt cleanup
-          await supabase.storage
-            .from('media')
-            .remove([imageData.storagePath])
-            .catch(() => {})
+          // Attempt cleanup of both files
+          await Promise.all([
+            supabase.storage
+              .from('media')
+              .remove([imageData.full.storagePath])
+              .catch(() => {}),
+            supabase.storage
+              .from('media')
+              .remove([imageData.thumb.storagePath])
+              .catch(() => {})
+          ])
           
           // Check if it's a limit reached error
           const errorMsg = insertError.message.toLowerCase()

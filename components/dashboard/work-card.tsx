@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import SRImage from '@/components/media/SRImage'
 import ReactPlayer from 'react-player'
 import { Work } from '@/hooks/use-user-profile'
-import { getMediaUrl } from '@/lib/media'
+import { getMediaUrl, getArtworkCardUrl, getArtworkModalUrl } from '@/lib/media'
 import { Skeleton } from '@/components/ui/skeleton'
 import EditButton from './edit-button'
 
@@ -170,8 +170,8 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
 
   // Check if image is already cached when work changes (for image media type)
   useEffect(() => {
-    if (work.media_type === 'image' && work.thumb_url) {
-      const imageSrc = getMediaUrl(work.thumb_url)
+    if (work.media_type === 'image') {
+      const imageSrc = isModal ? getArtworkModalUrl(work) : getArtworkCardUrl(work)
       if (!imageSrc) return
 
       // Set up timeout fallback to hide skeleton after reasonable time
@@ -206,11 +206,11 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
         }
       }
     }
-  }, [work.id, work.thumb_url, work.media_type])
+  }, [work.id, work.thumb_url, work.src_url, work.media_type, isModal])
 
   // Image media
   if (work.media_type === 'image') {
-    const imageSrc = getMediaUrl(work.thumb_url)
+    const imageSrc = isModal ? getArtworkModalUrl(work) : getArtworkCardUrl(work)
     
     if (!imageSrc) {
       return (
@@ -219,7 +219,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
             <svg className="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p className="text-xs text-gray-500 font-body">Image not available</p>
+            <p className="text-xs text-gray-500 font-body">Media missing</p>
           </div>
         </div>
       )
@@ -256,7 +256,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
                 backgroundColor: '#fff'
               }}>
                 <SRImage
-                  src={work.thumb_url}
+                  src={imageSrc}
                   alt={work.title}
                   width={1600}
                   height={1600}
@@ -280,7 +280,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
                   <svg className="w-16 h-16 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-sm text-gray-400 font-body">Could not load image</p>
+                  <p className="text-sm text-gray-400 font-body">Media missing</p>
                 </div>
               </div>
             )}
@@ -290,7 +290,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
           <>
             <div className="relative w-full h-full">
               <SRImage
-                src={work.thumb_url}
+                src={imageSrc}
                 alt={work.title}
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
@@ -307,7 +307,12 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
             )}
             {hasError && (
               <div className={`absolute inset-0 z-10 flex items-center justify-center bg-gray-50 pointer-events-none`}>
-                <p className="text-xs text-gray-500 text-center px-4 font-body">Could not load this media. Please check the original URL.</p>
+                <div className="text-center p-4">
+                  <svg className="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-xs text-gray-500 font-body">Media missing</p>
+                </div>
               </div>
             )}
           </>

@@ -1,19 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import SRImage from '@/components/media/SRImage'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { getBannerUrl } from '@/lib/media'
 
 interface Artist {
   id: string
   handle: string
   display_name: string
-  avatar_url?: string
-  banner_url?: string
+  banner_thumb_url?: string
   city?: string
   state?: string
-  country?: string
   category?: string
 }
 
@@ -22,168 +21,118 @@ interface SimilarArtistsProps {
   currentArtistCategories?: string[]
 }
 
+const TARGET_COUNT = 4
+
 export default function SimilarArtists({ currentArtistId, currentArtistCategories }: SimilarArtistsProps) {
   const [artists, setArtists] = useState<Artist[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Stabilize categories dependency - sort and join into string
+  const categoriesKey = useMemo(() => {
+    if (!currentArtistCategories || currentArtistCategories.length === 0) return ''
+    return [...currentArtistCategories].sort().join('|')
+  }, [currentArtistCategories])
+
   useEffect(() => {
-    async function fetchRandomArtists() {
-      const supabase = createAnonClient()
-      const { data, error } = await supabase
-        .from('artists_min')
-        .select(`
-          id,
-          handle,
-          display_name,
-          avatar_url,
-          banner_url,
-          locations:location_id (
-            city,
-            state,
-            country
-          ),
-          artist_categories (
-            categories (
-              name
-            )
-          )
-        `)
-        .neq('id', currentArtistId)
-        .limit(4)
-
-      if (error) {
-        console.error('Error fetching random artists:', error)
-        setArtists([])
-      } else {
-        const flattened = (data || []).map((artist: Record<string, unknown>) => ({
-          id: artist.id as string,
-          handle: artist.handle as string,
-          display_name: artist.display_name as string,
-          avatar_url: artist.avatar_url as string | undefined,
-          banner_url: artist.banner_url as string | undefined,
-          city: (artist.locations as Record<string, unknown>)?.city as string | undefined,
-          state: (artist.locations as Record<string, unknown>)?.state as string | undefined,
-          country: (artist.locations as Record<string, unknown>)?.country as string | undefined,
-          category: ((artist.artist_categories as Record<string, unknown>[]) || [])
-            .map((ac: Record<string, unknown>) => (ac.categories as Record<string, unknown>)?.name)
-            .filter(Boolean)[0] as string | undefined
-        })) as Artist[]
-        setArtists(flattened)
-      }
-    }
-
     async function fetchSimilarArtists() {
       try {
         setLoading(true)
         setError(null)
 
-        // Use the singleton anon client
         const supabase = createAnonClient()
+        const categories = categoriesKey ? categoriesKey.split('|') : []
         
-        // If we have categories, try to find artists with matching categories
-        if (currentArtistCategories && currentArtistCategories.length > 0) {
-          console.log('Looking for artists with categories:', currentArtistCategories)
-          
-          // Try to find artists that match any of the current artist's categories
-          const { data, error } = await supabase
+        let similarArtists: Artist[] = []
+        const excludeIds = new Set<string>([currentArtistId])
+
+        // Step 1: Try to find artists with matching categories (if we have categories)
+        // Only show listed (Pro) artists
+        if (categories.length > 0) {
+          const { data, error: queryError } = await supabase
             .from('artists_min')
             .select(`
-                id,
-                handle,
-                display_name,
-                avatar_url,
-                banner_url,
-                locations:location_id ( city, state, country ),
-                artist_categories!inner (
-                  categories!inner ( name )
-                )
-              `)
-            .neq('id', currentArtistId) // Exclude current artist
-            .in('artist_categories.categories.name', currentArtistCategories) // Filter by any of the categories
-            .limit(8) // Get more to filter from
+              id,
+              handle,
+              display_name,
+              banner_thumb_url,
+              locations:location_id (city, state),
+              artist_categories!inner (
+                categories!inner (name)
+              )
+            `)
+            .eq('is_listed', true)
+            .neq('id', currentArtistId)
+            .in('artist_categories.categories.name', categories)
+            .limit(TARGET_COUNT)
 
-          if (error) {
-            console.error('Error fetching similar artists:', error)
-            // Fallback to any artists if category filtering fails
-            const { data: fallbackData } = await supabase
-              .from('artists_min')
-              .select(`
-                id,
-                handle,
-                display_name,
-                avatar_url,
-                banner_url,
-                locations:location_id (
-                  city,
-                  state,
-                  country
-                ),
-                artist_categories (
-                  categories (
-                    name
-                  )
-                )
-              `)
-              .neq('id', currentArtistId)
-              .limit(4)
-            
-            if (fallbackData) {
-              const flattened = fallbackData.map((artist: Record<string, unknown>) => ({
-                id: artist.id as string,
-                handle: artist.handle as string,
-                display_name: artist.display_name as string,
-                avatar_url: artist.avatar_url as string | undefined,
-                banner_url: artist.banner_url as string | undefined,
-                city: (artist.locations as Record<string, unknown>)?.city as string | undefined,
-                state: (artist.locations as Record<string, unknown>)?.state as string | undefined,
-                country: (artist.locations as Record<string, unknown>)?.country as string | undefined,
-                category: ((artist.artist_categories as Record<string, unknown>[]) || [])
-                  .map((ac: Record<string, unknown>) => (ac.categories as Record<string, unknown>)?.name)
-                  .filter(Boolean)[0] as string | undefined
-              })) as Artist[]
-              setArtists(flattened)
-            } else {
-              setArtists([])
-            }
-          } else {
-            // Flatten nested locations for ease
-            const flattened = (data || []).map((artist: Record<string, unknown>) => ({
+          if (!queryError && data) {
+            // Flatten and filter by category match
+            const flattened = data.map((artist: Record<string, unknown>): Artist => ({
               id: artist.id as string,
               handle: artist.handle as string,
               display_name: artist.display_name as string,
-              avatar_url: artist.avatar_url as string | undefined,
-              banner_url: artist.banner_url as string | undefined,
+              banner_thumb_url: artist.banner_thumb_url as string | undefined,
               city: (artist.locations as Record<string, unknown>)?.city as string | undefined,
               state: (artist.locations as Record<string, unknown>)?.state as string | undefined,
-              country: (artist.locations as Record<string, unknown>)?.country as string | undefined,
               category: ((artist.artist_categories as Record<string, unknown>[]) || [])
                 .map((ac: Record<string, unknown>) => (ac.categories as Record<string, unknown>)?.name)
                 .filter(Boolean)[0] as string | undefined
-            })) as Artist[]
-            
-            // Filter by categories in JavaScript - find artists that share any category
-            const similarArtists = flattened.filter(artist => {
+            }))
+
+            // Filter by category in JavaScript to ensure accurate matches
+            similarArtists = flattened.filter(artist => {
               if (!artist.category) return false
-              return currentArtistCategories.includes(artist.category)
-            })
-            
-            console.log('Found similar artists:', similarArtists.length)
-            
-            if (similarArtists.length > 0) {
-              setArtists(similarArtists.slice(0, 4))
-            } else {
-              // No similar artists found, fallback to random artists
-              console.log('No similar artists found, fetching random artists...')
-              await fetchRandomArtists()
-            }
+              return categories.includes(artist.category)
+            }).slice(0, TARGET_COUNT)
+
+            // Track IDs we've already selected
+            similarArtists.forEach(a => excludeIds.add(a.id))
           }
-        } else {
-          // No categories provided, fetch random artists
-          await fetchRandomArtists()
         }
-      } catch (error) {
-        console.error('Unexpected error:', error)
+
+        // Step 2: If we need more artists, fetch random ones to fill remaining slots
+        // Only show listed (Pro) artists
+        const remaining = TARGET_COUNT - similarArtists.length
+        if (remaining > 0) {
+          // Build exclusion filter
+          const excludeArray = Array.from(excludeIds)
+          
+          const { data: randomData, error: randomError } = await supabase
+            .from('artists_min')
+            .select(`
+              id,
+              handle,
+              display_name,
+              banner_thumb_url,
+              locations:location_id (city, state),
+              artist_categories (
+                categories (name)
+              )
+            `)
+            .eq('is_listed', true)
+            .not('id', 'in', `(${excludeArray.join(',')})`)
+            .limit(remaining)
+
+          if (!randomError && randomData) {
+            const randomFlattened = randomData.map((artist: Record<string, unknown>): Artist => ({
+              id: artist.id as string,
+              handle: artist.handle as string,
+              display_name: artist.display_name as string,
+              banner_thumb_url: artist.banner_thumb_url as string | undefined,
+              city: (artist.locations as Record<string, unknown>)?.city as string | undefined,
+              state: (artist.locations as Record<string, unknown>)?.state as string | undefined,
+              category: ((artist.artist_categories as Record<string, unknown>[]) || [])
+                .map((ac: Record<string, unknown>) => (ac.categories as Record<string, unknown>)?.name)
+                .filter(Boolean)[0] as string | undefined
+            }))
+
+            similarArtists = [...similarArtists, ...randomFlattened]
+          }
+        }
+
+        setArtists(similarArtists)
+      } catch {
         setError('Failed to load similar artists')
       } finally {
         setLoading(false)
@@ -191,7 +140,7 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategorie
     }
 
     fetchSimilarArtists()
-  }, [currentArtistId, currentArtistCategories])
+  }, [currentArtistId, categoriesKey])
 
   if (loading) {
     return (
@@ -218,33 +167,36 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategorie
     <div className="mb-12">
       <h3 className="text-xl font-semibold text-gray-900 mb-4">Similar Artists</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {artists.map((artist) => (
-          <Link
-            key={artist.id}
-            href={`/artists/${artist.handle}`}
-            prefetch={false}
-            className="group block"
-          >
-            <div className="relative overflow-hidden rounded-lg mb-2">
-              {artist.banner_url ? (
-                <SRImage
-                  src={artist.banner_url}
-                  alt={artist.display_name}
-                  width={400}
-                  height={300}
-                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                  mode="raw"
-                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                />
-              ) : (
-                <div className="w-full h-48 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
-                  <span className="text-amber-600 font-bold text-xl">
-                    {artist.display_name.charAt(0)}
-                  </span>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </div>
+        {artists.map((artist) => {
+          // getBannerUrl will resolve thumb_url from the object for 'small' size
+          const bannerSrc = getBannerUrl({ banner_thumb_url: artist.banner_thumb_url }, 'small');
+          return (
+            <Link
+              key={artist.id}
+              href={`/artists/${artist.handle}`}
+              prefetch={false}
+              className="group block"
+            >
+              <div className="relative overflow-hidden rounded-lg mb-2">
+                {bannerSrc ? (
+                  <SRImage
+                    src={bannerSrc}
+                    alt={artist.display_name}
+                    width={400}
+                    height={300}
+                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                    mode="raw"
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                    <span className="text-amber-600 font-bold text-xl">
+                      {artist.display_name.charAt(0)}
+                    </span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
             <div className="space-y-1">
               <h4 className="font-medium text-gray-900 group-hover:text-amber-600 transition-colors">
                 {artist.display_name}
@@ -258,8 +210,9 @@ export default function SimilarArtists({ currentArtistId, currentArtistCategorie
                 </p>
               )}
             </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </div>
   )

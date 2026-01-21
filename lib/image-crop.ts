@@ -131,3 +131,64 @@ export function getPixelCrop(
     height: (cropArea.height * scaleY),
   }
 }
+
+/**
+ * Generate a JPEG blob from a canvas with specified crop and output dimensions
+ * 
+ * @param canvas - The source canvas element
+ * @param cropPixels - Crop parameters (x, y, width, height)
+ * @param outW - The desired output width
+ * @param outH - The desired output height
+ * @param quality - JPEG quality (0-1), defaults to 0.82
+ * @returns Promise<Blob> - The generated JPEG blob
+ */
+export async function generateJpegFromCanvas(
+  canvas: HTMLCanvasElement,
+  cropPixels: { x: number; y: number; width: number; height: number },
+  outW: number,
+  outH: number,
+  quality: number = 0.82
+): Promise<Blob> {
+  const outputCanvas = document.createElement('canvas')
+  const ctx = outputCanvas.getContext('2d')
+
+  if (!ctx) {
+    throw new Error('Could not get canvas context')
+  }
+
+  // Set canvas size to output dimensions
+  outputCanvas.width = outW
+  outputCanvas.height = outH
+
+  // Fill with white background (for JPEG)
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(0, 0, outW, outH)
+
+  // Draw the cropped image onto the canvas
+  ctx.drawImage(
+    canvas,
+    cropPixels.x,
+    cropPixels.y,
+    cropPixels.width,
+    cropPixels.height,
+    0,
+    0,
+    outW,
+    outH
+  )
+
+  // Convert canvas to blob
+  return new Promise<Blob>((resolve, reject) => {
+    outputCanvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Canvas is empty'))
+          return
+        }
+        resolve(blob)
+      },
+      'image/jpeg',
+      quality
+    )
+  })
+}

@@ -11,7 +11,9 @@ export interface UserProfile {
   display_name: string
   bio: string | null
   avatar_url: string | null
+  avatar_thumb_url?: string | null
   banner_url: string | null
+  banner_thumb_url?: string | null
   website_url: string | null
   instagram_url: string | null
   facebook_url: string | null
@@ -71,7 +73,9 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
       display_name,
       bio,
       avatar_url,
+      avatar_thumb_url,
       banner_url,
+      banner_thumb_url,
       website_url,
       instagram_url,
       facebook_url,
@@ -167,7 +171,9 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
     display_name: profileData.display_name,
     bio: profileData.bio,
     avatar_url: profileData.avatar_url,
+    avatar_thumb_url: profileData.avatar_thumb_url ?? null,
     banner_url: profileData.banner_url,
+    banner_thumb_url: profileData.banner_thumb_url ?? null,
     website_url: profileData.website_url,
     instagram_url: profileData.instagram_url,
     facebook_url: profileData.facebook_url,

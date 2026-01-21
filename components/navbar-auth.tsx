@@ -5,6 +5,7 @@ import Link from 'next/link'
 import SRImage from '@/components/media/SRImage'
 import { useNavbarUser } from '@/hooks/use-navbar-user'
 import { useUser } from '@/hooks/use-user'
+import { getAvatarUrl } from '@/lib/media'
 
 interface NavbarAuthProps {
   onMobileMenuOpen?: () => void
@@ -70,8 +71,10 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
   if (user) {
     // Get display name - prefer profile display_name, then full_name from metadata, fallback to email username
     const displayName = profile?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
-    // Get avatar - prefer profile avatar_url, then user_metadata avatar_url
-    const avatarSrc = profile?.avatar_url || user.user_metadata?.avatar_url
+    // Get avatar - use helper with small variant for navbar
+    const avatarSrc = profile 
+      ? getAvatarUrl(profile, 'small') 
+      : (user.user_metadata?.avatar_url ? getAvatarUrl({ avatar_url: user.user_metadata.avatar_url }, 'small') : null)
     
     // Authenticated view
     return (

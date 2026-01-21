@@ -3,7 +3,8 @@
 import React, { useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import dynamic from 'next/dynamic'
 import type { Area, Point } from 'react-easy-crop'
-import { getCroppedImg } from '@/lib/image-crop'
+import { getCroppedImg, generateJpegFromCanvas } from '@/lib/image-crop'
+import { toThumbKey } from '@/lib/utils/storage'
 import { decodeAndDownscale } from '@/lib/utils/decode-and-downscale'
 import { validateImageFile } from '@/lib/utils/image-validation'
 import CropperSkeleton from '../cropper-skeleton'
@@ -75,7 +76,10 @@ export interface ImageWorkFieldsProps {
 }
 
 export interface ImageWorkFieldsHandle {
-  getImageData: () => Promise<{ storagePath: string; file: File } | null>
+  getImageData: () => Promise<{ 
+    full: { storagePath: string; file: File }
+    thumb: { storagePath: string; file: File }
+  } | null>
   clear: () => void
 }
 
@@ -100,7 +104,10 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
     // User must select a new file to replace it
     // This keeps the component simple and avoids loading existing images into cropper
 
-    const getImageData = useCallback(async (): Promise<{ storagePath: string; file: File } | null> => {
+    const getImageData = useCallback(async (): Promise<{ 
+      full: { storagePath: string; file: File }
+      thumb: { storagePath: string; file: File }
+    } | null> => {
       if (!selectedFile || !decodedCanvas || !croppedAreaPixels) {
         return null
       }
@@ -110,7 +117,8 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
       const outputWidth = modeConfig.outputWidth
       const outputHeight = modeConfig.outputHeight
 
-      const croppedBlob = await getCroppedImg(
+      // Generate full-size cropped image blob
+      const fullBlob = await getCroppedImg(
         decodedCanvas,
         croppedAreaPixels,
         outputWidth,
@@ -122,15 +130,41 @@ export const ImageWorkFields = forwardRef<ImageWorkFieldsHandle, ImageWorkFields
         }
       )
 
-      const timestamp = Date.now()
-      const fileName = `${timestamp}-work.jpg`
-      const storagePath = `artworks/${profileId}/${fileName}`
+      // Calculate thumbnail dimensions maintaining aspect ratio
+      // Work thumb should be 600px wide
+      const WORK_THUMB_WIDTH = 600
+      const cropAspect = croppedAreaPixels.width / croppedAreaPixels.height
+      const thumbHeight = Math.round(WORK_THUMB_WIDTH / cropAspect)
 
-      const croppedFile = new File([croppedBlob], fileName, {
+      // Generate thumbnail blob
+      const thumbBlob = await generateJpegFromCanvas(
+        decodedCanvas,
+        croppedAreaPixels,
+        WORK_THUMB_WIDTH,
+        thumbHeight,
+        0.82
+      )
+
+      const timestamp = Date.now()
+      const fullFileName = `${timestamp}-work.jpg`
+      const fullStoragePath = `artworks/${profileId}/${fullFileName}`
+      const thumbStoragePath = toThumbKey(fullStoragePath)
+
+      if (!thumbStoragePath) {
+        throw new Error('Failed to generate thumbnail storage path')
+      }
+
+      const fullFile = new File([fullBlob], fullFileName, {
+        type: 'image/jpeg',
+      })
+      const thumbFile = new File([thumbBlob], fullFileName, {
         type: 'image/jpeg',
       })
 
-      return { storagePath, file: croppedFile }
+      return { 
+        full: { storagePath: fullStoragePath, file: fullFile },
+        thumb: { storagePath: thumbStoragePath, file: thumbFile }
+      }
     }, [selectedFile, decodedCanvas, croppedAreaPixels, cropMode, profileId])
 
     const clear = useCallback(() => {
