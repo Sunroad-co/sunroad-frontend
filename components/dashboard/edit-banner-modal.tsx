@@ -330,7 +330,7 @@ export default function EditBannerModal({
         await supabase.storage
           .from('media')
           .remove(pathsToRemove)
-          .catch((err) => {
+          .catch((err: unknown) => {
             console.error('Error cleaning up old banner files:', err)
           })
       }

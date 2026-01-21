@@ -20,6 +20,7 @@ export type SearchResult = {
   handle: string
   display_name: string
   avatar_url: string | null
+  avatar_thumb_url: string | null
   bio: string | null
   city: string | null
   state: string | null
