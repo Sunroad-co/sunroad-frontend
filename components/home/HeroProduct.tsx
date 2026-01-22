@@ -11,8 +11,8 @@ interface HeroProductProps {
  * HeroProduct - Premium hero section for the home page
  * 
  * Features:
- * - Left: Strong headline, subtext, dual CTAs, trust line
- * - Right: Enhanced hero image with subtle grain overlay, narrow light sweep, 3 floating preview cards
+ * - Left: Strong headline, subtext, dual CTAs, trust line, subtle logo watermark
+ * - Right: Enhanced hero image with subtle grain overlay, 3 floating preview cards
  * - Floating cards use real artist data from props (no fetching)
  * - Fully responsive with mobile-first design
  * - Respects prefers-reduced-motion for all animations
@@ -39,21 +39,23 @@ export default function HeroProduct({ artists }: HeroProductProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch min-h-[480px] lg:min-h-[520px]">
           
           {/* Left Panel - Content */}
-          <div className="p-8 lg:p-12 xl:p-16 flex flex-col justify-center space-y-6 text-center lg:text-left order-2 lg:order-1">
-            {/* Logo */}
-            <div className="flex justify-center lg:justify-start">
+          <div className="relative p-8 lg:p-12 xl:p-16 flex flex-col justify-center space-y-6 text-center lg:text-left order-2 lg:order-1">
+            {/* Logo - watermark in background, pushed below content */}
+            <div 
+              className="absolute -bottom-6 left-1/2 -translate-x-1/2 lg:-bottom-4 pointer-events-none select-none z-0"
+              aria-hidden="true"
+            >
               <Image 
                 src="/sunroad_logo.png" 
-                alt="Sun Road" 
-                width={150} 
-                height={50}
-                className="h-10 sm:h-12 w-auto brightness-0 invert"
-                priority
+                alt="" 
+                width={400} 
+                height={133}
+                className="h-24 sm:h-28 lg:h-32 w-auto opacity-[0.12] grayscale contrast-50"
               />
             </div>
 
             {/* Headline */}
-            <div className="space-y-4">
+            <div className="space-y-4 relative z-10">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-amber-50 leading-tight tracking-tight">
                 Your work deserves a home.
               </h1>
@@ -67,7 +69,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
             </div>
 
             {/* CTA Row */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-2 relative z-10">
               <Link
                 href="/auth/sign-up"
                 className="inline-flex items-center justify-center px-8 py-4 bg-black text-white rounded-full 
@@ -88,7 +90,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
             </div>
 
             {/* Trust Line */}
-            <p className="text-sm text-amber-100/70 pt-2">
+            <p className="text-sm text-amber-100/70 pt-2 relative z-10">
               No commissions. Direct contact. Cancel anytime.
             </p>
           </div>
@@ -118,11 +120,6 @@ export default function HeroProduct({ artists }: HeroProductProps) {
                 }}
               />
               
-              {/* Subtle diagonal light sweep - narrow highlight */}
-              <div 
-                className="absolute inset-0 pointer-events-none animate-light-sweep motion-reduce:animate-none mix-blend-soft-light"
-                aria-hidden="true"
-              />
             </div>
 
             {/* Floating Card 1 - Profile Preview (Artist 1) */}
