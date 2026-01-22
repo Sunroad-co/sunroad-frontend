@@ -648,3 +648,21 @@
     animation: howitworks-ping 12s ease-in-out infinite;
   }
 }
+
+/* ===== Popular Categories Animations ===== */
+/* Subtle breathing animation for category icons */
+
+@keyframes category-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@layer utilities {
+  .animate-category-breathe {
+    animation: category-breathe 8s ease-in-out infinite;
+  }
+}

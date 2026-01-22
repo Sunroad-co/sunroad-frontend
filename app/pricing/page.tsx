@@ -167,7 +167,7 @@ const faqItems: FaqItem[] = [
         <p>
           To permanently delete your account and all associated data, please
           email us at{" "}
-          <a href="mailto:support@sunroad.co">support@sunroad.co</a> with the
+          <a href="mailto:support@sunroad.io">support@sunroad.io</a> with the
           subject line &quot;Account Deletion Request&quot; from the email
           associated with your account.
         </p>
@@ -442,7 +442,7 @@ export default function PricingPage() {
             back to you as soon as possible.
           </p>
           <a
-            href="mailto:support@sunroad.co"
+            href="mailto:support@sunroad.io"
             className="inline-flex items-center gap-2 px-6 py-3 bg-white text-sunroad-brown-900 rounded-full font-semibold hover:bg-sunroad-cream transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-sunroad-brown-900"
           >
             <svg

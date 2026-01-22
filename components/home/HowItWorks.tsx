@@ -69,7 +69,7 @@ export default function HowItWorks() {
                          animate-howitworks-url motion-reduce:animate-none"
               aria-hidden="true"
             >
-              sunroad.co/you
+              sunroad.io/you
             </div>
             
             {/* Icon - synced focus pulse with tap */}
