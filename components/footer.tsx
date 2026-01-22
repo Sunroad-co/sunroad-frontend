@@ -135,9 +135,12 @@ export default function Footer() {
               >
                 Blog
               </Link>
-              <span className="text-sunroad-brown-500 text-sm font-medium cursor-not-allowed">
-                Pricing <span className="text-xs">(Coming soon)</span>
-              </span>
+              <Link
+                href="/pricing"
+                className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+              >
+                Pricing
+              </Link>
             </nav>
           </div>
 
@@ -229,9 +232,12 @@ export default function Footer() {
               >
                 Blog
               </Link>
-              <span className="text-sunroad-brown-500 text-sm font-medium cursor-not-allowed">
-                Pricing <span className="text-xs">(Coming soon)</span>
-              </span>
+              <Link
+                href="/pricing"
+                className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+              >
+                Pricing
+              </Link>
             </nav>
           </div>
 

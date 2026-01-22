@@ -183,6 +183,13 @@ export default function MobileMenuOverlay({ isOpen, onClose, user, onLogout }: M
                     Blog
                   </Link>
                   <Link
+                    href="/pricing"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-3 text-white hover:bg-sunroad-amber-900/40 rounded-lg transition-colors font-medium"
+                  >
+                    Pricing
+                  </Link>
+                  <Link
                     href="/search"
                     onClick={handleLinkClick}
                     className="block px-4 py-3 text-white hover:bg-sunroad-amber-900/40 rounded-lg transition-colors font-medium"
@@ -216,6 +223,13 @@ export default function MobileMenuOverlay({ isOpen, onClose, user, onLogout }: M
                     Blog
                   </Link>
                   <Link
+                    href="/pricing"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-3 text-white hover:bg-sunroad-amber-900/40 rounded-lg transition-colors font-medium"
+                  >
+                    Pricing
+                  </Link>
+                  <Link
                     href="/search"
                     onClick={handleLinkClick}
                     className="block px-4 py-3 text-white hover:bg-sunroad-amber-900/40 rounded-lg transition-colors font-medium"
@@ -225,25 +239,18 @@ export default function MobileMenuOverlay({ isOpen, onClose, user, onLogout }: M
                 </nav>
               </div>
 
-              {/* Account section */}
+              {/* Get started section */}
               <div>
                 <h2 className="text-xs font-semibold text-sunroad-amber-400 uppercase tracking-wider mb-3">
-                  Account
+                  Get Started
                 </h2>
-                <nav className="space-y-3">
-                  <Link
-                    href="/auth/login"
-                    onClick={handleLinkClick}
-                    className="block w-full px-4 py-3 text-center text-sunroad-brown-900 bg-sunroad-amber-200 rounded-lg hover:bg-sunroad-amber-300 transition-colors font-medium"
-                  >
-                    Login
-                  </Link>
+                <nav>
                   <Link
                     href="/auth/sign-up"
                     onClick={handleLinkClick}
-                    className="block w-full px-4 py-3 text-center text-white bg-sunroad-amber-600 rounded-lg hover:bg-sunroad-amber-700 transition-colors font-medium shadow-lg shadow-sunroad-amber-600/30"
+                    className="block w-full px-4 py-3.5 text-center text-white bg-sunroad-amber-600 rounded-lg hover:bg-sunroad-amber-700 transition-colors font-semibold shadow-lg shadow-sunroad-amber-600/30"
                   >
-                    Sign Up
+                    Join Sun Road
                   </Link>
                 </nav>
               </div>

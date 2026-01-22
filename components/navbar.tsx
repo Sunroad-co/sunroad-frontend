@@ -59,6 +59,15 @@ export default function Navbar({ variant }: NavbarProps = {}) {
           {/* Right side - Navigation Links + Auth */}
           <div className="flex items-center gap-6">
             <nav className="hidden lg:flex items-center gap-4">
+              {/* Pricing link only shown for unauthenticated users (authenticated users see it in dropdown) */}
+              {!user && (
+                <Link
+                  href="/pricing"
+                  className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors font-medium text-sm"
+                >
+                  Pricing
+                </Link>
+              )}
               <Link
                 href="/blog"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors font-medium text-sm"
@@ -78,11 +87,12 @@ export default function Navbar({ variant }: NavbarProps = {}) {
             <Link href="/" className="flex items-center flex-shrink-0" style={{ minWidth: '60px' }}>
               <Image 
                 src="/sunroad_logo.png" 
-                alt="Sun Road" 
+                alt="Sun Road Logo" 
                 width={100} 
                 height={40}
                 className="h-8 w-auto"
                 priority
+                unoptimized
               />
             </Link>
             

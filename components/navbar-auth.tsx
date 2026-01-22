@@ -180,6 +180,13 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
                 Home
               </Link>
               <Link
+                href="/pricing"
+                className="block px-4 py-2 text-sm text-sunroad-brown-900 hover:bg-sunroad-amber-50 transition-colors"
+                onClick={() => setShowDropdown(false)}
+              >
+                Pricing
+              </Link>
+              <Link
                 href="/search"
                 className="block px-4 py-2 text-sm text-sunroad-brown-900 hover:bg-sunroad-amber-50 transition-colors"
                 onClick={() => setShowDropdown(false)}
@@ -211,19 +218,11 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
   }
 
   return (
-    <div className="flex items-center space-x-4">
-      <Link 
-        href="/auth/login" 
-        className="px-4 py-2 text-sunroad-brown-700 bg-sunroad-amber-100 rounded-lg hover:bg-sunroad-amber-200 transition-colors font-medium"
-      >
-        Login
-      </Link>
-      <Link 
-        href="/signup" 
-        className="px-4 py-2 text-white bg-sunroad-amber-600 rounded-lg hover:bg-sunroad-amber-700 transition-colors font-medium"
-      >
-        Sign Up
-      </Link>
-    </div>
+    <Link 
+      href="/auth/sign-up" 
+      className="px-5 py-2.5 text-white bg-sunroad-amber-600 rounded-full hover:bg-sunroad-amber-700 transition-colors font-semibold shadow-sm"
+    >
+      Join Sun Road
+    </Link>
   )
 }
