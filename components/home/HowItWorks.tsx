@@ -5,8 +5,9 @@ import { MousePointerClick, Layers, Search, Instagram, Globe, Music } from "luci
  * 
  * Features:
  * - SVG conveyor belt connector (dots flow left->right on desktop, top->bottom on mobile)
- * - All step animations synced to 12s master timeline
- * - Cumulative reveal: Step 1 appears, then Step 2, then Step 3, all stay until reset
+ * - All step animations synced to 12s master timeline (~2.5s between steps)
+ * - Step 1 @5%, Step 2 @26%, Step 3 @47%, hold until ~88%, reset at 95%
+ * - Cumulative reveal: elements appear and stay visible until reset
  * - All animations respect prefers-reduced-motion
  * - CSS-only, no external animation libraries, ISR-friendly
  */

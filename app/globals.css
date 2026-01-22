@@ -277,7 +277,8 @@
 
 /* ===== HowItWorks Section Animations ===== */
 /* Master timeline: 12s for all synced animations */
-/* Cumulative reveal: elements appear and stay visible until reset at ~94-100% */
+/* Faster step cadence: ~2.5s between steps (Step1 @5%, Step2 @26%, Step3 @47%) */
+/* Cumulative reveal: elements appear and stay visible until reset at ~90-100% */
 
 /* SVG Conveyor belt - dots flow slowly */
 @keyframes howitworks-dash-flow-h {
@@ -308,33 +309,33 @@
   }
 }
 
-/* Card focus pulse - Step 2 (pulse at ~38%, then stable) */
+/* Card focus pulse - Step 2 (pulse at ~26%, then stable) */
 @keyframes howitworks-card-2 {
-  0%, 34%, 100% {
+  0%, 22%, 100% {
     transform: scale(1);
     box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
   }
-  38% {
+  26% {
     transform: scale(1.05);
     box-shadow: 0 8px 30px rgb(251 191 36 / 0.18);
   }
-  44% {
+  32% {
     transform: scale(1);
     box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
   }
 }
 
-/* Card focus pulse - Step 3 (pulse at ~68%, then stable) */
+/* Card focus pulse - Step 3 (pulse at ~47%, then stable) */
 @keyframes howitworks-card-3 {
-  0%, 64%, 100% {
+  0%, 43%, 100% {
     transform: scale(1);
     box-shadow: 0 8px 30px rgb(251 191 36 / 0.12);
   }
-  68% {
+  47% {
     transform: scale(1.05);
     box-shadow: 0 8px 30px rgb(251 191 36 / 0.28);
   }
-  74% {
+  53% {
     transform: scale(1);
     box-shadow: 0 8px 30px rgb(251 191 36 / 0.12);
   }
@@ -356,33 +357,33 @@
   }
 }
 
-/* Icon focus pulse - Step 2 (pulse at ~38%) */
+/* Icon focus pulse - Step 2 (pulse at ~26%) */
 @keyframes howitworks-icon-2 {
-  0%, 34%, 100% {
+  0%, 22%, 100% {
     transform: scale(1);
   }
-  38% {
+  26% {
     transform: scale(1.1);
   }
-  44% {
+  32% {
     transform: scale(1);
   }
 }
 
-/* Icon focus pulse - Step 3 (pulse at ~68%) */
+/* Icon focus pulse - Step 3 (pulse at ~47%) */
 @keyframes howitworks-icon-3 {
-  0%, 64%, 100% {
+  0%, 43%, 100% {
     transform: scale(1);
   }
-  68% {
+  47% {
     transform: scale(1.1);
   }
-  74% {
+  53% {
     transform: scale(1);
   }
 }
 
-/* URL pill - appears at ~6% and stays until reset at ~94% */
+/* URL pill - appears at ~6% and stays until reset at ~90% */
 @keyframes howitworks-url {
   0% {
     transform: translateX(-50%) translateX(-8px);
@@ -392,187 +393,187 @@
     transform: translateX(-50%) translateX(0);
     opacity: 1;
   }
-  92% {
+  88% {
     transform: translateX(-50%) translateX(0);
     opacity: 1;
   }
-  98%, 100% {
+  95%, 100% {
     transform: translateX(-50%) translateX(-8px);
     opacity: 0;
   }
 }
 
-/* Stacking layers - appear at ~38-44% (staggered) and stay until reset */
+/* Stacking layers - appear at ~26-32% (staggered) and stay until reset */
 @keyframes howitworks-stack-1 {
-  0%, 35% {
+  0%, 24% {
     transform: translateY(10px);
     opacity: 0;
   }
-  40% {
+  28% {
     transform: translateY(5px);
     opacity: 0.7;
   }
-  92% {
+  88% {
     transform: translateY(5px);
     opacity: 0.7;
   }
-  98%, 100% {
+  95%, 100% {
     transform: translateY(10px);
     opacity: 0;
   }
 }
 
 @keyframes howitworks-stack-2 {
-  0%, 38% {
+  0%, 26% {
     transform: translateY(10px);
     opacity: 0;
   }
-  43% {
+  30% {
     transform: translateY(0px);
     opacity: 0.7;
   }
-  92% {
+  88% {
     transform: translateY(0px);
     opacity: 0.7;
   }
-  98%, 100% {
+  95%, 100% {
     transform: translateY(10px);
     opacity: 0;
   }
 }
 
 @keyframes howitworks-stack-3 {
-  0%, 41% {
+  0%, 28% {
     transform: translateY(10px);
     opacity: 0;
   }
-  46% {
+  32% {
     transform: translateY(-5px);
     opacity: 0.7;
   }
-  92% {
+  88% {
     transform: translateY(-5px);
     opacity: 0.7;
   }
-  98%, 100% {
+  95%, 100% {
     transform: translateY(10px);
     opacity: 0;
   }
 }
 
-/* Social chips - appear at ~38-46% (staggered) and stay until reset */
+/* Social chips - appear at ~26-34% (staggered) and stay until reset */
 @keyframes howitworks-drift-1 {
-  0%, 35% {
+  0%, 24% {
     transform: translateY(8px) scale(0.9);
     opacity: 0;
   }
-  40% {
+  28% {
     transform: translateY(0) scale(1);
     opacity: 1;
   }
-  92% {
+  88% {
     transform: translateY(0) scale(1);
     opacity: 1;
   }
-  98%, 100% {
+  95%, 100% {
     transform: translateY(8px) scale(0.9);
     opacity: 0;
   }
 }
 
 @keyframes howitworks-drift-2 {
-  0%, 38% {
+  0%, 27% {
     transform: translateY(8px) scale(0.9);
     opacity: 0;
   }
-  43% {
+  31% {
     transform: translateY(0) scale(1);
     opacity: 1;
   }
-  92% {
+  88% {
     transform: translateY(0) scale(1);
     opacity: 1;
   }
-  98%, 100% {
+  95%, 100% {
     transform: translateY(8px) scale(0.9);
     opacity: 0;
   }
 }
 
 @keyframes howitworks-drift-3 {
-  0%, 41% {
+  0%, 30% {
     transform: translateY(8px) scale(0.9);
     opacity: 0;
   }
-  46% {
+  34% {
     transform: translateY(0) scale(1);
     opacity: 1;
   }
-  92% {
+  88% {
     transform: translateY(0) scale(1);
     opacity: 1;
   }
-  98%, 100% {
+  95%, 100% {
     transform: translateY(8px) scale(0.9);
     opacity: 0;
   }
 }
 
-/* Radar outer ring - appears at ~68%, stays until reset */
+/* Radar outer ring - appears at ~47%, stays until reset */
 @keyframes howitworks-radar-outer {
-  0%, 65% {
+  0%, 45% {
     transform: scale(0.6);
     opacity: 0;
   }
-  72% {
+  51% {
     transform: scale(1.3);
     opacity: 0.2;
   }
-  92% {
+  88% {
     transform: scale(1.3);
     opacity: 0.15;
   }
-  98%, 100% {
+  95%, 100% {
     transform: scale(0.6);
     opacity: 0;
   }
 }
 
-/* Radar inner ring - appears at ~70%, stays until reset */
+/* Radar inner ring - appears at ~49%, stays until reset */
 @keyframes howitworks-radar-inner {
-  0%, 67% {
+  0%, 47% {
     transform: scale(0.5);
     opacity: 0;
   }
-  74% {
+  53% {
     transform: scale(1.15);
     opacity: 0.25;
   }
-  92% {
+  88% {
     transform: scale(1.15);
     opacity: 0.2;
   }
-  98%, 100% {
+  95%, 100% {
     transform: scale(0.5);
     opacity: 0;
   }
 }
 
-/* Ping dot - appears at ~72%, stays until reset */
+/* Ping dot - appears at ~50%, stays until reset */
 @keyframes howitworks-ping {
-  0%, 69% {
+  0%, 48% {
     opacity: 0;
     transform: scale(0.8);
   }
-  75% {
+  54% {
     opacity: 1;
     transform: scale(1);
   }
-  92% {
+  88% {
     opacity: 0.9;
     transform: scale(1);
   }
-  98%, 100% {
+  95%, 100% {
     opacity: 0;
     transform: scale(0.8);
   }
