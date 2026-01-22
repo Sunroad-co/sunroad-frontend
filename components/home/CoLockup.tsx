@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 
 const suffixes = ['llaboration', 'nnection', 'mmunity']
-const DISPLAY_TIME = 2200 // 4 seconds per word
-const TRANSITION_DURATION = 800 // 800ms transition (between 600-900ms)
+const DISPLAY_TIME = 2500 // ~3.2 seconds per word (slower, less busy)
+const TRANSITION_DURATION = 900 // 900ms transition (smooth)
 
 export default function CoLockup() {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -57,7 +57,7 @@ export default function CoLockup() {
   const translateY = prefersReducedMotion ? 0 : -(currentIndex * slotHeight)
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex justify-center align-middle">
+    <div className="flex justify-center">
       <div className="flex justify-center">
         {/* Centered inline-flex wrapper for logo + suffix */}
         <div className="relative inline-flex flex-nowrap items-baseline justify-center sm:flex-nowrap gap-0">
@@ -113,6 +113,6 @@ export default function CoLockup() {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }

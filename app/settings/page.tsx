@@ -382,7 +382,7 @@ export default function SettingsPage() {
                         <span className="text-sm font-medium text-sunroad-brown-900">
                           {limits.max_works && limits.max_works > 0
                             ? `${usage.public_active_works ?? 0} / ${limits.max_works}`
-                            : '—'}
+                            : '-'}
                         </span>
                       </div>
                       {limits.max_works && limits.max_works > 0 && (
@@ -404,7 +404,7 @@ export default function SettingsPage() {
                         <span className="text-sm font-medium text-sunroad-brown-900">
                           {limits.max_categories && limits.max_categories > 0
                             ? `${usage.categories_count ?? 0} / ${limits.max_categories}`
-                            : '—'}
+                            : '-'}
                         </span>
                       </div>
                       {limits.max_categories && limits.max_categories > 0 && (

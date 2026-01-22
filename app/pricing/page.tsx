@@ -36,7 +36,7 @@ const faqItems: FaqItem[] = [
     answer: (
       <p>
         Sun Road Co. is a directory that helps locals discover and connect with
-        talented creatives in their area—photographers, musicians, designers,
+        talented creatives in their area - photographers, musicians, designers,
         artists, and more. We make it easy for creatives to showcase their work
         and for clients to find the right talent.
       </p>
@@ -66,7 +66,7 @@ const faqItems: FaqItem[] = [
         </p>
         <p>
           Free members have a public shareable profile but don&apos;t appear in
-          search results—you can still share your profile link directly with
+          search results - you can still share your profile link directly with
           potential clients.
         </p>
       </>
@@ -215,7 +215,7 @@ const faqItems: FaqItem[] = [
     answer: (
       <p>
         No! Browsing the directory is completely free for everyone. We
-        don&apos;t take any commission on work you get through Sun Road—any
+        don&apos;t take any commission on work you get through Sun Road - any
         arrangements are directly between you and the creative.
       </p>
     ),
@@ -311,7 +311,7 @@ export default function PricingPage() {
             </h2>
             <p className="text-sunroad-brown-600 max-w-xl mx-auto">
               What you see is what you pay. We never take a cut of the work you
-              get through Sun Road—keep 100% of your earnings.
+              get through Sun Road - keep 100% of your earnings.
             </p>
           </div>
         </div>

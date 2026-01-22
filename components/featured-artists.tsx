@@ -138,7 +138,7 @@ export default function FeaturedArtists() {
           
             {/* Text */}
             <div className="p-4 space-y-2">
-              <h3 className="font-semibold text-gray-900 text-base truncate">
+              <h3 className="font-display font-semibold text-gray-900 text-base truncate">
                 {artist.display_name}
               </h3>
               <p className="text-sm text-gray-500 truncate">
