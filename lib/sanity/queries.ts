@@ -194,6 +194,136 @@ export async function fetchBlogPostBySlug(slug: string): Promise<BlogPostWithOth
 }
 
 /**
+ * Featured theme tokens supported by Sanity
+ * Maps to Sunroad brand colors in tailwind.config.ts
+ */
+export type FeaturedTheme = 
+  | 'white' | 'black'
+  | 'cream' | 'paper' 
+  | 'amberSoft' | 'amber' 
+  | 'brownSoft' | 'brown'
+  | 'sageSoft' | 'sage'
+  | 'skySoft' | 'sky'
+  | 'slateSoft' | 'slate'
+  | 'roseSoft' | 'rose'
+  | 'lavenderSoft'
+  | 'sunsetSoft'
+
+/**
+ * Featured post type (extends BlogPostListItem with featured-specific fields)
+ */
+export interface FeaturedBlogPost extends BlogPostListItem {
+  featuredRank?: number
+  featuredTheme?: FeaturedTheme
+}
+
+// Shared projection for featured posts
+const featuredPostProjection = `{
+  _id,
+  "slug": slug.current,
+  title,
+  excerpt,
+  publishedAt,
+  featuredRank,
+  featuredTheme,
+  mainImage {
+    asset {
+      _ref,
+      _type
+    },
+    alt,
+    caption
+  },
+  author-> {
+    name,
+    sunroadHandle,
+    image {
+      asset {
+        _ref,
+        _type
+      },
+      alt
+    },
+    bio
+  },
+  categories[]-> {
+    title,
+    "slug": slug.current
+  }
+}`
+
+/**
+ * Single GROQ query that returns featured posts + fallback posts in one call
+ * Featured posts: isFeatured == true, within optional date range, ordered by rank then date
+ * Fallback posts: most recent posts excluding featured ones, to fill remaining slots
+ */
+export const featuredWithFallbackQuery = `{
+  "featured": *[
+    _type == "post" 
+    && defined(publishedAt) 
+    && publishedAt <= now() 
+    && !(_id in path("drafts.**"))
+    && isFeatured == true
+    && (!defined(featuredStartAt) || featuredStartAt <= now())
+    && (!defined(featuredEndAt) || featuredEndAt > now())
+  ] | order(
+    coalesce(featuredRank, 9999) asc,
+    publishedAt desc
+  ) [0...$limit] ${featuredPostProjection},
+  
+  "fallback": *[
+    _type == "post" 
+    && defined(publishedAt) 
+    && publishedAt <= now() 
+    && !(_id in path("drafts.**"))
+    && (
+      isFeatured != true
+      || !(!defined(featuredStartAt) || featuredStartAt <= now())
+      || !(!defined(featuredEndAt) || featuredEndAt > now())
+    )
+  ] | order(publishedAt desc) [0...$limit] ${featuredPostProjection}
+}`
+
+interface FeaturedWithFallbackResult {
+  featured: FeaturedBlogPost[]
+  fallback: FeaturedBlogPost[]
+}
+
+/**
+ * Fetch featured blog posts for homepage
+ * Returns up to `limit` posts: featured posts first, then fallback posts to fill remaining slots
+ * Uses a single GROQ query and merges results client-side to avoid duplicates
+ */
+export async function fetchFeaturedPosts(limit: number = 3): Promise<FeaturedBlogPost[]> {
+  const result = await sanityClient.fetch<FeaturedWithFallbackResult>(
+    featuredWithFallbackQuery,
+    { limit },
+    {
+      next: {
+        tags: ['sanity:featured', 'sanity:post', 'sanity:blog'],
+        // Cache indefinitely, revalidate only via revalidateTag
+        revalidate: false,
+      }
+    }
+  )
+
+  const featured = result?.featured || []
+  const fallback = result?.fallback || []
+
+  // If we have enough featured posts, return them
+  if (featured.length >= limit) {
+    return featured.slice(0, limit)
+  }
+
+  // Merge featured + fallback, excluding duplicates
+  const featuredIds = new Set(featured.map(p => p._id))
+  const uniqueFallback = fallback.filter(p => !featuredIds.has(p._id))
+  const merged = [...featured, ...uniqueFallback]
+
+  return merged.slice(0, limit)
+}
+
+/**
  * Legacy function for backward compatibility (used in generateMetadata)
  */
 export async function fetchBlogPostBySlugLegacy(slug: string): Promise<BlogPost | null> {

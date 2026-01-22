@@ -5,8 +5,11 @@ import FeaturedBlog from "@/components/featured-blog";
 import PopularCategories from "@/components/popular-categories";
 import SocialProof from "@/components/social-proof";
 import CoLockup from "@/components/home/CoLockup";
+import { fetchFeaturedPosts } from "@/lib/sanity/queries";
 
-export default function Home() {
+export default async function Home() {
+  // Fetch featured posts server-side (cached indefinitely, revalidated via webhook)
+  const featuredPosts = await fetchFeaturedPosts(3);
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -85,16 +88,23 @@ export default function Home() {
         <FeaturedArtists />
       </section>
 
-      {/* Featured Blog Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Featured Blog</h2>
-          <Link href="/blog" className="text-amber-600 hover:text-amber-700 font-medium">
-            See More...
-          </Link>
-        </div>
-        <FeaturedBlog />
-      </section>
+      {/* Community Stories Section - Only render if we have posts */}
+      {featuredPosts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight text-sunroad-brown-900">
+              Community Stories
+            </h2>
+            <Link 
+              href="/blog" 
+              className="text-sunroad-amber-600 hover:text-sunroad-amber-700 font-medium text-sm sm:text-base"
+            >
+              Explore all stories →
+            </Link>
+          </div>
+          <FeaturedBlog posts={featuredPosts} />
+        </section>
+      )}
 
       {/* Popular Categories Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

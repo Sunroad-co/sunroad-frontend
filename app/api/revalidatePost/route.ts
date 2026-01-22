@@ -70,6 +70,12 @@ export async function POST(request: NextRequest) {
     ;(revalidateTag as (tag: string) => void)('sanity:post')
     revalidatedTags.push('sanity:post')
 
+    // Revalidate featured posts tag and homepage (featured content is displayed on homepage)
+    ;(revalidateTag as (tag: string) => void)('sanity:featured')
+    revalidatePath('/')
+    revalidatedTags.push('sanity:featured')
+    revalidatedPaths.push('/')
+
     // Only when _type === 'post' AND slug is string, revalidate specific post
     if (_type === 'post' && slug && typeof slug === 'string') {
       const postTag = `sanity:post:${slug}`
