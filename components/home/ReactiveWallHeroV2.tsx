@@ -285,24 +285,15 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
   }, [intentIndex, prefersReducedMotion]);
 
   // Ref-based interval controller for intent rotation
-  const startInterval = useCallback(() => {
-    // Clear any existing interval first
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    
-    intervalRef.current = setInterval(() => {
-      setIntentIndex((prev) => (prev + 1) % INTENTS.length);
-    }, INTENT_INTERVAL);
-  }, []);
-
   const stopInterval = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
   }, []);
+
+  // Track mouse position to handle edge cases
+  const mouseOverRef = useRef(false);
 
   // Handle document visibility (tab switch) to prevent "hang"
   useEffect(() => {
@@ -312,10 +303,13 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
         stopInterval();
         setIsPaused(true);
       } else {
-        // Tab visible: resume and immediately advance intent once
+        // Tab visible: reset mouse tracking state
+        // When tab becomes visible after being hidden, we can't reliably know
+        // if the mouse is still over the section, so we reset and let mouse events handle it
+        // This prevents the animation from being stuck paused
+        mouseOverRef.current = false;
         setIsPaused(false);
-        setIntentIndex((prev) => (prev + 1) % INTENTS.length);
-        startInterval();
+        // The mouse events will fire if the mouse is actually over the section
       }
     };
 
@@ -324,28 +318,30 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       stopInterval();
     };
-  }, [startInterval, stopInterval]);
+  }, [stopInterval]);
 
-  // Intent rotation interval - controlled by ref
+  // Intent rotation interval - single source of truth, controlled by isPaused state
   useEffect(() => {
-    if (isPaused) {
-      stopInterval();
-      return;
+    // Always clear any existing interval first to prevent duplicates
+    stopInterval();
+    
+    // Only start interval if not paused
+    if (!isPaused) {
+      intervalRef.current = setInterval(() => {
+        setIntentIndex((prev) => (prev + 1) % INTENTS.length);
+      }, INTENT_INTERVAL);
     }
 
-    startInterval();
-
+    // Cleanup on unmount or when isPaused changes
     return () => {
       stopInterval();
     };
-  }, [isPaused, startInterval, stopInterval]);
+  }, [isPaused, stopInterval]);
 
   return (
     <section 
       className="relative min-h-0 sm:min-h-[100svh] w-full overflow-hidden bg-transparent"
       aria-label="Find local creatives"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
     >
       {/* Background: Reactive Card Wall - sm+ only */}
       <ReactiveCardWall 
@@ -412,7 +408,7 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
               {currentIntent.label}
             </p>
 
-            {/* Category chips with staged reveal */}
+            {/* Category chips with staged reveal - pause on hover for interaction */}
             <div 
               className={`flex flex-wrap justify-center gap-1.5 sm:gap-2 transition-all duration-500 ease-out
                          ${showChips 
@@ -420,6 +416,14 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
                            : "opacity-0 translate-y-2"
                          }
                          motion-reduce:opacity-100 motion-reduce:translate-y-0 motion-reduce:transition-none`}
+              onMouseEnter={() => {
+                mouseOverRef.current = true;
+                setIsPaused(true);
+              }}
+              onMouseLeave={() => {
+                mouseOverRef.current = false;
+                setIsPaused(false);
+              }}
             >
               {currentIntent.categoryIds.map((categoryId, idx) => {
                 // Find category name from ID (reverse lookup)
@@ -503,12 +507,20 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
 
       </div>
 
-      {/* Frosted Console Bar - hidden on mobile, visible sm+ */}
+      {/* Frosted Console Bar - hidden on mobile, visible sm+ - pause on hover for interaction */}
       <div 
         className="hidden sm:block absolute bottom-0 inset-x-0 z-30 
                    bg-white/70 backdrop-blur-xl
                    border-t border-gray-200/50
                    shadow-[0_-8px_30px_rgba(0,0,0,0.04)]"
+        onMouseEnter={() => {
+          mouseOverRef.current = true;
+          setIsPaused(true);
+        }}
+        onMouseLeave={() => {
+          mouseOverRef.current = false;
+          setIsPaused(false);
+        }}
       >
         <div className="max-w-4xl mx-auto px-6 py-5
                        flex items-center justify-between gap-4">
