@@ -342,7 +342,7 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
 
   return (
     <section 
-      className="relative min-h-[100svh] w-full overflow-hidden bg-transparent"
+      className="relative min-h-0 sm:min-h-[100svh] w-full overflow-hidden bg-transparent"
       aria-label="Find local creatives"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -356,7 +356,7 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
       />
 
       {/* Foreground Content */}
-      <div className="relative z-20 min-h-[100svh] flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 lg:px-8 pt-4 sm:pt-24 pb-8 sm:pb-32">
+      <div className="relative z-20 min-h-0 sm:min-h-[100svh] flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 lg:px-8 pt-4 sm:pt-24 pb-0 sm:pb-32">
         
         {/* Glass Panel for readability */}
         <div className="w-full max-w-2xl mx-auto
