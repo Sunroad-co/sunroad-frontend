@@ -5,6 +5,8 @@ import PopularCategories from "@/components/popular-categories";
 import SocialProof from "@/components/social-proof";
 import HomeHero from "@/components/home/HomeHero";
 import HowItWorks from "@/components/home/HowItWorks";
+// DiscoveryLoop is now embedded in ReactiveWallHero, no separate import needed
+// import DiscoveryLoop from "@/components/home/DiscoveryLoop";
 import Faq from "@/components/shared/Faq";
 import type { FaqItem } from "@/components/shared/Faq";
 import { fetchFeaturedPosts } from "@/lib/sanity/queries";
@@ -90,13 +92,13 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section - includes HeroProduct + HeroMasonry with CoLockup overlay */}
+      {/* Hero Section - ReactiveWallHero with embedded DiscoveryLoop */}
       <HomeHero />
- 
+  {/* Social Proof Section */}
+  <SocialProof />
       {/* How It Works Section */}
       <HowItWorks />
- {/* Social Proof Section */}
- <SocialProof />
+
     
 
       {/* Featured Artists Section */}

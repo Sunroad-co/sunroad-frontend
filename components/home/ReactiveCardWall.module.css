@@ -1,0 +1,83 @@
+/**
+ * ReactiveCardWall CSS Module
+ * 
+ * Animations and styles for the reactive card wall background.
+ * Cards float gently and react to intent changes.
+ */
+
+/* Subtle floating animation - different offsets create organic feel */
+@keyframes float1 {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes float2 {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes float3 {
+  0%, 100% { transform: translateY(-4px); }
+  50% { transform: translateY(4px); }
+}
+
+/* Glow pulse for active cards */
+@keyframes glowPulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(217, 119, 6, 0.15), 
+                0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(217, 119, 6, 0.25), 
+                0 8px 30px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Card base styles */
+.card {
+  transition: 
+    filter 0.6s ease-out,
+    transform 0.5s ease-out,
+    opacity 0.5s ease-out,
+    box-shadow 0.5s ease-out;
+  will-change: transform, filter, opacity;
+}
+
+/* Float animation variants */
+.float1 {
+  animation: float1 8s ease-in-out infinite;
+}
+
+.float2 {
+  animation: float2 10s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.float3 {
+  animation: float3 9s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+/* Active card glow */
+.active {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .float1,
+  .float2,
+  .float3 {
+    animation: none;
+  }
+  
+  .active {
+    animation: none;
+    box-shadow: 0 0 25px rgba(217, 119, 6, 0.2), 
+                0 6px 25px rgba(0, 0, 0, 0.12);
+  }
+  
+  .card {
+    transition-duration: 0.3s;
+  }
+}

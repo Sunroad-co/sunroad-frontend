@@ -1,0 +1,157 @@
+/**
+ * DiscoveryLoop CSS Module
+ * 
+ * Animation keyframes and component-specific styles for the 
+ * intent-based discovery section. Keeps globals.css clean.
+ * 
+ * 5 intents × 8s each = 40s total cycle
+ * Each intent: fade in (0.6s) → hold (6.8s) → fade out (0.6s)
+ */
+
+/* ===== Keyframes ===== */
+
+/* Intent cycle animation - 40s total, each intent gets 20% (8s) */
+@keyframes intentCycle {
+  /* Fade in with slight upward settle */
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(6px);
+  }
+  /* Fully visible - 1.5% = 0.6s fade in */
+  1.5% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+  /* Hold visible until fade out - 18.5% = 7.4s hold */
+  18.5% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+  /* Fade out with blur - 20% = end of this intent's time */
+  20% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(-4px);
+  }
+  /* Stay hidden for remaining 80% (other intents' time) */
+  100% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(6px);
+  }
+}
+
+/* Pill entrance animation */
+@keyframes pillEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Container ===== */
+
+.container {
+  /* Base styles handled by Tailwind */
+}
+
+/* Pause all animations on container hover */
+.container:hover .intent,
+.container:hover .chip {
+  animation-play-state: paused;
+}
+
+/* ===== Intent Slides ===== */
+
+.intent {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(6px);
+  animation: intentCycle 40s ease-in-out infinite;
+  will-change: opacity, filter, transform;
+}
+
+/* First intent starts visible immediately */
+.intent0 {
+  composes: intent;
+  animation-delay: 0s;
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
+}
+
+.intent1 {
+  composes: intent;
+  animation-delay: 8s;
+}
+
+.intent2 {
+  composes: intent;
+  animation-delay: 16s;
+}
+
+.intent3 {
+  composes: intent;
+  animation-delay: 24s;
+}
+
+.intent4 {
+  composes: intent;
+  animation-delay: 32s;
+}
+
+/* ===== Category Chips ===== */
+
+.chip {
+  animation: pillEnter 0.4s ease-out both;
+}
+
+/* Hover arrow reveal */
+.chipArrow {
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+.chip:hover .chipArrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ===== Reduced Motion ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  .intent {
+    animation: none;
+    opacity: 0;
+    filter: none;
+    transform: none;
+  }
+  
+  .intent0 {
+    opacity: 1;
+  }
+  
+  .chip {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  
+  .chipArrow {
+    opacity: 0.5;
+    transform: translateX(0);
+  }
+  
+  .container:hover .intent,
+  .container:hover .chip {
+    animation-play-state: running;
+  }
+}

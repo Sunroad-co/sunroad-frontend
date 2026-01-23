@@ -120,7 +120,7 @@ function CenteredOverlay() {
 
           {/* Stats line */}
           <p className="text-center text-xs sm:text-sm text-gray-600 mt-4 sm:mt-6">
-            500+ creatives • dozens of categories • Tulsa &amp; beyond
+            500+ creatives • 100+ of categories • Tulsa &amp; beyond
           </p>
         </div>
       </div>
