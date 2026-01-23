@@ -55,7 +55,8 @@ export default function HeroMasonry({ artists }: HeroMasonryProps) {
   const columns = splitIntoColumns(artists, 3);
 
   // Animation durations for each column (different speeds for visual interest)
-  const columnDurations = ["25s", "32s", "28s"];
+  // Slowed down for more relaxed motion
+  const columnDurations = ["40s", "50s", "45s"];
 
   return (
     <section 
