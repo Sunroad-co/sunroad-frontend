@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import { getAvatarUrl } from "@/lib/media";
 import type { HeroArtist } from "./HomeHero";
@@ -26,9 +26,46 @@ const FLOAT_CLASSES = [styles.float1, styles.float2, styles.float3];
 export default function ReactiveCardWall({ artists, activeArtistIds, activeCategoryIds, backfilledIds }: ReactiveCardWallProps) {
   if (artists.length === 0) return null;
 
+  // Track previous active IDs to detect transitions
+  const prevActiveIdsRef = useRef<Set<string>>(new Set());
+  const isFirstRenderRef = useRef(true);
+  
   // Create a set for O(1) lookup
   const activeSet = new Set(activeArtistIds);
   const activeCategorySet = new Set(activeCategoryIds);
+
+  // Track which cards are transitioning (becoming active/inactive)
+  const transitioningCards = useMemo(() => {
+    const prevSet = prevActiveIdsRef.current;
+    const currentSet = activeSet;
+    const transitioning = new Set<string>();
+    
+    // Skip transitions on first render
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevActiveIdsRef.current = new Set(currentSet);
+      return transitioning;
+    }
+    
+    // Cards becoming active (were inactive, now active)
+    currentSet.forEach(id => {
+      if (!prevSet.has(id)) {
+        transitioning.add(id);
+      }
+    });
+    
+    // Cards becoming inactive (were active, now inactive)
+    prevSet.forEach(id => {
+      if (!currentSet.has(id)) {
+        transitioning.add(id);
+      }
+    });
+    
+    // Update ref for next render
+    prevActiveIdsRef.current = new Set(currentSet);
+    
+    return transitioning;
+  }, [activeArtistIds]);
 
   // Separate active and inactive artists
   const activeArtists: HeroArtist[] = [];
@@ -125,6 +162,7 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
               categoryLabel={categoryLabel}
               gridColumnDesktop={slot.col}
               gridRowDesktop={slot.row}
+              isTransitioning={transitioningCards.has(artist.id)}
             />
           );
         })}
@@ -147,7 +185,7 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
               isActive={false}
               categoryLabel={categoryLabel}
               gridColumnDesktop={obscuredCol}
-              // We don't force rows for inactive, let them stack up
+              isTransitioning={transitioningCards.has(artist.id)}
             />
           );
         })}
@@ -163,9 +201,10 @@ interface ProfileCardProps {
   categoryLabel: string;
   gridColumnDesktop?: number;
   gridRowDesktop?: number;
+  isTransitioning?: boolean;
 }
 
-function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop, gridRowDesktop }: ProfileCardProps) {
+function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop, gridRowDesktop, isTransitioning = false }: ProfileCardProps) {
   // Use full-size avatar for better quality
   const avatarSrc = getAvatarUrl(artist, "full");
   const floatClass = FLOAT_CLASSES[index % 3];
@@ -176,6 +215,8 @@ function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop
         ${styles.card}
         ${isActive ? floatClass : ""}
         ${isActive ? styles.active : ""}
+        ${isTransitioning && isActive ? styles.fadeIn : ""}
+        ${isTransitioning && !isActive ? styles.fadeOut : ""}
         relative rounded-2xl overflow-hidden
         bg-white border border-gray-200
         transition-all duration-700 ease-out

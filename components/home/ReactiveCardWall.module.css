@@ -63,6 +63,38 @@
   animation: glowPulse 2s ease-in-out infinite;
 }
 
+/* Subtle fade in animation for cards becoming active */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Subtle fade out animation for cards becoming inactive */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.fadeOut {
+  animation: fadeOut 0.5s ease-out forwards;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .float1,
@@ -75,6 +107,11 @@
     animation: none;
     box-shadow: 0 0 25px rgba(217, 119, 6, 0.2), 
                 0 6px 25px rgba(0, 0, 0, 0.12);
+  }
+  
+  .fadeIn,
+  .fadeOut {
+    animation: none;
   }
   
   .card {
