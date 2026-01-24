@@ -13,6 +13,7 @@ import ScrollableCategories from '@/components/scrollable-categories'
 import { UserProfile } from '@/hooks/use-user-profile'
 import { useDashboardSnapshot } from '@/hooks/use-dashboard-snapshot'
 import { Pencil } from 'lucide-react'
+import { getProfileUrl } from '@/lib/utils/profile-url'
 
 interface ProfileContentProps {
   user: User
@@ -144,7 +145,7 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
           {/* Mobile View Public Profile Button */}
           <div className="flex justify-center md:hidden mb-3">
             <a
-              href={`/artists/${profile.handle}`}
+              href={getProfileUrl(profile.handle)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sunroad-brown-600 hover:text-sunroad-brown-900 hover:bg-sunroad-amber-50 rounded transition-colors"
@@ -159,7 +160,7 @@ export default function ProfileContent({ user, profile, onProfileUpdate }: Profi
           {/* Desktop Edit Profile Button - Always visible, more prominent on hover */}
           <div className="absolute top-0 right-0 hidden md:flex items-center gap-2">
             <a
-              href={`/artists/${profile.handle}`}
+              href={getProfileUrl(profile.handle)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-sunroad-brown-600 hover:text-sunroad-brown-900 hover:bg-sunroad-amber-50 rounded transition-colors"

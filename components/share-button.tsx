@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Toast from './ui/toast'
+import { getProfileUrlAbsolute } from '@/lib/utils/profile-url'
 
 interface ShareButtonProps {
   artistName: string
@@ -13,7 +14,7 @@ export default function ShareButton({ artistName, artistHandle, className = '' }
   const [showToast, setShowToast] = useState(false)
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/artists/${artistHandle}`
+    const url = getProfileUrlAbsolute(artistHandle)
     const text = `Hey, check out this amazing artist ${artistName} on Sun Road! 🎨✨\n\n${url}`
     
     try {

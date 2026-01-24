@@ -11,6 +11,8 @@ interface ReactiveCardWallProps {
   activeArtistIds: string[];
   activeCategoryIds: number[];
   backfilledIds: Set<string>;
+  showChips: boolean;
+  chipRevealDelay: number;
 }
 
 /** Float animation classes - distributed across cards */
@@ -23,7 +25,7 @@ const FLOAT_CLASSES = [styles.float1, styles.float2, styles.float3];
  * - Donut layout: Active cards forced to outer columns (1, 2, 5, 6), inactive to center (3, 4)
  * - Randomized Vertical Distribution: Active cards are assigned random rows (1-4) to prevent clumping at the top.
  */
-export default function ReactiveCardWall({ artists, activeArtistIds, activeCategoryIds, backfilledIds }: ReactiveCardWallProps) {
+export default function ReactiveCardWall({ artists, activeArtistIds, activeCategoryIds, backfilledIds, showChips, chipRevealDelay }: ReactiveCardWallProps) {
   if (artists.length === 0) return null;
 
   // Track previous active IDs to detect transitions
@@ -35,36 +37,38 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
   const activeCategorySet = new Set(activeCategoryIds);
 
   // Track which cards are transitioning (becoming active/inactive)
-  const transitioningCards = useMemo(() => {
+  // Separate into fadeOut (immediate) and fadeIn (delayed to match chips)
+  const { fadeOutCards, fadeInCards } = useMemo(() => {
     const prevSet = prevActiveIdsRef.current;
     const currentSet = activeSet;
-    const transitioning = new Set<string>();
+    const fadeOut = new Set<string>();
+    const fadeIn = new Set<string>();
     
     // Skip transitions on first render
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
       prevActiveIdsRef.current = new Set(currentSet);
-      return transitioning;
+      return { fadeOutCards: fadeOut, fadeInCards: fadeIn };
     }
     
-    // Cards becoming active (were inactive, now active)
-    currentSet.forEach(id => {
-      if (!prevSet.has(id)) {
-        transitioning.add(id);
+    // Cards becoming inactive (were active, now inactive) - fade out immediately
+    prevSet.forEach(id => {
+      if (!currentSet.has(id)) {
+        fadeOut.add(id);
       }
     });
     
-    // Cards becoming inactive (were active, now inactive)
-    prevSet.forEach(id => {
-      if (!currentSet.has(id)) {
-        transitioning.add(id);
+    // Cards becoming active (were inactive, now active) - fade in when chips appear
+    currentSet.forEach(id => {
+      if (!prevSet.has(id)) {
+        fadeIn.add(id);
       }
     });
     
     // Update ref for next render
     prevActiveIdsRef.current = new Set(currentSet);
     
-    return transitioning;
+    return { fadeOutCards: fadeOut, fadeInCards: fadeIn };
   }, [activeArtistIds]);
 
   // Separate active and inactive artists
@@ -162,7 +166,10 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
               categoryLabel={categoryLabel}
               gridColumnDesktop={slot.col}
               gridRowDesktop={slot.row}
-              isTransitioning={transitioningCards.has(artist.id)}
+              fadeOut={fadeOutCards.has(artist.id)}
+              fadeIn={fadeInCards.has(artist.id)}
+              showChips={showChips}
+              chipRevealDelay={chipRevealDelay}
             />
           );
         })}
@@ -185,7 +192,10 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
               isActive={false}
               categoryLabel={categoryLabel}
               gridColumnDesktop={obscuredCol}
-              isTransitioning={transitioningCards.has(artist.id)}
+              fadeOut={fadeOutCards.has(artist.id)}
+              fadeIn={fadeInCards.has(artist.id)}
+              showChips={showChips}
+              chipRevealDelay={chipRevealDelay}
             />
           );
         })}
@@ -201,13 +211,31 @@ interface ProfileCardProps {
   categoryLabel: string;
   gridColumnDesktop?: number;
   gridRowDesktop?: number;
-  isTransitioning?: boolean;
+  fadeOut?: boolean;
+  fadeIn?: boolean;
+  showChips: boolean;
+  chipRevealDelay: number;
 }
 
-function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop, gridRowDesktop, isTransitioning = false }: ProfileCardProps) {
+function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop, gridRowDesktop, fadeOut = false, fadeIn = false, showChips, chipRevealDelay }: ProfileCardProps) {
   // Use full-size avatar for better quality
   const avatarSrc = getAvatarUrl(artist, "full");
   const floatClass = FLOAT_CLASSES[index % 3];
+  
+  // Determine animation classes and delays
+  // Fade-out happens immediately when intent changes
+  // Fade-in only starts when chips appear (showChips becomes true)
+  const animationClass = fadeOut 
+    ? styles.fadeOut 
+    : (fadeIn && showChips ? styles.fadeIn : "");
+  
+  // Calculate delay: fade-in cards wait for chips, otherwise use stagger
+  const delay = fadeIn && !showChips 
+    ? chipRevealDelay 
+    : (isActive ? (index % 6) * 150 : 0);
+  
+  // For fade-in cards, keep opacity-0 until chips appear
+  const shouldBeVisible = isActive && !(fadeIn && !showChips);
   
   return (
     <div
@@ -215,20 +243,19 @@ function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop
         ${styles.card}
         ${isActive ? floatClass : ""}
         ${isActive ? styles.active : ""}
-        ${isTransitioning && isActive ? styles.fadeIn : ""}
-        ${isTransitioning && !isActive ? styles.fadeOut : ""}
+        ${animationClass}
         relative rounded-2xl overflow-hidden
         bg-white border border-gray-200
         transition-all duration-700 ease-out
         w-full h-full
-        ${isActive 
+        ${shouldBeVisible 
           ? "opacity-100 z-10" 
           : "opacity-0 pointer-events-none z-0"
         }
       `}
       style={{
-        // Stagger animation start for active cards
-        animationDelay: isActive ? `${(index % 6) * 0.15}s` : "0s",
+        // Animation delay for fade transitions and stagger
+        animationDelay: `${delay}ms`,
         // Force grid column position
         ...(gridColumnDesktop !== undefined ? { 
           gridColumn: gridColumnDesktop,

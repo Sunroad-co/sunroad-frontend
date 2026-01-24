@@ -2,6 +2,32 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  async redirects() {
+    return [
+      {
+        source: "/artists/:handle",
+        destination: "/@:handle",
+        permanent: true,
+      },
+      {
+        source: "/artists/:handle/:path*",
+        destination: "/@:handle/:path*",
+        permanent: true,
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/@:handle",
+        destination: "/u/:handle",
+      },
+      {
+        source: "/@:handle/:path*",
+        destination: "/u/:handle/:path*",
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

@@ -11,6 +11,8 @@ const TURNSTILE_SECRET_KEY = Deno.env.get("TURNSTILE_SECRET_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const CONTACT_FROM_EMAIL =
   Deno.env.get("CONTACT_FROM_EMAIL") ?? "notifications@auth.sunroad.io";
+const APP_BASE_URL =
+  Deno.env.get("APP_BASE_URL") ?? "https://sunroad.io";
 
 // "pepper" for hashing identifiers (never store raw IP)
 const IDENTIFIER_PEPPER = Deno.env.get("CONTACT_IDENTIFIER_PEPPER")!;
@@ -545,11 +547,13 @@ Deno.serve(async (req) => {
   // Use sanitized fromName and subject (already stripped of newlines)
   // Strip null chars from message for text version
   const messageForText = messageTrimmedForEmail.replace(/\0/g, '');
+  const profileUrl = `${APP_BASE_URL}/@${artistHandle}`;
+
   const text = `New message via Sun Road
 
 From: ${fromName} <${fromEmailNorm}>
 Subject: ${subject}
-Profile: https://sunroad.io/artists/${artistHandle}
+Profile: ${profileUrl}
 
 ${messageForText}
 
@@ -599,7 +603,7 @@ Reply to this email to respond directly.
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; font-size: 14px; color: #374151;">
-                    <strong style="color: #111827;">Profile:</strong> <a href="https://sunroad.io/artists/${artistHandle}" style="color: #d97706; text-decoration: none;">https://sunroad.io/artists/${artistHandle}</a>
+                    <strong style="color: #111827;">Profile:</strong> <a href="${profileUrl}" style="color: #d97706; text-decoration: none;">${profileUrl}</a>
                   </td>
                 </tr>
               </table>

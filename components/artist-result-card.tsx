@@ -4,6 +4,7 @@ import Link from 'next/link'
 import SRImage from '@/components/media/SRImage'
 import type { SearchResult } from '@/lib/search-artists'
 import { getAvatarUrl } from '@/lib/media'
+import { getProfileUrl } from '@/lib/utils/profile-url'
 
 interface ArtistResultCardProps {
   artist: SearchResult
@@ -36,7 +37,7 @@ export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
 
   return (
     <Link
-      href={`/artists/${artist.handle}`}
+      href={getProfileUrl(artist.handle)}
       className="block bg-white rounded-lg border border-sunroad-brown-200/50 hover:border-sunroad-amber-400 hover:shadow-md transition-all duration-200 p-4 h-full w-full overflow-hidden"
     >
       <div className="flex items-start space-x-4 min-w-0">

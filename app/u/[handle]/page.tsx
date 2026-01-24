@@ -200,7 +200,7 @@ export async function generateMetadata({
     .filter((name): name is string => Boolean(name)) || []
 
   const categoryText = categories.length > 0 
-    ? `Specializing in ${categories.join(', ')}` 
+    ? `Specializing in ${categories.join(', ')}`
     : 'Creative professional'
 
   // Create description from bio or fallback
@@ -219,6 +219,8 @@ export async function generateMetadata({
   // Use avatar as Open Graph image, fallback to banner
   const imageUrl = getMediaUrl(artist.avatar_url) || getMediaUrl(artist.banner_url)
 
+  const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sunroad-frontend.vercel.app'
+
   const metadata: Metadata = {
     title: `${artist.display_name} | Sun Road`,
     description,
@@ -236,7 +238,7 @@ export async function generateMetadata({
       title: `${artist.display_name} | Sun Road`,
       description,
       type: 'profile',
-      url: `https://sunroad-frontend.vercel.app/artists/${handle}`,
+      url: `${appBaseUrl}/@${handle}`,
       siteName: 'Sun Road',
       ...(imageUrl && {
         images: [
@@ -472,7 +474,6 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
           
 
 
-
           {/* Works */}
           <section className="mb-12 mt-12">
             <h2 className="text-xl font-display font-semibold text-sunroad-brown-900 mb-4">Work</h2>
@@ -498,3 +499,4 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
     )
   }
 }
+

@@ -5,6 +5,7 @@ import { BlogPostAuthor } from '@/lib/sanity/queries'
 import SRImage from '../media/SRImage'
 import { urlForImageWithSize } from '@/lib/sanity/image'
 import { PortableText } from '@portabletext/react'
+import { getProfileUrl } from '@/lib/utils/profile-url'
 
 interface AuthorCardProps {
   author?: BlogPostAuthor
@@ -65,7 +66,7 @@ export default function AuthorCard({ author }: AuthorCardProps) {
           <p className="text-xs text-sunroad-brown-500 mb-1.5 uppercase tracking-wide">Written by</p>
           {hasSunroadHandle ? (
             <Link
-              href={`/artists/${author.sunroadHandle}`}
+              href={getProfileUrl(author.sunroadHandle!)}
               className="text-xl font-display font-semibold text-sunroad-brown-900 hover:text-sunroad-amber-600 transition-colors focus:outline-none focus:ring-2 focus:ring-sunroad-amber-400 focus:ring-offset-2 rounded"
             >
               {authorName}

@@ -5,6 +5,7 @@ import SRImage from '@/components/media/SRImage'
 import Link from 'next/link'
 import { urlForImageWithSize } from '@/lib/sanity/image'
 import { BlogPostImage } from '@/lib/sanity/queries'
+import { getProfileUrl } from '@/lib/utils/profile-url'
 
 interface PostBodyProps {
   content: any // Portable Text content
@@ -103,7 +104,7 @@ const components: PortableTextComponents = {
           // Artist reference
           if (ref._type === 'artist' && ref.handle) {
             return (
-              <Link href={`/artists/${ref.handle}`} className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline">
+              <Link href={getProfileUrl(ref.handle)} className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline">
                 {children}
               </Link>
             )
@@ -122,7 +123,7 @@ const components: PortableTextComponents = {
         // Fallback: if _ref is a string (legacy format), try to use it as handle
         if (typeof value.reference === 'string') {
           return (
-            <Link href={`/artists/${value.reference}`} className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline">
+            <Link href={getProfileUrl(value.reference)} className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline">
               {children}
             </Link>
           )

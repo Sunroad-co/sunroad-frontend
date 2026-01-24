@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
  * Session mode: Authenticated via Supabase session cookie -> user can only revalidate their own artist handle
  * 
  * IMPORTANT: In session mode, tags from client are IGNORED to prevent tag abuse.
- * Only the artist's own cache is revalidated: artist:${handle} and /artists/${handle}
+ * Only the artist's own cache is revalidated: artist:${handle} and /u/${handle}
  */
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       // Optional handle-based revalidation in system mode
       if (handle) {
         await revalidateTag(`artist:${handle}`, 'max')
-        await revalidatePath(`/artists/${handle}`)
+        await revalidatePath(`/u/${handle}`)
         console.log('[Revalidate] System mode: Revalidated artist', handle)
       }
 
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
 
       // Revalidate only the artist's own cache
       await revalidateTag(`artist:${handle}`, 'max')
-      await revalidatePath(`/artists/${handle}`)
+      await revalidatePath(`/u/${handle}`)
 
       // Optionally revalidate artist works if artistId matches
       if (artistId && profile.id === artistId) {

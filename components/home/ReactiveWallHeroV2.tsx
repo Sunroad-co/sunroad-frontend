@@ -349,6 +349,8 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
         activeArtistIds={activeArtistIds}
         activeCategoryIds={activeCategoryIds}
         backfilledIds={backfilledIds}
+        showChips={showChips}
+        chipRevealDelay={CHIP_REVEAL_DELAY}
       />
 
       {/* Foreground Content */}

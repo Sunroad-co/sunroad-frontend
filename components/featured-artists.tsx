@@ -5,6 +5,7 @@ import SRImage from '@/components/media/SRImage'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getMediaUrl } from '@/lib/media'
+import { getProfileUrl } from '@/lib/utils/profile-url'
 
 interface Artist {
   id: string
@@ -110,7 +111,7 @@ export default function FeaturedArtists() {
         return (
           <Link
             key={artist.id}
-            href={`/artists/${artist.handle}`}
+            href={getProfileUrl(artist.handle)}
             prefetch={false}
             className="bg-white rounded-2xl border border-gray-200 overflow-hidden 
                        shadow-sm hover:shadow-md hover:-translate-y-1 

@@ -6,6 +6,7 @@ import SRImage from '@/components/media/SRImage'
 import { useRouter } from 'next/navigation'
 import { useSearch } from '@/hooks/use-search'
 import { getAvatarUrl } from '@/lib/media'
+import { getProfileUrl } from '@/lib/utils/profile-url'
 
 interface SearchBarProps {
   placeholder?: string
@@ -210,7 +211,7 @@ export default function SearchBar({
               return (
                 <Link
                   key={artist.id}
-                  href={`/artists/${artist.handle}`}
+                  href={getProfileUrl(artist.handle)}
                   prefetch={false}
                   onMouseDown={handleResultMouseDown}
                   onMouseEnter={() => handleResultMouseEnter(index)}
@@ -401,7 +402,7 @@ export default function SearchBar({
         const selectedArtist = results[activeIndex]
         if (selectedArtist) {
           handleResultClick()
-          router.push(`/artists/${selectedArtist.handle}`)
+          router.push(getProfileUrl(selectedArtist.handle))
         }
         return
       }
@@ -600,7 +601,7 @@ export default function SearchBar({
                   return (
                     <Link
                       key={artist.id}
-                      href={`/artists/${artist.handle}`}
+                      href={getProfileUrl(artist.handle)}
                       prefetch={false}
                       onMouseDown={handleResultMouseDown}
                       onMouseEnter={() => handleResultMouseEnter(index)}
@@ -778,10 +779,10 @@ export default function SearchBar({
                 const categories = formatCategories(artist.categories)
                 const isActive = activeIndex === index
                 
-                return (
+                  return (
                   <Link
                     key={artist.id}
-                    href={`/artists/${artist.handle}`}
+                    href={getProfileUrl(artist.handle)}
                     prefetch={false}
                     onMouseDown={handleResultMouseDown}
                     onMouseEnter={() => handleResultMouseEnter(index)}

@@ -462,7 +462,7 @@ export default function OnboardingForm({
                     isHandleAvailable === false && "border-red-500 focus-within:ring-red-500"
                   )}>
                     <span className="px-2 sm:px-3 text-xs text-sunroad-brown-500 whitespace-nowrap select-none flex-shrink-0 font-body">
-                      sunroad.io/artists/
+                      sunroad.io/@
                     </span>
                     <Input
                       id="handle"
