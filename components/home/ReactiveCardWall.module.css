@@ -8,17 +8,17 @@
 /* Subtle floating animation - different offsets create organic feel */
 @keyframes float1 {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  50% { transform: translateY(-4px); }
 }
 
 @keyframes float2 {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  50% { transform: translateY(-3px); }
 }
 
 @keyframes float3 {
-  0%, 100% { transform: translateY(-4px); }
-  50% { transform: translateY(4px); }
+  0%, 100% { transform: translateY(-2px); }
+  50% { transform: translateY(2px); }
 }
 
 /* Glow pulse for active cards */
@@ -41,6 +41,12 @@
     opacity 0.5s ease-out,
     box-shadow 0.5s ease-out;
   will-change: transform, filter, opacity;
+}
+
+/* Subtle hover effect for revealed cards - uses box-shadow to avoid transform conflicts */
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 25px rgba(217, 119, 6, 0.25);
+  transition: box-shadow 0.3s ease-out;
 }
 
 /* Float animation variants */

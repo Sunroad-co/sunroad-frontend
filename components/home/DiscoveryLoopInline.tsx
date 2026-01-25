@@ -110,7 +110,7 @@ const INTENT_CLASSES = [
 export default function DiscoveryLoopInline() {
   return (
     <div 
-      className={`${styles.container} group relative`}
+      className={`${styles.container} group relative max-w-2xl mx-auto`}
       role="region"
       aria-live="polite"
       aria-atomic="true"
@@ -122,7 +122,7 @@ export default function DiscoveryLoopInline() {
       </p>
 
       {/* Intent stack - all intents positioned absolutely, animated in sequence */}
-      <div className="relative w-full h-[120px] sm:h-[140px]">
+      <div className="relative w-full max-w-2xl mx-auto h-[160px] sm:h-[140px] md:h-[120px]">
         {INTENTS.map((intent, index) => (
           <IntentSlide 
             key={intent.sentence}
@@ -154,12 +154,12 @@ function IntentSlide({ intent, index }: IntentSlideProps) {
       aria-hidden={index !== 0 ? "true" : undefined}
     >
       {/* Intent sentence */}
-      <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-semibold text-gray-900 text-center tracking-tight mb-4 sm:mb-5">
+      <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-semibold text-gray-900 text-center tracking-tight mb-3 sm:mb-4">
         {intent.sentence}
       </h2>
       
       {/* Category chips */}
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 max-w-lg mx-auto">
         {intent.categories.map((category, catIndex) => (
           <CategoryChip 
             key={category}
@@ -187,8 +187,8 @@ function CategoryChip({ category, index }: CategoryChipProps) {
     <Link
       href={href}
       className={`${styles.chip} group/chip inline-flex items-center gap-1.5 
-                 px-3 py-1.5 sm:px-4 sm:py-2
-                 text-sm font-medium text-gray-600
+                 px-2.5 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2
+                 text-xs sm:text-sm font-medium text-gray-600
                  bg-white/90 backdrop-blur-sm
                  border border-gray-200 rounded-full
                  shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]
