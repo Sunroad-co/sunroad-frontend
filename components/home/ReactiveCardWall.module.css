@@ -87,6 +87,11 @@
   }
 }
 
+/* Pre-reveal state: keep cards at opacity 0 until animation starts */
+.preReveal {
+  opacity: 0 !important;
+}
+
 .fadeIn {
   animation: fadeIn 0.5s ease-out forwards;
   /* Override base opacity during animation */
@@ -114,6 +119,11 @@
   .fadeIn,
   .fadeOut {
     animation: none;
+  }
+  
+  .preReveal {
+    /* In reduced motion, don't force opacity 0 - let cards appear immediately */
+    opacity: 1 !important;
   }
   
   .card {

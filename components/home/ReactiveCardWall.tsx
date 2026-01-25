@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState, memo } from "react";
 import Image from "next/image";
 import { getAvatarUrl } from "@/lib/media";
 import type { HeroArtist } from "./HomeHero";
@@ -18,57 +18,168 @@ interface ReactiveCardWallProps {
 /** Float animation classes - distributed across cards */
 const FLOAT_CLASSES = [styles.float1, styles.float2, styles.float3];
 
+/** Tunable constant: milliseconds between each card reveal */
+const REVEAL_STEP_MS = 500;
+
+/**
+ * Hook to detect prefers-reduced-motion preference
+ * Returns true if user prefers reduced motion
+ */
+function usePrefersReducedMotion(): boolean {
+  const [prefersReduced, setPrefersReduced] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReduced(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => setPrefersReduced(e.matches);
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
+
+  return prefersReduced;
+}
+
+/**
+ * Seeded pseudo-random number generator using sin
+ * Returns a function that produces deterministic random values [0, 1)
+ */
+function createSeededRandom(seedString: string): () => number {
+  let seed = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    seed += seedString.charCodeAt(i);
+  }
+  return () => {
+    const x = Math.sin(seed++) * 10000;
+    return x - Math.floor(x);
+  };
+}
+
+/**
+ * Fisher-Yates shuffle with seeded random
+ */
+function seededShuffle<T>(array: T[], random: () => number): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 /**
  * ReactiveCardWall - Background grid of profile cards with "Donut" layout (desktop/tablet only)
- * * Features:
+ * 
+ * Features:
  * - Hidden on mobile (sm+ only)
  * - Donut layout: Active cards forced to outer columns (1, 2, 5, 6), inactive to center (3, 4)
  * - Randomized Vertical Distribution: Active cards are assigned random rows (1-4) to prevent clumping at the top.
+ * - Sequential reveal: Cards fade in one-by-one in a random order per intent change.
  */
 export default function ReactiveCardWall({ artists, activeArtistIds, activeCategoryIds, backfilledIds, showChips, chipRevealDelay }: ReactiveCardWallProps) {
   if (artists.length === 0) return null;
 
-  // Track previous active IDs to detect transitions
-  const prevActiveIdsRef = useRef<Set<string>>(new Set());
+  // Respect reduced motion preference
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  // Track previous active IDs to detect transitions and intent changes
+  const prevActiveIdsArrayRef = useRef<string[]>([]);
   const isFirstRenderRef = useRef(true);
   
   // Create a set for O(1) lookup
   const activeSet = new Set(activeArtistIds);
   const activeCategorySet = new Set(activeCategoryIds);
 
-  // Track which cards are transitioning (becoming active/inactive)
-  // Separate into fadeOut (immediate) and fadeIn (delayed to match chips)
-  const { fadeOutCards, fadeInCards } = useMemo(() => {
-    const prevSet = prevActiveIdsRef.current;
-    const currentSet = activeSet;
-    const fadeOut = new Set<string>();
-    const fadeIn = new Set<string>();
-    
-    // Skip transitions on first render
+  // Detect intent change: activeArtistIds array changed (not just set membership)
+  const intentChanged = useMemo(() => {
     if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      prevActiveIdsRef.current = new Set(currentSet);
-      return { fadeOutCards: fadeOut, fadeInCards: fadeIn };
+      return false;
     }
-    
-    // Cards becoming inactive (were active, now inactive) - fade out immediately
+    const prevArray = prevActiveIdsArrayRef.current;
+    if (prevArray.length !== activeArtistIds.length) {
+      return true;
+    }
+    return prevArray.some((id, i) => id !== activeArtistIds[i]);
+  }, [activeArtistIds]);
+
+  // Compute deterministic shuffled order of activeArtistIds when intent changes
+  const shuffledOrder = useMemo(() => {
+    if (activeArtistIds.length === 0) return [];
+    const seedString = activeArtistIds.join("|");
+    const random = createSeededRandom(seedString);
+    return seededShuffle([...activeArtistIds], random);
+  }, [activeArtistIds.join("|")]);
+
+  // Memoized Map for O(1) lookup of order index by artist ID
+  const shuffledOrderMap = useMemo(() => {
+    const map = new Map<string, number>();
+    shuffledOrder.forEach((id, index) => {
+      map.set(id, index);
+    });
+    return map;
+  }, [shuffledOrder]);
+
+  // State: which active cards are currently visible
+  const [visibleActiveIds, setVisibleActiveIds] = useState<Set<string>>(() => {
+    // On first render or reduced motion, show all immediately
+    return prefersReducedMotion ? new Set(activeArtistIds) : new Set();
+  });
+
+  // Track cards leaving active set for fade-out
+  const fadeOutCards = useMemo(() => {
+    if (isFirstRenderRef.current) {
+      return new Set<string>();
+    }
+    const prevSet = new Set(prevActiveIdsArrayRef.current);
+    const currentSet = new Set(activeArtistIds);
+    const fadeOut = new Set<string>();
     prevSet.forEach(id => {
       if (!currentSet.has(id)) {
         fadeOut.add(id);
       }
     });
+    return fadeOut;
+  }, [activeArtistIds.join(",")]);
+
+  // Sequential reveal timer: add one card every REVEAL_STEP_MS
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      // Show all immediately for reduced motion
+      setVisibleActiveIds(new Set(activeArtistIds));
+      return;
+    }
+
+    // Reset visible set on intent change
+    setVisibleActiveIds(new Set());
     
-    // Cards becoming active (were inactive, now active) - fade in when chips appear
-    currentSet.forEach(id => {
-      if (!prevSet.has(id)) {
-        fadeIn.add(id);
+    if (shuffledOrder.length === 0) {
+      return;
+    }
+
+    // Start sequential reveal
+    let currentIndex = 0;
+    const timer = setInterval(() => {
+      if (currentIndex < shuffledOrder.length) {
+        setVisibleActiveIds(prev => {
+          const next = new Set(prev);
+          next.add(shuffledOrder[currentIndex]);
+          return next;
+        });
+        currentIndex++;
+      } else {
+        clearInterval(timer);
       }
-    });
-    
-    // Update ref for next render
-    prevActiveIdsRef.current = new Set(currentSet);
-    
-    return { fadeOutCards: fadeOut, fadeInCards: fadeIn };
+    }, REVEAL_STEP_MS);
+
+    return () => clearInterval(timer);
+  }, [activeArtistIds.join("|"), shuffledOrder, prefersReducedMotion]);
+
+  // Update refs after processing
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+    }
+    prevActiveIdsArrayRef.current = [...activeArtistIds];
   }, [activeArtistIds]);
 
   // Separate active and inactive artists
@@ -86,9 +197,9 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
   // --- POSITIONING LOGIC ---
 
   // Desktop (6 columns): columns 1, 2, 5, 6 are safe (outer edges)
-  const safeColumnsDesktop = [1, 2, 5, 6]; 
+  const safeColumnsDesktop = [1, 2, 6]; 
   // We want to distribute cards across 4 rows to cover the screen height
-  const safeRows = [1, 2, 3, 4];
+  const safeRows = [1, 2, 3];
 
   // Generate all possible "Safe Slots" (Col, Row)
   // 4 cols * 4 rows = 16 slots. Plenty for our ~6-8 active cards.
@@ -104,22 +215,12 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
 
   // Shuffle slots deterministically based on the current set of active artists
   // This ensures the layout scrambles freshly for every new intent, but stays stable during the intent.
+  // Uses same seed approach as reveal order for consistency
   const shuffledSlots = useMemo(() => {
-    const slots = [...safeSlots];
-    // Simple seed from the first active artist ID
-    const seedString = activeArtists.length > 0 ? activeArtists[0].id : "seed";
-    let seed = 0;
-    for (let i = 0; i < seedString.length; i++) seed += seedString.charCodeAt(i);
-
-    // Fisher-Yates shuffle with seeded random
-    for (let i = slots.length - 1; i > 0; i--) {
-      const x = Math.sin(seed++) * 10000;
-      const rand = x - Math.floor(x);
-      const j = Math.floor(rand * (i + 1));
-      [slots[i], slots[j]] = [slots[j], slots[i]];
-    }
-    return slots;
-  }, [activeArtists, safeSlots]);
+    const seedString = activeArtistIds.join("|") + "::slots";
+    const random = createSeededRandom(seedString);
+    return seededShuffle(safeSlots, random);
+  }, [activeArtistIds.join("|"), safeSlots]);
 
   return (
     <div 
@@ -154,8 +255,13 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
               : (artist.category_labels[0] || artist.category_label || "Creative");
           }
           
-          // Assign random safe slot
-          const slot = shuffledSlots[index % shuffledSlots.length];
+          // Assign slot based on shuffled order position
+          const revealOrder = shuffledOrder.indexOf(artist.id);
+          const slotIndex = revealOrder >= 0 ? revealOrder : index;
+          const slot = shuffledSlots[slotIndex % shuffledSlots.length];
+          
+          // Card is visible only if in visibleActiveIds
+          const isVisible = visibleActiveIds.has(artist.id);
           
           return (
             <ProfileCard
@@ -167,9 +273,8 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
               gridColumnDesktop={slot.col}
               gridRowDesktop={slot.row}
               fadeOut={fadeOutCards.has(artist.id)}
-              fadeIn={fadeInCards.has(artist.id)}
-              showChips={showChips}
-              chipRevealDelay={chipRevealDelay}
+              isVisible={isVisible}
+              prefersReducedMotion={prefersReducedMotion}
             />
           );
         })}
@@ -193,9 +298,8 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
               categoryLabel={categoryLabel}
               gridColumnDesktop={obscuredCol}
               fadeOut={fadeOutCards.has(artist.id)}
-              fadeIn={fadeInCards.has(artist.id)}
-              showChips={showChips}
-              chipRevealDelay={chipRevealDelay}
+              isVisible={false}
+              prefersReducedMotion={prefersReducedMotion}
             />
           );
         })}
@@ -212,50 +316,46 @@ interface ProfileCardProps {
   gridColumnDesktop?: number;
   gridRowDesktop?: number;
   fadeOut?: boolean;
-  fadeIn?: boolean;
-  showChips: boolean;
-  chipRevealDelay: number;
+  isVisible: boolean;
+  prefersReducedMotion: boolean;
 }
 
-function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop, gridRowDesktop, fadeOut = false, fadeIn = false, showChips, chipRevealDelay }: ProfileCardProps) {
+const ProfileCard = memo(function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop, gridRowDesktop, fadeOut = false, isVisible, prefersReducedMotion }: ProfileCardProps) {
   // Use full-size avatar for better quality
   const avatarSrc = getAvatarUrl(artist, "full");
   const floatClass = FLOAT_CLASSES[index % 3];
   
-  // Determine animation classes and delays
-  // Fade-out happens immediately when intent changes
-  // Fade-in only starts when chips appear (showChips becomes true)
-  const animationClass = fadeOut 
-    ? styles.fadeOut 
-    : (fadeIn && showChips ? styles.fadeIn : "");
+  // Determine animation classes
+  const animationClass = fadeOut ? styles.fadeOut : "";
   
-  // Calculate delay: fade-in cards wait for chips, otherwise use stagger
-  const delay = fadeIn && !showChips 
-    ? chipRevealDelay 
-    : (isActive ? (index % 6) * 150 : 0);
+  // Calculate animation delay for fade-out only
+  const animationDelay = fadeOut ? 0 : (isActive ? (index % 6) * 50 : 0);
   
-  // For fade-in cards, keep opacity-0 until chips appear
-  const shouldBeVisible = isActive && !(fadeIn && !showChips);
+  // Visibility: active cards are visible only if in visibleActiveIds
+  // Cards leaving active set fade out immediately
+  const shouldShow = isActive && isVisible && !fadeOut;
+  const zIndexClass = shouldShow ? "z-10" : "z-0";
   
   return (
     <div
       className={`
         ${styles.card}
-        ${isActive ? floatClass : ""}
-        ${isActive ? styles.active : ""}
+        ${isActive && shouldShow ? floatClass : ""}
+        ${isActive && shouldShow ? styles.active : ""}
         ${animationClass}
         relative rounded-2xl overflow-hidden
         bg-white border border-gray-200
         transition-all duration-700 ease-out
         w-full h-full
-        ${shouldBeVisible 
-          ? "opacity-100 z-10" 
-          : "opacity-0 pointer-events-none z-0"
+        ${zIndexClass}
+        ${shouldShow
+          ? "opacity-100" 
+          : "opacity-0 pointer-events-none"
         }
       `}
       style={{
-        // Animation delay for fade transitions and stagger
-        animationDelay: `${delay}ms`,
+        // Animation delay for fade transitions and sequential reveal
+        animationDelay: `${animationDelay}ms`,
         // Force grid column position
         ...(gridColumnDesktop !== undefined ? { 
           gridColumn: gridColumnDesktop,
@@ -308,8 +408,8 @@ function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop
         </div>
       </div>
       
-      {/* Active glow ring */}
-      {isActive && (
+      {/* Active glow ring - only show when visible */}
+      {isActive && shouldShow && (
         <div 
           className="absolute inset-0 rounded-2xl pointer-events-none
                      ring-2 ring-amber-400/60 shadow-[0_0_30px_rgba(217,119,6,0.2)]"
@@ -317,4 +417,4 @@ function ProfileCard({ artist, index, isActive, categoryLabel, gridColumnDesktop
       )}
     </div>
   );
-}
+});

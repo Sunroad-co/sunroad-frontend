@@ -147,7 +147,7 @@ export const INTENTS: Intent[] = [
   },
 ];
 
-const INTENT_INTERVAL = 5000; // 5 seconds per intent
+const INTENT_INTERVAL = 7000; // 7 seconds per intent (allows full sequential reveal: 650ms * 6 + 1500ms buffer)
 const ACTIVE_CARD_COUNT_DESKTOP = 6;
 
 /**
@@ -362,7 +362,7 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
                        rounded-2xl sm:rounded-3xl
                        ring-1 ring-black/5
                        shadow-[0_8px_40px_rgba(0,0,0,0.08)]
-                       px-5 py-8 sm:px-10 sm:py-12">
+                       px-5 py-8 sm:px-2 sm:py-8">
           
           {/* Main headline - reduced prominence */}
           <h1 className="text-center text-xl sm:text-2xl lg:text-3xl font-display font-medium text-gray-700 tracking-tight leading-[1.2] mb-5 sm:mb-6">
