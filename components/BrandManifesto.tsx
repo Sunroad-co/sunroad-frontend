@@ -11,7 +11,7 @@ import Image from 'next/image'
  * - Elements touch edge-to-edge with no gaps
  * - No padding for seamless flow to HeroMasonry below
  * - Desktop: All elements match 600px height (images and center card)
- * - Animation sequencing:
+ * - Animation sequencing (triggered when user scrolls ~30% into section):
  *   - After 150ms: BW overlays fade in (0->1 over ~1400ms)
  *   - After 600ms: Center card fades in
  *   - After 1100ms (500ms after card appears): BW→color crossfade starts with light bloom effect:
@@ -63,8 +63,11 @@ export default function BrandManifesto() {
 
     const observerOptions: IntersectionObserverInit = {
       root: null,
-      rootMargin: '0px',
-      threshold: 0.2,
+      // Use negative top margin to delay trigger until user has scrolled ~30% into the section
+      // This ensures the animation starts when the section is well into view and user won't miss it
+      // -30% top margin means intersection area starts 30% down from top of section
+      rootMargin: '-30% 0px -20% 0px',
+      threshold: 0.3,
     }
 
     const observer = new IntersectionObserver((entries) => {

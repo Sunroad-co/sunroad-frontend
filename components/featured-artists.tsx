@@ -88,14 +88,14 @@ export default function FeaturedArtists() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-            <div className="h-48 bg-gray-200"></div>
-            <div className="p-4 space-y-2">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            <div className="w-full h-48 bg-gray-200"></div>
+            <div className="p-3 sm:p-4 space-y-2">
+              <div className="h-3 sm:h-4 bg-gray-200 rounded"></div>
+              <div className="h-2.5 sm:h-3 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-2.5 sm:h-3 bg-gray-200 rounded w-1/2"></div>
             </div>
           </div>
         ))}
@@ -104,7 +104,7 @@ export default function FeaturedArtists() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {artists.map((artist) => {
         // Use FULL avatar for featured cards (higher quality showcase)
         const avatarSrc = getMediaUrl(artist.avatar_url);
@@ -118,19 +118,20 @@ export default function FeaturedArtists() {
                        transition-all duration-300 group"
           >
             {/* Image */}
-            <div className="aspect-square relative bg-gray-100 overflow-hidden">
+            <div className="relative overflow-hidden rounded-t-2xl">
               {avatarSrc ? (
                 <SRImage
                   src={avatarSrc}
                   alt={artist.display_name}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
+                  width={400}
+                  height={300}
+                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                   mode="raw"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 20vw"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
-                  <span className="text-amber-600 font-bold text-2xl">
+                <div className="w-full h-48 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                  <span className="text-amber-600 font-bold text-xl sm:text-2xl">
                     {artist.display_name.charAt(0)}
                   </span>
                 </div>
@@ -138,21 +139,21 @@ export default function FeaturedArtists() {
             </div>
           
             {/* Text */}
-            <div className="p-4 space-y-2">
-              <h3 className="font-display font-semibold text-gray-900 text-base truncate">
+            <div className="p-3 sm:p-4 space-y-1.5 sm:space-y-2">
+              <h3 className="font-display font-semibold text-gray-900 text-sm sm:text-base truncate leading-tight">
                 {artist.display_name}
               </h3>
-              <p className="text-sm text-gray-500 truncate">
+              <p className="text-xs sm:text-sm text-gray-500 truncate leading-tight">
                 {[artist.city, artist.state].filter(Boolean).join(', ')}
               </p>
           
               {/* Category chip(s) */}
               {artist.category && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
                   {artist.category.split(',').map((cat) => (
                     <span
                       key={cat}
-                      className="inline-block bg-amber-50 text-amber-700 text-xs font-medium px-2 py-1 rounded-full"
+                      className="inline-block bg-amber-50 text-amber-700 text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full"
                     >
                       {cat.trim()}
                     </span>
