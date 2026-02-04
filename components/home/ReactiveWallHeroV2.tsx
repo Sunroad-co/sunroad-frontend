@@ -497,13 +497,13 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2
                        transition-colors py-2"
             >
-              Are you a creative? <span className="text-amber-600 hover:text-amber-700">Claim profile</span>
+              Are you a creative? <span className="text-amber-600 hover:text-amber-700">Claim your  profile</span>
             </Link>
           </div>
 
           {/* Tagline - visible on mobile inside panel */}
           <p className="sm:hidden text-center text-xs text-gray-400 mt-4">
-            Browse freely – contact directly. No commissions.
+            Browse freely. Contact directly. No commissions.
           </p>
         </div>
 
@@ -528,7 +528,7 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
                        flex items-center justify-between gap-4">
           {/* Left side - tagline */}
           <p className="text-sm text-gray-600">
-            Browse freely – contact directly. <span className="text-gray-400">No commissions.</span>
+            Browse freely. Contact directly. <span className="text-gray-400">No commissions.</span>
           </p>
 
           {/* Right side - CTAs */}
@@ -540,7 +540,7 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2
                        transition-colors"
             >
-              Are you a creative? <span className="text-amber-600 hover:text-amber-700">Claim profile</span>
+              Are you a creative? <span className="text-amber-600 hover:text-amber-700">Claim your profile</span>
             </Link>
 
             {/* Primary CTA */}

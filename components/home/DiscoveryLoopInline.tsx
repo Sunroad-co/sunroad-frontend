@@ -134,7 +134,7 @@ export default function DiscoveryLoopInline() {
       
       {/* Reassurance line */}
       <p className="text-center text-sm text-gray-400 mt-4">
-        Browse freely – contact directly.
+        Browse freely. Contact directly.
       </p>
     </div>
   );

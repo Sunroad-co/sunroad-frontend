@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useSearch } from '@/hooks/use-search'
 import { getAvatarUrl } from '@/lib/media'
 import { getProfileUrl } from '@/lib/utils/profile-url'
+import { useUser } from '@/hooks/use-user'
 
 interface SearchBarProps {
   placeholder?: string
@@ -112,6 +113,7 @@ export default function SearchBar({
   nearMeCoords
 }: SearchBarProps) {
   const router = useRouter()
+  const { user } = useUser()
   const [isFocused, setIsFocused] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1) // For keyboard navigation
   const inputRef = useRef<HTMLInputElement>(null)
@@ -119,6 +121,7 @@ export default function SearchBar({
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isMouseInDropdownRef = useRef(false)
   const listboxId = 'artist-search-listbox'
+  const isUnauthenticated = !user
   
   // Local state for query when disableDropdown is true
   const [localQuery, setLocalQuery] = useState(controlledValue || '')
@@ -280,6 +283,25 @@ export default function SearchBar({
                              transition-colors duration-150 hover:bg-amber-50 py-2 rounded-lg"
                 >
                   View all results for &quot;{query}&quot;
+                </Link>
+              </div>
+            )}
+            
+            {/* Sign Up CTA for unauthenticated users */}
+            {isUnauthenticated && (
+              <div className="px-4 py-3 border-t border-gray-100 bg-gradient-to-br from-amber-50/50 to-transparent">
+                <p className="text-xs text-gray-600 text-center mb-2 leading-relaxed">
+                  We are a growing platform. Join the community of creatives today!
+                </p>
+                <Link
+                  href="/signup"
+                  prefetch={false}
+                  onMouseDown={handleResultMouseDown}
+                  onClick={handleResultClick}
+                  className="block text-center text-sm text-amber-700 hover:text-amber-800 font-medium 
+                             transition-colors duration-150 hover:bg-amber-100 py-2 px-4 rounded-lg border border-amber-200/60"
+                >
+                  Sign Up
                 </Link>
               </div>
             )}
@@ -673,6 +695,25 @@ export default function SearchBar({
                     </Link>
                   </div>
                 )}
+                
+                {/* Sign Up CTA for unauthenticated users */}
+                {isUnauthenticated && (
+                  <div className="px-4 py-3 border-t border-gray-100 bg-gradient-to-br from-amber-50/50 to-transparent">
+                    <p className="text-xs text-gray-600 text-center mb-2 leading-relaxed">
+                      We are a growing platform. Join the community of creatives today!
+                    </p>
+                    <Link
+                      href="/signup"
+                      prefetch={false}
+                      onMouseDown={handleResultMouseDown}
+                      onClick={handleResultClick}
+                      className="block text-center text-sm text-amber-700 hover:text-amber-800 font-medium 
+                                 transition-colors duration-150 hover:bg-amber-100 py-2 px-4 rounded-lg border border-amber-200/60"
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
               </div>
             ) : query.length >= 2 && !loading && hasSearched && results.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
@@ -859,6 +900,25 @@ export default function SearchBar({
                                transition-colors duration-150 hover:bg-amber-50 py-2 rounded-lg"
                   >
                     View all results for &quot;{query}&quot;
+                  </Link>
+                </div>
+              )}
+              
+              {/* Sign Up CTA for unauthenticated users */}
+              {isUnauthenticated && (
+                <div className="px-4 py-3 border-t border-gray-100 bg-gradient-to-br from-amber-50/50 to-transparent">
+                  <p className="text-xs text-gray-600 text-center mb-2 leading-relaxed">
+                    We are a growing platform. Join the community of creatives today!
+                  </p>
+                  <Link
+                    href="/signup"
+                    prefetch={false}
+                    onMouseDown={handleResultMouseDown}
+                    onClick={handleResultClick}
+                    className="block text-center text-sm text-amber-700 hover:text-amber-800 font-medium 
+                               transition-colors duration-150 hover:bg-amber-100 py-2 px-4 rounded-lg border border-amber-200/60"
+                  >
+                    Sign Up
                   </Link>
                 </div>
               )}

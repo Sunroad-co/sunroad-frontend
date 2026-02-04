@@ -147,7 +147,7 @@ export default function BrandManifesto() {
         <div className={`relative flex-shrink-0 w-auto max-w-[360px] h-[600px] flex flex-col justify-center transition-opacity duration-700 ease-in-out ${
           showCard ? 'opacity-100' : 'opacity-0 pointer-events-none'
         } motion-reduce:opacity-100 motion-reduce:pointer-events-auto`}>
-          <div className="relative bg-white/10 backdrop-blur-sm rounded-3xl p-6 shadow-2xl h-full flex flex-col justify-center">
+          <div className="relative bg-white/10 backdrop-blur-sm rounded-t-3xl p-6 shadow-2xl h-full flex flex-col justify-center">
             <Image
               src="/sunroad_artwork.png"
               alt="Connecting you to local creatives"
@@ -266,7 +266,7 @@ export default function BrandManifesto() {
           <div className="relative bg-white/80 backdrop-blur-sm rounded-full shadow-2xl p-3">
             <div className="relative w-[90px] h-[90px]">
               <Image
-                src="/sunroad_artwork.png"
+                src="/sunroad_logo.png"
                 alt="Sun Road"
                 fill
                 sizes="90px"

@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, Suspense, useMemo } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import ArtistSearchControls from '@/components/artist-search-controls'
 import ArtistResultCard from '@/components/artist-result-card'
 import { useArtistSearchResults } from '@/hooks/use-artist-search-results'
+import { useUser } from '@/hooks/use-user'
 import type { Location } from '@/hooks/use-location-search'
 import type { NearMeCoords } from '@/components/where-filter-pill'
 import { createClient } from '@/lib/supabase/client'
@@ -213,6 +215,9 @@ function SearchPageContent() {
   }, [selectedCategoryIds.join(',')])
 
   // Use search results hook
+  const { user } = useUser()
+  const isUnauthenticated = !user
+
   const {
     results,
     loading,
@@ -314,10 +319,14 @@ function SearchPageContent() {
           {results.length > 0 && (
             <>
               <div className="mb-6">
-              <h2 className="text-xl font-body font-semibold text-sunroad-brown-900">
-                {results.length} {results.length === 1 ? 'result' : 'results'}
-                {query && ` for "${query}"`}
-              </h2>
+                <h2 className="text-xl font-body font-semibold text-sunroad-brown-900">
+                  Discover local creatives
+                </h2>
+                {query.trim() && (
+                  <p className="mt-1 text-sm text-sunroad-brown-600 font-body">
+                    Showing results for &quot;{query}&quot;
+                  </p>
+                )}
               </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {results.map((artist) => (
@@ -344,9 +353,25 @@ function SearchPageContent() {
 
               {/* End of Results */}
               {!hasMore && results.length > 0 && (
-              <div className="mt-8 text-center text-sunroad-brown-500 font-body">
-                <p>No more results to load</p>
-              </div>
+                <div className="mt-8 text-center text-sunroad-brown-500 font-body">
+                  <p>No more results to load</p>
+                </div>
+              )}
+
+              {/* Sign Up CTA for unauthenticated users */}
+              {isUnauthenticated && (
+                <div className="mt-10 rounded-xl border border-sunroad-amber-200/60 bg-gradient-to-br from-amber-50/50 to-transparent px-6 py-5 text-center">
+                  <p className="text-sm text-sunroad-brown-600 font-body mb-3 leading-relaxed">
+                    We are a growing platform. Join the community of creatives today!
+                  </p>
+                  <Link
+                    href="/signup"
+                    prefetch={false}
+                    className="inline-block rounded-lg border border-sunroad-amber-200/60 bg-white/80 px-5 py-2.5 text-sm font-medium text-sunroad-amber-700 transition-colors hover:bg-sunroad-amber-100 hover:text-sunroad-amber-800"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
               )}
             </>
           )}
