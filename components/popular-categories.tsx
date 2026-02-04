@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
-import SRImage from '@/components/media/SRImage'
 
 interface CategoryItem {
   id: number
@@ -11,38 +10,35 @@ interface CategoryItem {
 
 // ⚠️ Make sure these IDs match your Supabase DB 'categories' table!
 // These IDs are validated against the repo's shared category ID mapping.
-const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
-const toAbsoluteUrl = (path: string) => `${APP_BASE_URL}${path}`
-
 const categories: CategoryItem[] = [
   {
     id: 6,
     name: 'Photography',
-    illustrationSrc: toAbsoluteUrl('/categories/PHOTOGRAPHY.png'),
+    illustrationSrc: '/categories/PHOTOGRAPHY.png',
     illustrationAlt: 'Photography',
   },
   {
     id: 57,
     name: 'Venues',
-    illustrationSrc: toAbsoluteUrl('/categories/VENUE.png'),
+    illustrationSrc: '/categories/VENUE.png',
     illustrationAlt: 'Venues',
   },
   {
     id: 45,
     name: 'Museums',
-    illustrationSrc: toAbsoluteUrl('/categories/MUESUM.png'),
+    illustrationSrc: '/categories/MUESUM.png',
     illustrationAlt: 'Museums',
   },
   {
     id: 64,
     name: 'Fine Artists',
-    illustrationSrc: toAbsoluteUrl('/categories/FINE%20ARTIST.png'),
+    illustrationSrc: '/categories/FINE%20ARTIST.png',
     illustrationAlt: 'Fine Artists',
   },
   {
     id: 34,
     name: 'Art Galleries',
-    illustrationSrc: toAbsoluteUrl('/categories/GALLERY.png'),
+    illustrationSrc: '/categories/GALLERY.png',
     illustrationAlt: 'Art Galleries',
   },
 ]
@@ -71,12 +67,11 @@ export default function PopularCategories() {
             <div className="relative z-10 w-full flex-1 overflow-hidden mt-1">
               {/* Primary Icon (Slides Up) */}
               <div className="absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-out group-hover:-translate-y-full">
-                <SRImage
+                <img
                   src={category.illustrationSrc}
                   alt={category.illustrationAlt}
-                  fill
-                  sizes="(min-width: 768px) 180px, (min-width: 640px) 28vw, 42vw"
-                  className="object-contain px-2 pb-0 pt-0 scale-[1.7] drop-shadow-[0_18px_34px_rgba(0,0,0,0.09)]"
+                  loading="lazy"
+                  className="w-full h-full object-contain px-2 pb-0 pt-0 scale-[1.7] drop-shadow-[0_18px_34px_rgba(0,0,0,0.09)]"
                 />
               </div>
               
