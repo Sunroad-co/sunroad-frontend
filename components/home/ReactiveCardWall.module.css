@@ -108,6 +108,50 @@
   animation: fadeOut 0.5s ease-out forwards;
 }
 
+/* Subtle grid overlay behind cards */
+.gridOverlay {
+  background-image: 
+    linear-gradient(to right, rgba(217, 119, 6, 0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(217, 119, 6, 0.25) 1px, transparent 1px),
+    radial-gradient(circle, rgba(217, 119, 6, 0.10) 0.5px, transparent 0.6px);
+  background-size: 
+    calc((100% - 2.5rem - 2 * 1.25rem) / 3) calc(clamp(200px, 24vh, 300px) + 1.25rem),
+    calc((100% - 2.5rem - 2 * 1.25rem) / 3) calc(clamp(200px, 24vh, 300px) + 1.25rem),
+    calc((100% - 2.5rem - 2 * 1.25rem) / 3) calc(clamp(200px, 24vh, 300px) + 1.25rem);
+  background-position: 
+    1.25rem 1.25rem,
+    1.25rem 1.25rem,
+    1.25rem 1.25rem;
+  mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+  animation: gridBreath 8s ease-in-out infinite;
+  opacity: 0.05;
+}
+
+/* Grid overlay for large screens (6 columns) */
+@media (min-width: 1024px) {
+  .gridOverlay {
+    background-size: 
+      calc((100% - 3.5rem - 5 * 1.5rem) / 6) calc(clamp(200px, 24vh, 300px) + 1.5rem),
+      calc((100% - 3.5rem - 5 * 1.5rem) / 6) calc(clamp(200px, 24vh, 300px) + 1.5rem),
+      calc((100% - 3.5rem - 5 * 1.5rem) / 6) calc(clamp(200px, 24vh, 300px) + 1.5rem);
+    background-position: 
+      1.75rem 1.75rem,
+      1.75rem 1.75rem,
+      1.75rem 1.75rem;
+  }
+}
+
+/* Subtle breathing animation for grid overlay */
+@keyframes gridBreath {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .float1,
@@ -134,5 +178,10 @@
   
   .card {
     transition-duration: 0.3s;
+  }
+  
+  .gridOverlay {
+    animation: none;
+    opacity: 0.45;
   }
 }

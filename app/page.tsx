@@ -5,6 +5,7 @@ import PopularCategories from "@/components/popular-categories";
 import SocialProof from "@/components/social-proof";
 import HomeHero from "@/components/home/HomeHero";
 import HowItWorks from "@/components/home/HowItWorks";
+import BrandManifesto from "@/components/BrandManifesto";
 // DiscoveryLoop is now embedded in ReactiveWallHero, no separate import needed
 // import DiscoveryLoop from "@/components/home/DiscoveryLoop";
 import Faq from "@/components/shared/Faq";
@@ -94,10 +95,11 @@ export default async function Home() {
     <div className="min-h-screen">
       {/* Hero Section - ReactiveWallHero with embedded DiscoveryLoop */}
       <HomeHero />
-  {/* Social Proof Section */}
-  <SocialProof />
-      {/* How It Works Section */}
-      <HowItWorks />
+      {/* Brand Manifesto Section */}
+        {/* Social Proof Section */}
+     
+    
+     
 
     
 
@@ -111,7 +113,8 @@ export default async function Home() {
         </div>
         <FeaturedArtists />
       </section>
-
+ {/* How It Works Section */}
+ <HowItWorks />
       {/* Community Stories Section - Only render if we have posts */}
       {featuredPosts.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

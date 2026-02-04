@@ -2,6 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 import ReactiveWallHeroV2 from "./ReactiveWallHeroV2";
 import HeroMasonry from "./HeroMasonry";
+import BrandManifesto from "../BrandManifesto";
+import SocialProof from "../social-proof";
 // Keep imports for reference - these components are not deleted
 // import ReactiveWallHero from "./ReactiveWallHero";
 // import HeroProduct from "./HeroProduct";
@@ -145,5 +147,10 @@ export default async function HomeHero() {
   // Single cached fetch for all hero data
   const artists = await getHeroArtists();
 
-  return <> <ReactiveWallHeroV2 artists={artists} /> <HeroMasonry artists={artists} /> </>;
+  return <> <ReactiveWallHeroV2 artists={artists} /> 
+  
+  <BrandManifesto />
+  <HeroMasonry artists={artists} />
+  <SocialProof /> </>;
+ 
 }

@@ -227,10 +227,16 @@ export default function ReactiveCardWall({ artists, activeArtistIds, activeCateg
       className="hidden sm:block absolute inset-0 overflow-hidden"
       aria-hidden="true"
     >
+      {/* Subtle grid overlay behind cards */}
+      <div 
+        className={`absolute inset-0 pointer-events-none z-0 ${styles.gridOverlay}`}
+        aria-hidden="true"
+      />
+      
       {/* Grid container */}
       <div 
         className="absolute inset-0 grid gap-5 lg:gap-6 p-5 lg:p-7
-                   grid-cols-3 lg:grid-cols-6"
+                   grid-cols-3 lg:grid-cols-6 z-10"
         style={{
           minHeight: "115%",
           transform: "translateY(-7%)",
