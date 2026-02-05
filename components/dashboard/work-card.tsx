@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import SRImage from '@/components/media/SRImage'
-import ReactPlayer from 'react-player'
+import LazyReactPlayer from '@/components/media/LazyReactPlayer'
 import { Work } from '@/hooks/use-user-profile'
 import { getMediaUrl, getArtworkCardUrl, getArtworkModalUrl } from '@/lib/media'
 import { Skeleton } from '@/components/ui/skeleton'
 import EditButton from './edit-button'
 
-// Type assertion for ReactPlayer to work around Next.js type issues
-const TypedReactPlayer = ReactPlayer as React.ComponentType<any>
+// Type assertion for LazyReactPlayer to work around Next.js type issues
+const TypedReactPlayer = LazyReactPlayer as React.ComponentType<any>
 
 interface WorkCardProps {
   work: Work

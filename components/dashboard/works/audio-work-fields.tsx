@@ -1,12 +1,12 @@
 'use client'
 
 import React, { useState, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
-import ReactPlayer from 'react-player'
+import LazyReactPlayer from '@/components/media/LazyReactPlayer'
 import { validateAudioUrl } from '@/lib/utils/audio-validation'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 
-const TypedReactPlayer = ReactPlayer as React.ComponentType<any>
+const TypedReactPlayer = LazyReactPlayer as React.ComponentType<any>
 
 export interface AudioWorkFieldsProps {
   saving: boolean

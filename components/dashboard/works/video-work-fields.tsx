@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useState, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
-import ReactPlayer from 'react-player'
+import LazyReactPlayer from '@/components/media/LazyReactPlayer'
 import { validateVideoUrl } from '@/lib/utils/video-validation'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 
-// Type assertion for ReactPlayer to work around Next.js type issues
-const TypedReactPlayer = ReactPlayer as React.ComponentType<any>
+// Type assertion for LazyReactPlayer to work around Next.js type issues
+const TypedReactPlayer = LazyReactPlayer as React.ComponentType<any>
 
 export interface VideoWorkFieldsProps {
   saving: boolean

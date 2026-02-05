@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import * as simpleIcons from 'simple-icons'
+import { simpleIcons } from '@/lib/simpleIcons'
 import { Link, Globe } from 'lucide-react'
 import LinkedInIcon from './social-icons/linkedin-icon'
 import { checkPlatformUrlMatch } from '@/lib/utils/platform-url-validation'

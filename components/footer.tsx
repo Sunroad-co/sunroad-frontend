@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import * as simpleIcons from 'simple-icons'
+import { simpleIcons } from '@/lib/simpleIcons'
 import LinkedInIcon from './social-icons/linkedin-icon'
 
 // YouTube icon from simple-icons

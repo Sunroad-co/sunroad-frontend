@@ -38,6 +38,7 @@ export default function ArtistResultCard({ artist }: ArtistResultCardProps) {
   return (
     <Link
       href={getProfileUrl(artist.handle)}
+      prefetch={false}
       className="block bg-white rounded-lg border border-sunroad-brown-200/50 hover:border-sunroad-amber-400 hover:shadow-md transition-all duration-200 p-4 h-full w-full overflow-hidden"
     >
       <div className="flex items-start space-x-4 min-w-0">
