@@ -74,10 +74,10 @@ export default function MobileMenuOverlay({ isOpen, onClose, user, onLogout }: M
         <div className="flex justify-between items-center px-4 py-4 border-b border-sunroad-amber-800/30 flex-shrink-0" style={{ marginTop: 0 }}>
           <Link href="/" onClick={handleLinkClick} className="flex items-center space-x-2">
             <Image 
-              src="/sunroad_logo.png" 
+              src="/sunroad_logo_2x.webp" 
               alt="Sun Road Logo" 
               width={100} 
-              height={32}
+              height={55}
               className="h-10 w-auto"
             />
           </Link>

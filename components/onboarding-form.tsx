@@ -612,10 +612,10 @@ export default function OnboardingForm({
                 <div className="hidden lg:block mt-10 pointer-events-none">
                   <div className="flex justify-center">
                     <Image
-                      src="/sunroad_logo.png"
+                      src="/sunroad_logo_2x.webp"
                       alt="Sunroad"
                       width={180}
-                      height={180}
+                      height={98}
                       className="opacity-10 grayscale w-48 h-auto"
                       priority={false}
                     />

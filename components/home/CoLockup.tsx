@@ -67,8 +67,8 @@ export default function CoLockup() {
             <Image 
               src="/Sun-Road-Logo-svg.svg" 
               alt="Sun Road Co" 
-              width={300} 
-              height={200}
+              width={954} 
+              height={522}
               className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 w-auto"
               priority
               unoptimized

@@ -5,27 +5,27 @@ import Image from 'next/image'
 const institutions = [
   {
     name: 'Bob Dylan Center',
-    logo: '/Logos_bob_dylan.png',
+    logo: '/Logos_bob_dylan.webp',
     alt: 'Bob Dylan Center'
   },
   {
     name: 'Cain\'s Ballroom',
-    logo: '/logos_cains.png',
+    logo: '/logos_cains.webp',
     alt: 'Cain\'s Ballroom'
   },
   {
     name: 'Circle Cinema',
-    logo: '/logos_circle_cinema.png',
+    logo: '/logos_circle_cinema.webp',
     alt: 'Circle Cinema'
   },
   {
     name: 'Crystal Museum',
-    logo: '/logos_crystal_museum.png',
+    logo: '/logos_crystal_museum.webp',
     alt: 'Crystal Museum'
   },
   {
     name: 'Tulsa Ballet',
-    logo: '/logos_tulsa_balet.png',
+    logo: '/logos_tulsa_balet.webp',
     alt: 'Tulsa Ballet'
   }
 ]
@@ -41,11 +41,11 @@ export default function SocialProof() {
               Trusted by leading institutions
             </p>
           </div>
-          <div className="flex items-center justify-center space-x-12 lg:space-x-16">
+          <div className="flex items-center justify-center gap-8 lg:gap-12">
             {institutions.map((institution) => (
               <div
                 key={institution.name}
-                className="flex items-center justify-center opacity-60 hover:opacity-80 transition-opacity duration-300"
+                className="h-10 md:h-12 lg:h-12 max-w-[180px] flex items-center justify-center opacity-60 hover:opacity-80 transition-opacity duration-300"
               >
                 {/* Static logo - unoptimized to avoid Vercel Image Optimization quota */}
                 <Image
@@ -53,7 +53,7 @@ export default function SocialProof() {
                   alt={institution.alt}
                   width={120}
                   height={80}
-                  className="h-15 w-auto object-contain filter grayscale hover:grayscale-0 transition-all duration-300"
+                  className="h-full w-auto object-contain filter grayscale hover:grayscale-0 transition-all duration-300"
                   unoptimized
                 />
               </div>

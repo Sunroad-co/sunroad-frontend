@@ -58,7 +58,7 @@ export default function Footer() {
         <div className="max-w-[1600px] mx-auto px-2 sm:px-4 lg:px-6">
           <div className="relative w-full" style={{ aspectRatio: '1600/400', minHeight: '250px', maxHeight: '450px' }}>
             <Image
-              src="/sunroad-building-art.png"
+              src="/sunroad-building-art.webp"
               alt="Sun Road Building Art"
               fill
              unoptimized={true}
@@ -92,16 +92,16 @@ export default function Footer() {
 
       {/* Footer content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Desktop: 3-column layout */}
-        <div className="hidden md:grid md:grid-cols-3 gap-8 mb-8">
+        {/* Desktop: 4-column layout */}
+        <div className="hidden md:grid md:grid-cols-4 gap-8 mb-8">
           {/* Left: Branding */}
           <div className="flex flex-col space-y-3">
             <Link href="/" className="flex items-center">
               <Image 
-                src="/sunroad_logo.png" 
+                src="/Sun-Road-Logo-svg.svg" 
                 alt="Sun Road Logo" 
-                width={120} 
-                height={40}
+                width={954} 
+                height={522}
                 className="h-10 w-auto"
                 unoptimized
               />
@@ -188,6 +188,21 @@ export default function Footer() {
               </a>
             </div>
           </div>
+
+          {/* Legal Links */}
+          <div className="flex flex-col space-y-2">
+            <h3 className="text-sm font-display font-semibold text-sunroad-brown-900 uppercase tracking-wide mb-2">
+              Legal
+            </h3>
+            <nav className="flex flex-col space-y-2">
+              <Link
+                href="/privacy"
+                className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+              >
+                Privacy Policy
+              </Link>
+            </nav>
+          </div>
         </div>
 
         {/* Mobile: Stacked layout */}
@@ -196,10 +211,10 @@ export default function Footer() {
           <div className="flex flex-col items-center space-y-3 text-center">
             <Link href="/" className="flex items-center">
               <Image 
-                src="/sunroad_logo.png" 
+                src="/Sun-Road-Logo-svg.svg" 
                 alt="Sun Road Logo" 
-                width={120} 
-                height={40}
+                width={954} 
+                height={522}
                 className="h-10 w-auto"
                 unoptimized
               />
@@ -285,6 +300,21 @@ export default function Footer() {
                 <LinkedInIcon className="w-5 h-5" />
               </a>
             </div>
+          </div>
+
+          {/* Legal Links */}
+          <div className="flex flex-col items-center space-y-3">
+            <h3 className="text-sm font-display font-semibold text-sunroad-brown-900 uppercase tracking-wide">
+              Legal
+            </h3>
+            <nav className="flex flex-col items-center space-y-2">
+              <Link
+                href="/privacy"
+                className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+              >
+                Privacy Policy
+              </Link>
+            </nav>
           </div>
         </div>
 

@@ -37,10 +37,10 @@ export default function Navbar({ variant }: NavbarProps = {}) {
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center space-x-2">
               <Image 
-                src="/sunroad_logo.png" 
+                src="/Sun-Road-Logo-svg.svg" 
                 alt="Sun Road Logo" 
-                width={120} 
-                height={60}
+                width={954} 
+                height={522}
                 className="h-14 w-auto"
                 unoptimized
               />
@@ -87,10 +87,10 @@ export default function Navbar({ variant }: NavbarProps = {}) {
             {/* Logo - Always on left */}
             <Link href="/" className="flex items-center flex-shrink-0" style={{ minWidth: '60px' }}>
               <Image 
-                src="/sunroad_logo.png" 
+                src="/Sun-Road-Logo-svg.svg" 
                 alt="Sun Road Logo" 
-                width={100} 
-                height={40}
+                width={954} 
+                height={522}
                 className="h-8 w-auto"
                 priority
                 unoptimized

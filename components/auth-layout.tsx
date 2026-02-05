@@ -19,7 +19,7 @@ export default function AuthLayout({ children, title, subtitle, containerClassNa
       <div className="absolute left-30 inset-0 opacity-5">
         {/* Static artwork - unoptimized to avoid Vercel Image Optimization quota */}
         <Image
-          src="/sunroad_artwork.png"
+          src="/artwork_sunroad_auth.webp"
           alt="Sun Road Artwork"
           fill
           className="object-contain"
@@ -41,10 +41,10 @@ export default function AuthLayout({ children, title, subtitle, containerClassNa
               <div className="relative bg-white/20 backdrop-blur-sm rounded-3xl p-6 shadow-2xl">
                 {/* Static artwork - unoptimized to avoid Vercel Image Optimization quota */}
                 <Image
-                  src="/sunroad_artwork.png"
+                  src="/artwork_sunroad_auth.webp"
                   alt="Connecting you to local creatives"
-                  width={400}
-                  height={300}
+                  width={600}
+                  height={608}
                   className="w-full h-auto object-contain mb-4"
                   priority
                   unoptimized
@@ -63,9 +63,9 @@ export default function AuthLayout({ children, title, subtitle, containerClassNa
                 Trusted by leading institutions
               </p>
               <div className="flex justify-center items-center space-x-6 opacity-60">
-                <Image src="/Logos_bob_dylan.png" alt="Bob Dylan Center" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
-                <Image src="/logos_cains.png" alt="Cain's Ballroom" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
-                <Image src="/logos_circle_cinema.png" alt="Circle Cinema" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
+                <Image src="/Logos_bob_dylan.webp" alt="Bob Dylan Center" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
+                <Image src="/logos_cains.webp" alt="Cain's Ballroom" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
+                <Image src="/logos_circle_cinema.webp" alt="Circle Cinema" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
               </div>
             </div>
           </div>

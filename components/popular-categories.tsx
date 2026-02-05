@@ -14,31 +14,31 @@ const categories: CategoryItem[] = [
   {
     id: 6,
     name: 'Photography',
-    illustrationSrc: '/categories/PHOTOGRAPHY.png',
+    illustrationSrc: '/categories/PHOTOGRAPHY.webp',
     illustrationAlt: 'Photography',
   },
   {
     id: 57,
     name: 'Venues',
-    illustrationSrc: '/categories/VENUE.png',
+    illustrationSrc: '/categories/VENUE.webp',
     illustrationAlt: 'Venues',
   },
   {
     id: 45,
     name: 'Museums',
-    illustrationSrc: '/categories/MUESUM.png',
+    illustrationSrc: '/categories/MUESUM.webp',
     illustrationAlt: 'Museums',
   },
   {
     id: 64,
     name: 'Fine Artists',
-    illustrationSrc: '/categories/FINE%20ARTIST.png',
+    illustrationSrc: '/categories/FINE%20ARTIST.webp',
     illustrationAlt: 'Fine Artists',
   },
   {
     id: 34,
     name: 'Art Galleries',
-    illustrationSrc: '/categories/GALLERY.png',
+    illustrationSrc: '/categories/GALLERY.webp',
     illustrationAlt: 'Art Galleries',
   },
 ]

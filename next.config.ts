@@ -62,6 +62,19 @@ const nextConfig: NextConfig = {
     imageSizes: [64, 96, 128, 256, 384], // Small set of sizes
   },
   reactStrictMode: false,
+  async headers() {
+    return [
+      {
+        source: '/:path*.(png|jpg|jpeg|webp|svg|ico)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

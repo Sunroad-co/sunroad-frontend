@@ -115,7 +115,7 @@ export default function BrandManifesto() {
         <div className="relative flex-shrink-0 inline-block h-[600px]">
           {/* BW image (base layer for sizing) */}
           <Image
-            src="/heroart/man_bw.png"
+            src="/heroart/man_bw.webp"
             alt=""
             width={400}
             height={600}
@@ -126,7 +126,7 @@ export default function BrandManifesto() {
           />
           {/* Color image (overlay, crossfade in with light bloom) */}
           <Image
-            src="/heroart/man_color.png"
+            src="/heroart/man_color.webp"
             alt=""
             width={400}
             height={600}
@@ -149,7 +149,7 @@ export default function BrandManifesto() {
         } motion-reduce:opacity-100 motion-reduce:pointer-events-auto`}>
           <div className="relative bg-white/10 backdrop-blur-sm rounded-t-3xl p-6 shadow-2xl h-full flex flex-col justify-center">
             <Image
-              src="/sunroad_artwork.png"
+              src="/sunroad_artwork.webp"
               alt="Connecting you to local creatives"
               width={400}
               height={300}
@@ -166,7 +166,7 @@ export default function BrandManifesto() {
         <div className="relative flex-shrink-0 inline-block h-[600px]">
           {/* BW image (base layer for sizing) */}
           <Image
-            src="/heroart/woman_bw.png"
+            src="/heroart/woman_bw.webp"
             alt=""
             width={400}
             height={600}
@@ -177,7 +177,7 @@ export default function BrandManifesto() {
           />
           {/* Color image (overlay, crossfade in with light bloom) */}
           <Image
-            src="/heroart/woman_color.png"
+            src="/heroart/woman_color.webp"
             alt=""
             width={400}
             height={600}
@@ -201,7 +201,7 @@ export default function BrandManifesto() {
         <div className="relative inline-block">
           {/* BW image (base layer for sizing) */}
           <Image
-            src="/heroart/man_bw.png"
+            src="/heroart/man_bw.webp"
             alt=""
             width={400}
             height={600}
@@ -212,7 +212,7 @@ export default function BrandManifesto() {
           />
           {/* Color image (overlay, crossfade in with light bloom) */}
           <Image
-            src="/heroart/man_color.png"
+            src="/heroart/man_color.webp"
             alt=""
             width={400}
             height={600}
@@ -233,7 +233,7 @@ export default function BrandManifesto() {
         <div className="relative inline-block">
           {/* BW image (base layer for sizing) */}
           <Image
-            src="/heroart/woman_bw.png"
+            src="/heroart/woman_bw.webp"
             alt=""
             width={400}
             height={600}
@@ -244,7 +244,7 @@ export default function BrandManifesto() {
           />
           {/* Color image (overlay, crossfade in with light bloom) */}
           <Image
-            src="/heroart/woman_color.png"
+            src="/heroart/woman_color.webp"
             alt=""
             width={400}
             height={600}
@@ -266,7 +266,7 @@ export default function BrandManifesto() {
           <div className="relative bg-white/80 backdrop-blur-sm rounded-full shadow-2xl p-3">
             <div className="relative w-[90px] h-[90px]">
               <Image
-                src="/sunroad_logo.png"
+                src="/sunroad_logo.webp"
                 alt="Sun Road"
                 fill
                 sizes="90px"

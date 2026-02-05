@@ -228,12 +228,13 @@ const CHIP_REVEAL_DELAY = 1000; // ms delay before chips appear
 export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props) {
   const [intentIndex, setIntentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [showChips, setShowChips] = useState(true); // Start true for SSR
+  const [showChips, setShowChips] = useState(true); // Start true for SSR - no delayed render for LCP
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   // Desktop only - cards hidden on mobile
   const activeCardCount = ACTIVE_CARD_COUNT_DESKTOP;
   const chipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isFirstRenderRef = useRef(true);
 
   const currentIntent = INTENTS[intentIndex];
   
@@ -259,19 +260,21 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
 
 
   // Staged reveal: hide chips on intent change, reveal after delay
+  // Skip delay on first render to avoid LCP delay
   useEffect(() => {
     // Clear any pending timeout
     if (chipTimeoutRef.current) {
       clearTimeout(chipTimeoutRef.current);
     }
 
-    // If reduced motion, show chips instantly
-    if (prefersReducedMotion) {
+    // If reduced motion or first render, show chips instantly (no LCP delay)
+    if (prefersReducedMotion || isFirstRenderRef.current) {
       setShowChips(true);
+      isFirstRenderRef.current = false;
       return;
     }
 
-    // Hide chips, then reveal after delay
+    // Hide chips, then reveal after delay (only on subsequent intent changes)
     setShowChips(false);
     chipTimeoutRef.current = setTimeout(() => {
       setShowChips(true);
@@ -339,10 +342,11 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
   }, [isPaused, stopInterval]);
 
   return (
-    <section 
-      className="relative min-h-0 sm:min-h-[100svh] w-full overflow-hidden bg-transparent"
-      aria-label="Find local creatives"
-    >
+      <section 
+        className="relative min-h-0 sm:min-h-[100svh] w-full overflow-hidden bg-transparent"
+        aria-label="Find local creatives"
+        role="region"
+      >
       {/* Background: Reactive Card Wall - sm+ only */}
       <ReactiveCardWall 
         artists={artists} 
@@ -463,10 +467,10 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
                 <span className="text-xs text-gray-900 font-medium">Explore on</span>
                 {/* Static SVG logo - unoptimized to avoid Vercel Image Optimization quota */}
                 <Image 
-                  src="/Sun-Road-Logo-svg.svg" 
+                  src="/sunroad_logo_tiny.webp" 
                   alt="Sunroad" 
-                  width={60} 
-                  height={16}
+                  width={96} 
+                  height={53}
                   className="grayscale"
                   unoptimized
                 />

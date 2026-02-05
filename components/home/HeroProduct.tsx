@@ -47,10 +47,10 @@ export default function HeroProduct({ artists }: HeroProductProps) {
               aria-hidden="true"
             >
               <Image 
-                src="/sunroad_logo.png" 
+                src="/sunroad_logo.webp" 
                 alt="" 
                 width={400} 
-                height={133}
+                height={219}
                 className="h-24 sm:h-28 lg:h-32 w-auto opacity-[0.12] grayscale contrast-50"
                 unoptimized
               />
@@ -107,7 +107,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
             >
               {/* Static hero image - unoptimized to avoid Vercel Image Optimization quota */}
               <Image
-                src="/head_guitarist.jpg"
+                src="/head_guitarist.webp"
                 alt="Local creative performing"
                 fill
                 className="object-cover object-center scale-110"

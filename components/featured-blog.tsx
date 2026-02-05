@@ -265,7 +265,7 @@ function SunroadWatermark({ className = '', size = 'md' }: { className?: string;
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/Sun-Road-Logo-svg.svg"
+        src="/sunroad_logo_hero.webp"
         alt=""
         className={`${sizeClasses} opacity-[0.12]`}
       />
