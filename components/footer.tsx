@@ -120,24 +120,28 @@ export default function Footer() {
               <Link
                 href="/search"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Search
               </Link>
-              <Link
+              {/* <Link
                 href="/artists"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Artists
-              </Link>
+              </Link> */}
               <Link
                 href="/blog"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Blog
               </Link>
               <Link
                 href="/pricing"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Pricing
               </Link>
@@ -198,7 +202,8 @@ export default function Footer() {
               <Link
                 href="/privacy"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
-              >
+                prefetch={false}
+             >
                 Privacy Policy
               </Link>
             </nav>
@@ -233,24 +238,27 @@ export default function Footer() {
               <Link
                 href="/search"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Search
               </Link>
-              <Link
+              {/* <Link
                 href="/artists"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
               >
                 Artists
-              </Link>
+              </Link> */}
               <Link
                 href="/blog"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
-              >
+                prefetch={false}
+             >
                 Blog
               </Link>
               <Link
                 href="/pricing"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Pricing
               </Link>
@@ -311,7 +319,8 @@ export default function Footer() {
               <Link
                 href="/privacy"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
-              >
+                prefetch={false}
+             >
                 Privacy Policy
               </Link>
             </nav>

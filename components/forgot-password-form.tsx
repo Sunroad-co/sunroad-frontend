@@ -271,6 +271,7 @@ export function ForgotPasswordForm({
                 Remember your password?{" "}
                 <Link
                   href="/auth/login"
+                  prefetch={false}
                   className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline underline-offset-4 font-body"
                 >
                   Sign in

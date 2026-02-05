@@ -394,6 +394,7 @@ function ExplorePlaceholderCard() {
     <article className={`flex flex-col rounded-xl overflow-hidden h-full ${theme.bg}`}>
       <Link
         href="/blog"
+        prefetch={false}
         className="flex flex-col h-full group focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sunroad-amber-500"
         aria-label="Explore more stories from the Sunroad community"
       >
@@ -464,6 +465,7 @@ function SecondaryPostCard({ post }: { post: FeaturedBlogPost }) {
     <article className={`flex flex-col rounded-xl overflow-hidden h-full transition-all duration-200 hover:shadow-md ${theme.bg}`}>
       <Link
         href={`/blog/${post.slug}`}
+        prefetch={false}
         className="flex flex-col h-full group focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sunroad-amber-500"
         aria-label={`Read article: ${post.title}`}
       >

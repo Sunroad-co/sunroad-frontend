@@ -734,6 +734,7 @@ export default function OnboardingForm({
                     </Link>{" "}
                     and{" "}
                     <Link
+                      prefetch={false}
                       href="/privacy"
                       className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline font-medium"
                       onClick={(e) => e.stopPropagation()}

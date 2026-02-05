@@ -71,6 +71,7 @@ export default function Navbar({ variant }: NavbarProps = {}) {
               )}
               <Link
                 href="/blog"
+                prefetch={false}
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors font-medium text-sm"
               >
                 Blog

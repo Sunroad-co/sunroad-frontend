@@ -51,6 +51,7 @@ export default function PopularCategories() {
           <Link
             key={category.id}
             href={`/search?categories=${category.id}`}
+            prefetch={false}
             className="group relative flex flex-col items-center justify-between
                        aspect-square sm:aspect-[4/5] md:aspect-auto md:h-48
                        bg-gradient-to-b from-white to-stone-50/80 rounded-3xl border border-stone-200/80
