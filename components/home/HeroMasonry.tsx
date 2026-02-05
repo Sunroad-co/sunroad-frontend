@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { getAvatarUrl } from "@/lib/media";
 import CoLockup from "./CoLockup";
+import styles from "./HeroMasonry.module.css";
 
 /**
  * Artist data for masonry display
@@ -154,7 +155,7 @@ function MasonryColumn({
     >
       <div
         className={`flex flex-col gap-4 sm:gap-5 lg:gap-6
-                   ${direction === "up" ? "animate-scroll-up" : "animate-scroll-down"}
+                   ${direction === "up" ? styles.animateScrollUp : styles.animateScrollDown}
                    motion-reduce:animate-none`}
         style={{
           animationDuration: duration,
@@ -193,6 +194,7 @@ function AvatarCard({ artist }: AvatarCardProps) {
           sizes="(max-width: 640px) 96px, (max-width: 768px) 112px, (max-width: 1024px) 128px, 144px"
           loading="lazy"
           className="w-full h-full object-cover"
+          unoptimized
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">

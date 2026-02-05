@@ -98,12 +98,12 @@ export default function Footer() {
           <div className="flex flex-col space-y-3">
             <Link href="/" className="flex items-center">
               <Image 
-              unoptimized={true}
                 src="/sunroad_logo.png" 
                 alt="Sun Road Logo" 
                 width={120} 
                 height={40}
                 className="h-10 w-auto"
+                unoptimized
               />
             </Link>
             <p className="text-sm text-sunroad-brown-600 font-medium">
@@ -201,6 +201,7 @@ export default function Footer() {
                 width={120} 
                 height={40}
                 className="h-10 w-auto"
+                unoptimized
               />
             </Link>
             <p className="text-sm text-sunroad-brown-600 font-medium">

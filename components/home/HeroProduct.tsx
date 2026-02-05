@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getAvatarUrl } from "@/lib/media";
 import type { HeroArtist } from "./HomeHero";
+import styles from "./HeroProduct.module.css";
 
 interface HeroProductProps {
   artists: HeroArtist[];
@@ -51,6 +52,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
                 width={400} 
                 height={133}
                 className="h-24 sm:h-28 lg:h-32 w-auto opacity-[0.12] grayscale contrast-50"
+                unoptimized
               />
             </div>
 
@@ -103,6 +105,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
                 [clip-path:ellipse(150%_100%_at_100%_50%)] 
                 lg:[clip-path:ellipse(100%_150%_at_100%_50%)]"
             >
+              {/* Static hero image - unoptimized to avoid Vercel Image Optimization quota */}
               <Image
                 src="/head_guitarist.jpg"
                 alt="Local creative performing"
@@ -110,6 +113,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
                 className="object-cover object-center scale-110"
                 priority
                 sizes="(max-width: 1024px) 100vw, 50vw"
+                unoptimized
               />
               
               {/* Subtle grain overlay - reduced opacity */}
@@ -124,10 +128,10 @@ export default function HeroProduct({ artists }: HeroProductProps) {
 
             {/* Floating Card 1 - Profile Preview (Artist 1) */}
             <div 
-              className="absolute bottom-8 left-4 sm:bottom-12 sm:left-8 lg:bottom-16 lg:left-12
+              className={`absolute bottom-8 left-4 sm:bottom-12 sm:left-8 lg:bottom-16 lg:left-12
                          bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-3 sm:p-4
-                         animate-float-slow motion-reduce:animate-none
-                         transform-gpu"
+                         ${styles.animateFloatSlow} motion-reduce:animate-none
+                         transform-gpu`}
               aria-hidden="true"
             >
               <div className="flex items-center gap-3">
@@ -141,6 +145,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
                       height={48}
                       sizes="48px"
                       className="w-full h-full object-cover"
+                      unoptimized
                     />
                   ) : (
                     <span className="text-amber-800 font-bold text-sm sm:text-base">
@@ -159,10 +164,10 @@ export default function HeroProduct({ artists }: HeroProductProps) {
 
             {/* Floating Card 2 - Available for Hire Badge */}
             <div 
-              className="absolute top-8 right-4 sm:top-12 sm:right-8 lg:top-16 lg:right-auto lg:left-4
+              className={`absolute top-8 right-4 sm:top-12 sm:right-8 lg:top-16 lg:right-auto lg:left-4
                          bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-3 sm:p-4
-                         animate-float-fast motion-reduce:animate-none
-                         transform-gpu"
+                         ${styles.animateFloatFast} motion-reduce:animate-none
+                         transform-gpu`}
               aria-hidden="true"
             >
               <div className="flex items-center gap-2">
@@ -176,10 +181,10 @@ export default function HeroProduct({ artists }: HeroProductProps) {
 
             {/* Floating Card 3 - Second Profile Preview OR Community Stats */}
             <div 
-              className="absolute bottom-20 right-4 sm:bottom-28 sm:right-8 lg:bottom-32 lg:right-12
+              className={`absolute bottom-20 right-4 sm:bottom-28 sm:right-8 lg:bottom-32 lg:right-12
                          bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-3 sm:p-4
-                         animate-float-medium motion-reduce:animate-none
-                         transform-gpu hidden sm:block"
+                         ${styles.animateFloatMedium} motion-reduce:animate-none
+                         transform-gpu hidden sm:block`}
               aria-hidden="true"
             >
               {artist2 ? (
@@ -194,6 +199,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
                         height={40}
                         sizes="40px"
                         className="w-full h-full object-cover"
+                        unoptimized
                       />
                     ) : (
                       <span className="text-amber-800 font-bold text-xs sm:text-sm">

@@ -156,7 +156,7 @@ export default function BrandManifesto() {
               className="w-full h-auto max-h-[420px] object-contain mb-4"
               unoptimized
             />
-            <p className="font-artistic text-lg text-sunroad-brown-700 text-center">
+            <p className="font-display text-lg text-sunroad-brown-700 text-center">
               Connecting you to local creatives
             </p>
           </div>

@@ -461,12 +461,14 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
                             rounded-full
                             opacity-[0.18]">
                 <span className="text-xs text-gray-900 font-medium">Explore on</span>
+                {/* Static SVG logo - unoptimized to avoid Vercel Image Optimization quota */}
                 <Image 
                   src="/Sun-Road-Logo-svg.svg" 
                   alt="Sunroad" 
                   width={60} 
                   height={16}
                   className="grayscale"
+                  unoptimized
                 />
               </div>
             </div>

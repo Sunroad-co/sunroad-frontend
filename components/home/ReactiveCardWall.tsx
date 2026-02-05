@@ -383,6 +383,7 @@ const ProfileCard = memo(function ProfileCard({ artist, index, isActive, categor
             sizes="(max-width: 1024px) 30vw, 18vw"
             className="object-contain p-2"
             loading="lazy"
+            unoptimized
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">

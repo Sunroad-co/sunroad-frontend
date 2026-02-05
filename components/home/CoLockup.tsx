@@ -63,6 +63,7 @@ export default function CoLockup() {
         <div className="relative inline-flex flex-nowrap items-baseline justify-center sm:flex-nowrap gap-0">
           {/* SVG Logo - scaled so "Co" is large enough, bigger on mobile */}
           <div className="flex items-baseline">
+            {/* SVG logo - unoptimized to avoid Vercel Image Optimization quota */}
             <Image 
               src="/Sun-Road-Logo-svg.svg" 
               alt="Sun Road Co" 
@@ -70,6 +71,7 @@ export default function CoLockup() {
               height={200}
               className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 w-auto"
               priority
+              unoptimized
             />
           </div>
 

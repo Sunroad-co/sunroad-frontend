@@ -42,6 +42,7 @@ export default function Navbar({ variant }: NavbarProps = {}) {
                 width={120} 
                 height={60}
                 className="h-14 w-auto"
+                unoptimized
               />
             </Link>
           </div>

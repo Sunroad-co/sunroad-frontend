@@ -1,0 +1,26 @@
+/* Masonry scroll keyframes */
+@keyframes scrollUp {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes scrollDown {
+  0% {
+    transform: translateY(-50%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animateScrollUp {
+  animation: scrollUp linear infinite;
+}
+
+.animateScrollDown {
+  animation: scrollDown linear infinite;
+}

@@ -1,0 +1,39 @@
+/* Floating card keyframes */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes floatMedium {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes floatFast {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.animateFloatSlow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+.animateFloatMedium {
+  animation: floatMedium 5s ease-in-out infinite;
+}
+
+.animateFloatFast {
+  animation: floatFast 4s ease-in-out infinite;
+}

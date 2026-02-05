@@ -1,0 +1,381 @@
+/* ===== HowItWorks Section Animations ===== */
+/* Master timeline: 12s for all synced animations */
+/* Faster step cadence: ~2.5s between steps (Step1 @5%, Step2 @26%, Step3 @47%) */
+/* Cumulative reveal: elements appear and stay visible until reset at ~90-100% */
+
+/* SVG Conveyor belt - dots flow slowly */
+@keyframes howitworks-dash-flow-h {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@keyframes howitworks-dash-flow-v {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+/* Card focus pulse - Step 1 (pulse at ~5%, then stable) */
+@keyframes howitworks-card-1 {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+  }
+  4% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 30px rgb(251 191 36 / 0.18);
+  }
+  10% {
+    transform: scale(1);
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+  }
+}
+
+/* Card focus pulse - Step 2 (pulse at ~26%, then stable) */
+@keyframes howitworks-card-2 {
+  0%, 22%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+  }
+  26% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 30px rgb(251 191 36 / 0.18);
+  }
+  32% {
+    transform: scale(1);
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+  }
+}
+
+/* Card focus pulse - Step 3 (pulse at ~47%, then stable) */
+@keyframes howitworks-card-3 {
+  0%, 43%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 30px rgb(251 191 36 / 0.12);
+  }
+  47% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 30px rgb(251 191 36 / 0.28);
+  }
+  53% {
+    transform: scale(1);
+    box-shadow: 0 8px 30px rgb(251 191 36 / 0.12);
+  }
+}
+
+/* Icon focus pulse - Step 1 (tap at ~5%) */
+@keyframes howitworks-icon-1 {
+  0%, 100% {
+    transform: scale(1);
+  }
+  3% {
+    transform: scale(0.92);
+  }
+  6% {
+    transform: scale(1.06);
+  }
+  12% {
+    transform: scale(1);
+  }
+}
+
+/* Icon focus pulse - Step 2 (pulse at ~26%) */
+@keyframes howitworks-icon-2 {
+  0%, 22%, 100% {
+    transform: scale(1);
+  }
+  26% {
+    transform: scale(1.1);
+  }
+  32% {
+    transform: scale(1);
+  }
+}
+
+/* Icon focus pulse - Step 3 (pulse at ~47%) */
+@keyframes howitworks-icon-3 {
+  0%, 43%, 100% {
+    transform: scale(1);
+  }
+  47% {
+    transform: scale(1.1);
+  }
+  53% {
+    transform: scale(1);
+  }
+}
+
+/* URL pill - appears at ~6% and stays until reset at ~90% */
+@keyframes howitworks-url {
+  0% {
+    transform: translateX(-50%) translateX(-8px);
+    opacity: 0;
+  }
+  6% {
+    transform: translateX(-50%) translateX(0);
+    opacity: 1;
+  }
+  88% {
+    transform: translateX(-50%) translateX(0);
+    opacity: 1;
+  }
+  95%, 100% {
+    transform: translateX(-50%) translateX(-8px);
+    opacity: 0;
+  }
+}
+
+/* Stacking layers - appear at ~26-32% (staggered) and stay until reset */
+@keyframes howitworks-stack-1 {
+  0%, 24% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  28% {
+    transform: translateY(5px);
+    opacity: 0.7;
+  }
+  88% {
+    transform: translateY(5px);
+    opacity: 0.7;
+  }
+  95%, 100% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+
+@keyframes howitworks-stack-2 {
+  0%, 26% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  30% {
+    transform: translateY(0px);
+    opacity: 0.7;
+  }
+  88% {
+    transform: translateY(0px);
+    opacity: 0.7;
+  }
+  95%, 100% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+
+@keyframes howitworks-stack-3 {
+  0%, 28% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  32% {
+    transform: translateY(-5px);
+    opacity: 0.7;
+  }
+  88% {
+    transform: translateY(-5px);
+    opacity: 0.7;
+  }
+  95%, 100% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+
+/* Social chips - appear at ~26-34% (staggered) and stay until reset */
+@keyframes howitworks-drift-1 {
+  0%, 24% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 0;
+  }
+  28% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  88% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  95%, 100% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes howitworks-drift-2 {
+  0%, 27% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 0;
+  }
+  31% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  88% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  95%, 100% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes howitworks-drift-3 {
+  0%, 30% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 0;
+  }
+  34% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  88% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  95%, 100% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Radar outer ring - appears at ~47%, stays until reset */
+@keyframes howitworks-radar-outer {
+  0%, 45% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  51% {
+    transform: scale(1.3);
+    opacity: 0.2;
+  }
+  88% {
+    transform: scale(1.3);
+    opacity: 0.15;
+  }
+  95%, 100% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+/* Radar inner ring - appears at ~49%, stays until reset */
+@keyframes howitworks-radar-inner {
+  0%, 47% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  53% {
+    transform: scale(1.15);
+    opacity: 0.25;
+  }
+  88% {
+    transform: scale(1.15);
+    opacity: 0.2;
+  }
+  95%, 100% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Ping dot - appears at ~50%, stays until reset */
+@keyframes howitworks-ping {
+  0%, 48% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  54% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  88% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  95%, 100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* SVG conveyor belt dash flow - slow and subtle */
+.howitworksDashFlowH {
+  animation: howitworks-dash-flow-h 5s linear infinite;
+}
+
+.howitworksDashFlowV {
+  animation: howitworks-dash-flow-v 5s linear infinite;
+}
+
+/* Card focus pulses (synced to 12s) */
+.animateHowitworksCard1 {
+  animation: howitworks-card-1 12s ease-in-out infinite;
+}
+
+.animateHowitworksCard2 {
+  animation: howitworks-card-2 12s ease-in-out infinite;
+}
+
+.animateHowitworksCard3 {
+  animation: howitworks-card-3 12s ease-in-out infinite;
+}
+
+/* Icon focus pulses (synced to 12s) */
+.animateHowitworksIcon1 {
+  animation: howitworks-icon-1 12s ease-in-out infinite;
+}
+
+.animateHowitworksIcon2 {
+  animation: howitworks-icon-2 12s ease-in-out infinite;
+}
+
+.animateHowitworksIcon3 {
+  animation: howitworks-icon-3 12s ease-in-out infinite;
+}
+
+/* Step 1 micro animations (synced to 12s) */
+.animateHowitworksUrl {
+  animation: howitworks-url 12s ease-out infinite;
+}
+
+/* Step 2 micro animations (synced to 12s) */
+.animateHowitworksStack1 {
+  animation: howitworks-stack-1 12s ease-out infinite;
+}
+
+.animateHowitworksStack2 {
+  animation: howitworks-stack-2 12s ease-out infinite;
+}
+
+.animateHowitworksStack3 {
+  animation: howitworks-stack-3 12s ease-out infinite;
+}
+
+.animateHowitworksDrift1 {
+  animation: howitworks-drift-1 12s ease-out infinite;
+}
+
+.animateHowitworksDrift2 {
+  animation: howitworks-drift-2 12s ease-out infinite;
+}
+
+.animateHowitworksDrift3 {
+  animation: howitworks-drift-3 12s ease-out infinite;
+}
+
+/* Step 3 micro animations (synced to 12s) */
+.animateHowitworksRadarOuter {
+  animation: howitworks-radar-outer 12s ease-out infinite;
+}
+
+.animateHowitworksRadarInner {
+  animation: howitworks-radar-inner 12s ease-out infinite;
+}
+
+.animateHowitworksPing {
+  animation: howitworks-ping 12s ease-in-out infinite;
+}

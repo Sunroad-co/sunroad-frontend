@@ -47,12 +47,14 @@ export default function SocialProof() {
                 key={institution.name}
                 className="flex items-center justify-center opacity-60 hover:opacity-80 transition-opacity duration-300"
               >
+                {/* Static logo - unoptimized to avoid Vercel Image Optimization quota */}
                 <Image
                   src={institution.logo}
                   alt={institution.alt}
                   width={120}
                   height={80}
                   className="h-15 w-auto object-contain filter grayscale hover:grayscale-0 transition-all duration-300"
+                  unoptimized
                 />
               </div>
             ))}
@@ -74,12 +76,14 @@ export default function SocialProof() {
         key={`first-${institution.name}`}
         className="flex-shrink-0 flex items-center justify-center opacity-60"
       >
+        {/* Static logo - unoptimized to avoid Vercel Image Optimization quota */}
         <Image
           src={institution.logo}
           alt={institution.alt}
           width={100}
           height={50}
           className="h-10 w-auto object-contain filter grayscale"
+          unoptimized
         />
       </div>
     ))}
@@ -89,12 +93,14 @@ export default function SocialProof() {
         key={`second-${institution.name}`}
         className="flex-shrink-0 flex items-center justify-center opacity-60"
       >
+        {/* Static logo - unoptimized to avoid Vercel Image Optimization quota */}
         <Image
           src={institution.logo}
           alt={institution.alt}
           width={100}
           height={50}
           className="h-10 w-auto object-contain filter grayscale"
+          unoptimized
         />
       </div>
     ))}

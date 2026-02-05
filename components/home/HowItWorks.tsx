@@ -1,4 +1,5 @@
 import { MousePointerClick, Layers, Search, Instagram, Globe, Music } from "lucide-react";
+import styles from "./HowItWorks.module.css";
 
 /**
  * HowItWorks - Premium 3-step explainer with synced animations
@@ -41,7 +42,7 @@ export default function HowItWorks() {
             strokeWidth="1" 
             strokeLinecap="round" 
             strokeDasharray="1 4"
-            className="howitworks-dash-flow-h motion-reduce:[animation:none]"
+            className={`${styles.howitworksDashFlowH} motion-reduce:[animation:none]`}
           />
         </svg>
       </div>
@@ -54,9 +55,9 @@ export default function HowItWorks() {
           
           {/* Card Visual - synced focus pulse */}
           <div 
-            className="relative w-24 h-24 mb-6 rounded-3xl bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center 
-                       animate-howitworks-card-1 motion-reduce:animate-none
-                       group-hover:-translate-y-1 transition-transform duration-700 ease-out motion-reduce:group-hover:translate-y-0"
+            className={`relative w-24 h-24 mb-6 rounded-3xl bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center 
+                       ${styles.animateHowitworksCard1} motion-reduce:animate-none
+                       group-hover:-translate-y-1 transition-transform duration-700 ease-out motion-reduce:group-hover:translate-y-0`}
           >
             {/* Free Badge */}
             <div className="absolute -top-3 -right-3 bg-green-50 text-green-700 text-xs font-semibold px-3 py-1 rounded-full border border-green-200/80">
@@ -65,9 +66,9 @@ export default function HowItWorks() {
             
             {/* URL pill - synced to step 1 focus */}
             <div 
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[9px] font-mono 
+              className={`absolute -bottom-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[9px] font-mono 
                          px-2 py-0.5 rounded-full whitespace-nowrap
-                         animate-howitworks-url motion-reduce:animate-none"
+                         ${styles.animateHowitworksUrl} motion-reduce:animate-none`}
               aria-hidden="true"
             >
               sunroad.io/you
@@ -77,7 +78,7 @@ export default function HowItWorks() {
             <div className="relative">
               <div className="absolute inset-0 bg-amber-100 rounded-full blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-700" />
               <MousePointerClick 
-                className="w-10 h-10 text-gray-800 relative z-10 animate-howitworks-icon-1 motion-reduce:animate-none" 
+                className={`w-10 h-10 text-gray-800 relative z-10 ${styles.animateHowitworksIcon1} motion-reduce:animate-none`}
                 strokeWidth={1.5} 
               />
             </div>
@@ -106,7 +107,7 @@ export default function HowItWorks() {
                 strokeWidth="1" 
                 strokeLinecap="round" 
                 strokeDasharray="1 4"
-                className="howitworks-dash-flow-v motion-reduce:[animation:none]"
+                className={`${styles.howitworksDashFlowV} motion-reduce:[animation:none]`}
               />
             </svg>
           </div>
@@ -117,9 +118,9 @@ export default function HowItWorks() {
           
           {/* Card Visual - synced focus pulse */}
           <div 
-            className="relative w-24 h-24 mb-6 rounded-3xl bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center 
-                       animate-howitworks-card-2 motion-reduce:animate-none
-                       group-hover:-translate-y-1 transition-transform duration-700 ease-out delay-75 motion-reduce:group-hover:translate-y-0"
+            className={`relative w-24 h-24 mb-6 rounded-3xl bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center 
+                       ${styles.animateHowitworksCard2} motion-reduce:animate-none
+                       group-hover:-translate-y-1 transition-transform duration-700 ease-out delay-75 motion-reduce:group-hover:translate-y-0`}
           >
             {/* Free Badge */}
             <div className="absolute -top-3 -right-3 bg-green-50 text-green-700 text-xs font-semibold px-3 py-1 rounded-full border border-green-200/80">
@@ -129,22 +130,22 @@ export default function HowItWorks() {
             {/* Stacking layers - synced to step 2 focus */}
             <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
               <div 
-                className="absolute w-8 h-5 bg-blue-100/70 rounded-md
-                           animate-howitworks-stack-1 motion-reduce:animate-none"
+                className={`absolute w-8 h-5 bg-blue-100/70 rounded-md
+                           ${styles.animateHowitworksStack1} motion-reduce:animate-none`}
               />
               <div 
-                className="absolute w-8 h-5 bg-pink-100/70 rounded-md
-                           animate-howitworks-stack-2 motion-reduce:animate-none"
+                className={`absolute w-8 h-5 bg-pink-100/70 rounded-md
+                           ${styles.animateHowitworksStack2} motion-reduce:animate-none`}
               />
               <div 
-                className="absolute w-8 h-5 bg-amber-100/70 rounded-md
-                           animate-howitworks-stack-3 motion-reduce:animate-none"
+                className={`absolute w-8 h-5 bg-amber-100/70 rounded-md
+                           ${styles.animateHowitworksStack3} motion-reduce:animate-none`}
               />
             </div>
 
             {/* Icon - synced focus pulse */}
             <Layers 
-              className="w-10 h-10 text-gray-800 relative z-10 animate-howitworks-icon-2 motion-reduce:animate-none" 
+              className={`w-10 h-10 text-gray-800 relative z-10 ${styles.animateHowitworksIcon2} motion-reduce:animate-none`}
               strokeWidth={1.5} 
             />
             
@@ -152,22 +153,22 @@ export default function HowItWorks() {
             <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none" aria-hidden="true">
               {/* Chip 1 - Instagram */}
               <div 
-                className="absolute bottom-1 -left-1.5 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-pink-50 to-purple-50 rounded-full flex items-center justify-center border border-pink-100/50
-                           animate-howitworks-drift-1 motion-reduce:animate-none"
+                className={`absolute bottom-1 -left-1.5 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-pink-50 to-purple-50 rounded-full flex items-center justify-center border border-pink-100/50
+                           ${styles.animateHowitworksDrift1} motion-reduce:animate-none`}
               >
                 <Instagram className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-pink-500" />
               </div>
               {/* Chip 2 - Globe */}
               <div 
-                className="absolute -bottom-0.5 left-5 w-5 h-5 sm:w-6 sm:h-6 bg-blue-50 rounded-full flex items-center justify-center border border-blue-100/50
-                           animate-howitworks-drift-2 motion-reduce:animate-none"
+                className={`absolute -bottom-0.5 left-5 w-5 h-5 sm:w-6 sm:h-6 bg-blue-50 rounded-full flex items-center justify-center border border-blue-100/50
+                           ${styles.animateHowitworksDrift2} motion-reduce:animate-none`}
               >
                 <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-500" />
               </div>
               {/* Chip 3 - Music */}
               <div 
-                className="absolute bottom-1 left-10 sm:left-11 w-5 h-5 sm:w-6 sm:h-6 bg-green-50 rounded-full flex items-center justify-center border border-green-100/50
-                           animate-howitworks-drift-3 motion-reduce:animate-none"
+                className={`absolute bottom-1 left-10 sm:left-11 w-5 h-5 sm:w-6 sm:h-6 bg-green-50 rounded-full flex items-center justify-center border border-green-100/50
+                           ${styles.animateHowitworksDrift3} motion-reduce:animate-none`}
               >
                 <Music className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-600" />
               </div>
@@ -197,7 +198,7 @@ export default function HowItWorks() {
                 strokeWidth="1" 
                 strokeLinecap="round" 
                 strokeDasharray="1 4"
-                className="howitworks-dash-flow-v motion-reduce:[animation:none]"
+                className={`${styles.howitworksDashFlowV} motion-reduce:[animation:none]`}
               />
             </svg>
           </div>
@@ -208,9 +209,9 @@ export default function HowItWorks() {
           
           {/* Card Visual - synced focus pulse */}
           <div 
-            className="relative w-24 h-24 mb-6 rounded-3xl bg-white border border-amber-100 shadow-[0_8px_30px_rgb(251,191,36,0.12)] flex items-center justify-center 
-                       animate-howitworks-card-3 motion-reduce:animate-none
-                       group-hover:-translate-y-1 transition-transform duration-700 ease-out delay-150 motion-reduce:group-hover:translate-y-0"
+            className={`relative w-24 h-24 mb-6 rounded-3xl bg-white border border-amber-100 shadow-[0_8px_30px_rgb(251,191,36,0.12)] flex items-center justify-center 
+                       ${styles.animateHowitworksCard3} motion-reduce:animate-none
+                       group-hover:-translate-y-1 transition-transform duration-700 ease-out delay-150 motion-reduce:group-hover:translate-y-0`}
           >
             {/* Premium Badge */}
             <div className="absolute -top-3 -right-3 bg-amber-50 text-amber-800 text-xs font-semibold px-3 py-1 rounded-full border border-amber-200/80 shadow-sm">
@@ -220,22 +221,22 @@ export default function HowItWorks() {
             {/* Radar sweep - synced to step 3 focus */}
             <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
               <div 
-                className="absolute w-16 h-16 border border-amber-200 rounded-full 
-                           animate-howitworks-radar-outer motion-reduce:animate-none"
+                className={`absolute w-16 h-16 border border-amber-200 rounded-full 
+                           ${styles.animateHowitworksRadarOuter} motion-reduce:animate-none`}
               />
               <div 
-                className="absolute w-10 h-10 border border-amber-300 rounded-full
-                           animate-howitworks-radar-inner motion-reduce:animate-none"
+                className={`absolute w-10 h-10 border border-amber-300 rounded-full
+                           ${styles.animateHowitworksRadarInner} motion-reduce:animate-none`}
               />
               <div 
-                className="absolute top-4 right-4 w-1.5 h-1.5 bg-amber-500 rounded-full
-                           animate-howitworks-ping motion-reduce:animate-none"
+                className={`absolute top-4 right-4 w-1.5 h-1.5 bg-amber-500 rounded-full
+                           ${styles.animateHowitworksPing} motion-reduce:animate-none`}
               />
             </div>
             
             {/* Icon - synced focus pulse */}
             <Search 
-              className="w-10 h-10 text-amber-600 relative z-10 animate-howitworks-icon-3 motion-reduce:animate-none" 
+              className={`w-10 h-10 text-amber-600 relative z-10 ${styles.animateHowitworksIcon3} motion-reduce:animate-none`}
               strokeWidth={1.5} 
             />
           </div>

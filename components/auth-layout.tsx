@@ -17,12 +17,14 @@ export default function AuthLayout({ children, title, subtitle, containerClassNa
     >
       {/* Subtle Background Artwork */}
       <div className="absolute left-30 inset-0 opacity-5">
+        {/* Static artwork - unoptimized to avoid Vercel Image Optimization quota */}
         <Image
           src="/sunroad_artwork.png"
           alt="Sun Road Artwork"
           fill
           className="object-contain"
           priority
+          unoptimized
         />
       </div>
 
@@ -37,6 +39,7 @@ export default function AuthLayout({ children, title, subtitle, containerClassNa
             {/* Artwork Section with Tagline Inside */}
             <div className="relative w-full max-w-md">
               <div className="relative bg-white/20 backdrop-blur-sm rounded-3xl p-6 shadow-2xl">
+                {/* Static artwork - unoptimized to avoid Vercel Image Optimization quota */}
                 <Image
                   src="/sunroad_artwork.png"
                   alt="Connecting you to local creatives"
@@ -44,9 +47,10 @@ export default function AuthLayout({ children, title, subtitle, containerClassNa
                   height={300}
                   className="w-full h-auto object-contain mb-4"
                   priority
+                  unoptimized
                 />
                 {/* Tagline inside the card */}
-                <p className="font-artistic text-lg text-sunroad-brown-700 text-center">
+                <p className="font-display text-lg text-sunroad-brown-700 text-center">
                   Connecting you to local creatives
                 </p>
               </div>
@@ -59,9 +63,9 @@ export default function AuthLayout({ children, title, subtitle, containerClassNa
                 Trusted by leading institutions
               </p>
               <div className="flex justify-center items-center space-x-6 opacity-60">
-                <Image src="/Logos_bob_dylan.png" alt="Bob Dylan Center" width={60} height={40} className="h-8 w-auto filter grayscale" />
-                <Image src="/logos_cains.png" alt="Cain's Ballroom" width={60} height={40} className="h-8 w-auto filter grayscale" />
-                <Image src="/logos_circle_cinema.png" alt="Circle Cinema" width={60} height={40} className="h-8 w-auto filter grayscale" />
+                <Image src="/Logos_bob_dylan.png" alt="Bob Dylan Center" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
+                <Image src="/logos_cains.png" alt="Cain's Ballroom" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
+                <Image src="/logos_circle_cinema.png" alt="Circle Cinema" width={60} height={40} className="h-8 w-auto filter grayscale" unoptimized />
               </div>
             </div>
           </div>
@@ -73,7 +77,7 @@ export default function AuthLayout({ children, title, subtitle, containerClassNa
             {/* Optional title and subtitle - hidden on mobile, shown on desktop */}
             {title && (
               <div className="hidden lg:block text-center mb-8">
-                <h1 className="font-bold text-3xl text-sunroad-brown-800 mb-2">{title}</h1>
+                <h1 className="font-display font-bold text-3xl text-sunroad-brown-800 mb-2">{title}</h1>
                 {subtitle && <p className="font-body text-sunroad-brown-600">{subtitle}</p>}
               </div>
             )}

@@ -97,6 +97,7 @@ export function LoginForm({
                 height={53}
                 className="h-12 w-auto mx-auto"
                 priority
+                unoptimized
               />
             </Link>
             <h1 className="font-bold text-xl text-sunroad-brown-800 mb-1">Welcome back</h1>
