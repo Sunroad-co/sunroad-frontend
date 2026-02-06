@@ -91,7 +91,7 @@ export function LoginForm({
           <div className="text-center mb-5 lg:hidden">
             <Link href="/" className="inline-block mb-3">
               <Image 
-                src="/sunroad_logo_2x.webp" 
+                src="/Sun-Road-Logo-svg.svg" 
                 alt="Sun Road" 
                 width={100}
                 height={53}

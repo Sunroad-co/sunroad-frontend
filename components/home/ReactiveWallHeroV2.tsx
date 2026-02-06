@@ -467,7 +467,7 @@ export default function ReactiveWallHeroV2({ artists }: ReactiveWallHeroV2Props)
                 <span className="text-xs text-gray-900 font-medium">Explore on</span>
                 {/* Static SVG logo - unoptimized to avoid Vercel Image Optimization quota */}
                 <Image 
-                  src="/sunroad_logo_tiny.webp" 
+                  src="/Sun-Road-Logo-svg.svg" 
                   alt="Sunroad" 
                   width={96} 
                   height={53}
