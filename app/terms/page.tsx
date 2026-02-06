@@ -117,7 +117,7 @@ export default function TermsPage() {
             10. Privacy
           </h2>
           <p>
-            Our <Link href="/privacy" className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline">Privacy Policy</Link> is part of these terms. By using the Services, you agree to it. Data is processed in the United States.
+            Our <Link href="/privacy" prefetch={false} className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline">Privacy Policy</Link> is part of these terms. By using the Services, you agree to it. Data is processed in the United States.
           </p>
 
           <h2 className="text-2xl font-display font-semibold text-sunroad-brown-900 mt-8 mb-4">

@@ -220,6 +220,7 @@ export default function NavbarAuth({ onMobileMenuOpen, showMobileAvatar = false 
   return (
     <Link 
       href="/auth/sign-up" 
+      prefetch={false}
       className="px-5 py-2.5 text-white bg-sunroad-amber-600 rounded-full hover:bg-sunroad-amber-700 transition-colors font-semibold shadow-sm"
     >
       Join Sun Road

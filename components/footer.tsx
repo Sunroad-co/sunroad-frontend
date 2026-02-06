@@ -96,7 +96,7 @@ export default function Footer() {
         <div className="hidden md:grid md:grid-cols-4 gap-8 mb-8">
           {/* Left: Branding */}
           <div className="flex flex-col space-y-3">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center" prefetch={false}>
               <Image 
                 src="/Sun-Road-Logo-svg.svg" 
                 alt="Sun Road Logo" 
@@ -202,12 +202,14 @@ export default function Footer() {
               <Link
                 href="/privacy"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Privacy Policy
               </Link>
               <Link
                 href="/terms"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Terms of Use
               </Link>
@@ -219,7 +221,7 @@ export default function Footer() {
         <div className="md:hidden space-y-8">
           {/* Branding */}
           <div className="flex flex-col items-center space-y-3 text-center">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center" prefetch={false}>
               <Image 
                 src="/Sun-Road-Logo-svg.svg" 
                 alt="Sun Road Logo" 
@@ -324,12 +326,14 @@ export default function Footer() {
               <Link
                 href="/privacy"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Privacy Policy
               </Link>
               <Link
                 href="/terms"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+                prefetch={false}
               >
                 Terms of Use
               </Link>

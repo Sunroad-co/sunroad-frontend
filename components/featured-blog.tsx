@@ -312,6 +312,7 @@ export default function FeaturedBlog({ posts }: FeaturedBlogProps) {
             <Link 
               href={`/blog/${primaryPost.slug}`}
               className="group/title"
+              prefetch={false}
             >
               <h3 className={`text-xl sm:text-2xl lg:text-3xl font-display font-bold tracking-tight ${theme.text} mb-3 line-clamp-2 group-hover/title:underline decoration-2 underline-offset-4`}>
                 {primaryPost.title}

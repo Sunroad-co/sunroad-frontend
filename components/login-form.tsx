@@ -89,7 +89,7 @@ export function LoginForm({
         <CardContent className="p-5 sm:p-8">
           {/* Logo and Title - Only show on mobile, inside card */}
           <div className="text-center mb-5 lg:hidden">
-            <Link href="/" className="inline-block mb-3">
+            <Link href="/" className="inline-block mb-3" prefetch={false}>
               <Image 
                 src="/Sun-Road-Logo-svg.svg" 
                 alt="Sun Road" 
@@ -216,13 +216,13 @@ export function LoginForm({
       <div className="text-center">
         <p className="text-xs text-sunroad-brown-500 font-body">
           By signing in, you agree to our{" "}
-          <Link href="/terms" className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline font-body">
+          <Link href="/terms" prefetch={false} className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline font-body">
             Terms of Service
           </Link>{" "}
           and{" "}
-          <Link href="/privacy" className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline font-body">
+          <Link href="/privacy" prefetch={false} className="text-sunroad-amber-600 hover:text-sunroad-amber-700 underline font-body">
             Privacy Policy
-          </Link>
+          </Link> 
         </p>
       </div>
     </div>

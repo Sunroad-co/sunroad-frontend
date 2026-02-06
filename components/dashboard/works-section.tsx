@@ -184,7 +184,7 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
               </p>
             ) : (
               <p className="text-sm text-amber-700 mt-1">
-                Upgrade to Pro for more works. <Link href="/settings" className="font-medium underline">View plans</Link>
+                Upgrade to Pro for more works. <Link href="/settings" className="font-medium underline" prefetch={false}>View plans</Link>
               </p>
             )}
           </div>
@@ -337,7 +337,7 @@ export default function WorksSection({ user, profile, onRefreshProfile }: WorksS
               </p>
             ) : (
               <p className="text-sm text-gray-600">
-                Upgrade to Pro to add works. <Link href="/settings" className="font-medium text-sunroad-amber-700 hover:text-sunroad-amber-800 underline">View plans</Link>
+                Upgrade to Pro to add works. <Link href="/settings" className="font-medium text-sunroad-amber-700 hover:text-sunroad-amber-800 underline" prefetch={false}>View plans</Link>
               </p>
             )}
           </div>
