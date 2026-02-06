@@ -202,9 +202,14 @@ export default function Footer() {
               <Link
                 href="/privacy"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
-                prefetch={false}
-             >
+              >
                 Privacy Policy
+              </Link>
+              <Link
+                href="/terms"
+                className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+              >
+                Terms of Use
               </Link>
             </nav>
           </div>
@@ -319,9 +324,14 @@ export default function Footer() {
               <Link
                 href="/privacy"
                 className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
-                prefetch={false}
-             >
+              >
                 Privacy Policy
+              </Link>
+              <Link
+                href="/terms"
+                className="text-sunroad-brown-700 hover:text-sunroad-amber-600 transition-colors text-sm font-medium"
+              >
+                Terms of Use
               </Link>
             </nav>
           </div>
