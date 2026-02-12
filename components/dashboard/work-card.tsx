@@ -69,7 +69,8 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
   const [hasError, setHasError] = useState(false)
   const readyRef = useRef(false)
   const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const iframeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const iframeSoftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const iframeHardTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const imageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [iframeLoaded, setIframeLoaded] = useState(false)
   const [iframeError, setIframeError] = useState(false)
@@ -85,9 +86,13 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
       clearTimeout(readyTimeoutRef.current)
       readyTimeoutRef.current = null
     }
-    if (iframeTimeoutRef.current) {
-      clearTimeout(iframeTimeoutRef.current)
-      iframeTimeoutRef.current = null
+    if (iframeSoftTimeoutRef.current) {
+      clearTimeout(iframeSoftTimeoutRef.current)
+      iframeSoftTimeoutRef.current = null
+    }
+    if (iframeHardTimeoutRef.current) {
+      clearTimeout(iframeHardTimeoutRef.current)
+      iframeHardTimeoutRef.current = null
     }
     if (imageTimeoutRef.current) {
       clearTimeout(imageTimeoutRef.current)
@@ -124,7 +129,10 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
     }
   }, [work.media_type, work.media_source, work.src_url, hasError, isLoading])
 
-  // Set up timeout for SoundCloud and Spotify iframes
+  // SoundCloud/Spotify iframes: soft timeout only hides skeleton; hard timeout sets error.
+  // This avoids false "Could not load" when onLoad is slow (e.g. loading="lazy" or slow network).
+  const IFRAME_SOFT_MS = 8000
+  const IFRAME_HARD_MS = 20000
   useEffect(() => {
     if (
       work.media_type === 'audio' &&
@@ -133,18 +141,33 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
       !iframeLoaded &&
       !iframeError
     ) {
-      iframeTimeoutRef.current = setTimeout(() => {
+      iframeSoftTimeoutRef.current = setTimeout(() => {
+        if (!iframeLoaded) {
+          setIsLoading(false)
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[MediaPreview] Spotify/SoundCloud iframe load exceeded 8s, skeleton hidden. URL:', work.src_url)
+          }
+        }
+        iframeSoftTimeoutRef.current = null
+      }, IFRAME_SOFT_MS)
+      iframeHardTimeoutRef.current = setTimeout(() => {
         if (!iframeLoaded) {
           setIframeError(true)
           setHasError(true)
+          setIsLoading(false)
         }
-        iframeTimeoutRef.current = null
-      }, 1500)
+        iframeHardTimeoutRef.current = null
+      }, IFRAME_HARD_MS)
     }
 
     return () => {
-      if (iframeTimeoutRef.current) {
-        clearTimeout(iframeTimeoutRef.current)
+      if (iframeSoftTimeoutRef.current) {
+        clearTimeout(iframeSoftTimeoutRef.current)
+        iframeSoftTimeoutRef.current = null
+      }
+      if (iframeHardTimeoutRef.current) {
+        clearTimeout(iframeHardTimeoutRef.current)
+        iframeHardTimeoutRef.current = null
       }
     }
   }, [work.media_type, work.media_source, work.src_url, iframeLoaded, iframeError])
@@ -485,7 +508,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
     if (work.media_source === 'spotify') {
       const spotifyContent = (
         <>
-          {!iframeLoaded && !iframeError && (
+          {isLoading && !iframeLoaded && !iframeError && (
             <div className="absolute inset-0 z-10 pointer-events-none">
               <Skeleton className="w-full h-[180px]" />
             </div>
@@ -503,15 +526,20 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
               className="w-full h-[180px]"
               frameBorder="0"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="lazy"
+              loading={isModal ? 'lazy' : 'eager'}
               src={getSpotifyEmbedUrl(work.src_url)}
               onLoad={() => {
-                if (iframeTimeoutRef.current) {
-                  clearTimeout(iframeTimeoutRef.current)
-                  iframeTimeoutRef.current = null
+                if (iframeSoftTimeoutRef.current) {
+                  clearTimeout(iframeSoftTimeoutRef.current)
+                  iframeSoftTimeoutRef.current = null
+                }
+                if (iframeHardTimeoutRef.current) {
+                  clearTimeout(iframeHardTimeoutRef.current)
+                  iframeHardTimeoutRef.current = null
                 }
                 setIframeLoaded(true)
                 setIframeError(false)
+                setHasError(false)
                 setIsLoading(false)
               }}
               onError={() => {
@@ -656,7 +684,7 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
     if (work.media_source === 'soundcloud') {
       const soundcloudContent = (
         <>
-          {!iframeLoaded && !iframeError && (
+          {isLoading && !iframeLoaded && !iframeError && (
             <div className="absolute inset-0 z-10 pointer-events-none">
               <Skeleton className="w-full h-[180px]" />
             </div>
@@ -675,15 +703,20 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
               scrolling="no"
               frameBorder="no"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="lazy"
+              loading={isModal ? 'lazy' : 'eager'}
               src={getSoundCloudEmbedUrl(work.src_url)}
               onLoad={() => {
-                if (iframeTimeoutRef.current) {
-                  clearTimeout(iframeTimeoutRef.current)
-                  iframeTimeoutRef.current = null
+                if (iframeSoftTimeoutRef.current) {
+                  clearTimeout(iframeSoftTimeoutRef.current)
+                  iframeSoftTimeoutRef.current = null
+                }
+                if (iframeHardTimeoutRef.current) {
+                  clearTimeout(iframeHardTimeoutRef.current)
+                  iframeHardTimeoutRef.current = null
                 }
                 setIframeLoaded(true)
                 setIframeError(false)
+                setHasError(false)
                 setIsLoading(false)
               }}
               onError={() => {
