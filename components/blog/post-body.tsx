@@ -4,21 +4,62 @@ import { PortableText, PortableTextComponents } from '@portabletext/react'
 import SRImage from '@/components/media/SRImage'
 import Link from 'next/link'
 import { urlForImageWithSize } from '@/lib/sanity/image'
-import { BlogPostImage } from '@/lib/sanity/queries'
 import { getProfileUrl } from '@/lib/utils/profile-url'
+
+/** Portable Text image block value from Sanity (shape can vary) */
+type PortableTextImageValue = {
+  asset?: string | { _ref?: string; _id?: string; _type?: string }
+  _ref?: string
+  alt?: string
+  caption?: string
+} | null
 
 interface PostBodyProps {
   content: any // Portable Text content
 }
 
+function PlaceholderFigure({ caption, alt }: { caption?: string; alt?: string } = {}) {
+  return (
+    <figure className="my-8">
+      <div className="relative w-full h-48 sm:h-64 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200">
+        <span className="text-gray-400 text-sm font-body">{alt || 'Image unavailable'}</span>
+      </div>
+      {caption && (
+        <figcaption className="mt-2 text-sm text-center text-sunroad-brown-600 italic">
+          {caption}
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
 // Custom components for Portable Text rendering
 const components: PortableTextComponents = {
   types: {
-    image: ({ value }: { value: BlogPostImage }) => {
-      if (!value?.asset) return null
+    image: ({ value }: { value: PortableTextImageValue }) => {
+      if (!value) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[PostBody] types.image: value is null/undefined')
+        }
+        return <PlaceholderFigure />
+      }
+
+      const hasAsset = value.asset !== undefined && value.asset !== null
+      const hasTopLevelRef = typeof (value as { _ref?: string })._ref === 'string'
+      if (!hasAsset && !hasTopLevelRef) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[PostBody] types.image: missing asset and _ref. value:', JSON.stringify(value, null, 2))
+        }
+        return <PlaceholderFigure caption={value.caption} />
+      }
 
       const imageUrl = urlForImageWithSize(value, 1200, 800)
-      if (!imageUrl) return null
+      if (!imageUrl) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[PostBody] types.image: urlForImageWithSize returned null. value:', JSON.stringify(value, null, 2))
+        }
+        return <PlaceholderFigure caption={value.caption} alt={value.alt} />
+      }
 
       return (
         <figure className="my-8">

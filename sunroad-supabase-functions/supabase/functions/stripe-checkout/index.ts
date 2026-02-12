@@ -161,6 +161,32 @@ serve(async (req) => {
     );
   }
 
+  // Double subscription guard: check for existing active subscriptions
+  const { data: existingSub, error: subErr } = await supabaseAdmin
+    .from("billing_subscriptions")
+    .select("status")
+    .eq("auth_user_id", auth_user_id)
+    .in("status", ["active", "trialing", "past_due", "unpaid"])
+    .maybeSingle();
+
+  if (subErr) {
+    return new Response("DB error", { status: 500, headers });
+  }
+
+  // If user already has an active subscription, redirect to Billing Portal instead
+  if (existingSub) {
+    const baseUrl = resolveBaseUrl(req);
+    const portal = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${baseUrl}/billing`,
+    });
+
+    return new Response(JSON.stringify({ url: portal.url }), {
+      status: 200,
+      headers: { ...headers, "content-type": "application/json" },
+    });
+  }
+
   const baseUrl = resolveBaseUrl(req);
   const successUrl = `${baseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${baseUrl}/billing/cancel`;

@@ -182,24 +182,41 @@ async function revalidateArtistCache(auth_user_id: string) {
     }
 
     const revalidateUrl = `${PUBLIC_SITE_URL}/api/revalidate`;
-    const response = await fetch(revalidateUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-revalidate-secret": REVALIDATE_SECRET,
-      },
-      body: JSON.stringify({
-        tags: [`artist:${handle}`],
-        handle,
-      }),
-    });
+    
+    // Add timeout to prevent webhook from hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    try {
+      const response = await fetch(revalidateUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-revalidate-secret": REVALIDATE_SECRET,
+        },
+        body: JSON.stringify({
+          tags: [`artist:${handle}`],
+          handle,
+        }),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "Unknown error");
-      throw new Error(`Revalidation failed: ${response.status} ${errorText}`);
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "Unknown error");
+        throw new Error(`Revalidation failed: ${response.status} ${errorText}`);
+      }
+
+      console.log(`Successfully revalidated artist cache for handle: ${handle}`);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
+        console.error("Revalidation request timed out (non-fatal):", fetchError);
+      } else {
+        throw fetchError;
+      }
     }
-
-    console.log(`Successfully revalidated artist cache for handle: ${handle}`);
   } catch (error) {
     // Best-effort: log but don't fail the webhook
     console.error("Failed to revalidate artist cache (non-fatal):", error);
@@ -224,7 +241,22 @@ serve(async (req) => {
     return new Response("Invalid signature", { status: 400 });
   }
 
+  // Track if event processing began (for error handling)
+  let eventBegun = false;
+
   try {
+    // Stripe mode guard: ensure event matches expected mode (before any DB writes)
+    const EXPECT_LIVEMODE = Deno.env.get("STRIPE_EXPECT_LIVEMODE") === "true";
+    if (event.livemode !== EXPECT_LIVEMODE) {
+      console.warn("[WEBHOOK] Livemode mismatch", {
+        eventId: event.id,
+        type: event.type,
+        eventLivemode: event.livemode,
+        expected: EXPECT_LIVEMODE,
+      });
+      // Return 200 so Stripe does not retry for config mismatch
+      return new Response("OK (livemode mismatch)", { status: 200 });
+    }
     if (DEBUG_STRIPE) {
       console.log('='.repeat(80));
       console.log('[WEBHOOK] Full event object:', JSON.stringify(event, null, 2));
@@ -238,20 +270,23 @@ serve(async (req) => {
       });
     }
 
-    // Idempotency: only process each event once
-    console.log('[WEBHOOK] Checking idempotency for event:', event.id);
-    const { data: shouldProcess, error: idemErr } = await supabaseAdmin
-      .rpc("insert_stripe_event_once", { p_event_id: event.id });
+    // Idempotency: begin event processing
+    console.log('[WEBHOOK] Beginning event processing for:', event.id);
+    const { data: shouldProcess, error: beginErr } = await supabaseAdmin
+      .rpc("stripe_event_begin", { p_event_id: event.id });
 
-    if (idemErr) {
-      console.error('[WEBHOOK] Idempotency check error:', idemErr);
-      throw idemErr;
+    if (beginErr) {
+      console.error('[WEBHOOK] Event begin error:', beginErr);
+      throw beginErr;
     }
-    console.log('[WEBHOOK] Idempotency check result - shouldProcess:', shouldProcess);
+
     if (!shouldProcess) {
-      console.log('[WEBHOOK] Event already processed, skipping (duplicate)');
+      console.log('[WEBHOOK] Event already processed or in progress, skipping (duplicate/in-progress)');
       return new Response("OK (duplicate)", { status: 200 });
     }
+
+    // Track that begin() succeeded so we can mark failed on error
+    eventBegun = true;
 
     // Handle events
     console.log('[WEBHOOK] Processing event type:', event.type);
@@ -273,7 +308,7 @@ serve(async (req) => {
 
         if (!auth_user_id || !customerId) {
           console.warn('[WEBHOOK] Missing auth_user_id or customerId, skipping');
-          break;
+          throw new Error("checkout.session.completed: missing auth_user_id or customerId");
         }
 
         await upsertCustomer(auth_user_id, customerId, session.customer_details?.email ?? null);
@@ -349,7 +384,7 @@ serve(async (req) => {
 
         if (!auth_user_id) {
           console.warn("[WEBHOOK] No auth_user_id found for subscription", sub.id);
-          break;
+          throw new Error(`customer.subscription: no auth_user_id for subscription ${sub.id}`);
         }
 
         const priceId = sub.items.data?.[0]?.price?.id;
@@ -360,7 +395,7 @@ serve(async (req) => {
 
         if (!priceId) {
           console.warn("[WEBHOOK] No price id found for subscription", sub.id);
-          break;
+          throw new Error(`customer.subscription: no price id for subscription ${sub.id}`);
         }
 
         const periodStart = extractPeriodSeconds(sub, 'current_period_start');
@@ -421,7 +456,7 @@ serve(async (req) => {
 
         if (!subscriptionId || !customerId) {
           console.warn("[WEBHOOK] Missing subscription or customer ID in invoice event", invoice.id);
-          break;
+          throw new Error(`invoice: missing subscription or customer ID for invoice ${invoice.id}`);
         }
 
         // Resolve auth_user_id in priority order
@@ -460,7 +495,7 @@ serve(async (req) => {
 
         if (!auth_user_id) {
           console.warn("[WEBHOOK] No auth_user_id found for invoice", invoice.id);
-          break;
+          throw new Error(`invoice: no auth_user_id for invoice ${invoice.id}`);
         }
 
         // Retrieve fresh subscription from Stripe
@@ -477,7 +512,7 @@ serve(async (req) => {
           }
         } catch (err) {
           console.error("[WEBHOOK] Failed to retrieve subscription from Stripe:", err);
-          break;
+          throw err instanceof Error ? err : new Error(String(err));
         }
 
         const priceId = sub.items.data?.[0]?.price?.id;
@@ -486,7 +521,7 @@ serve(async (req) => {
         }
         if (!priceId) {
           console.warn("[WEBHOOK] No price id found for subscription", sub.id);
-          break;
+          throw new Error(`invoice: no price id for subscription ${sub.id}`);
         }
 
         const periodStart = extractPeriodSeconds(sub, 'current_period_start');
@@ -539,7 +574,7 @@ serve(async (req) => {
 
         if (!customerId) {
           console.warn("[WEBHOOK] Missing customer ID in invoice.payment_failed event", invoice.id);
-          break;
+          throw new Error(`invoice.payment_failed: missing customer ID for invoice ${invoice.id}`);
         }
 
         // Resolve auth_user_id via customer lookup (no Stripe API call needed)
@@ -563,7 +598,7 @@ serve(async (req) => {
           }
         } else {
           console.warn("[WEBHOOK] No auth_user_id found for invoice.payment_failed", invoice.id);
-          // Don't throw - safe to continue
+          throw new Error(`invoice.payment_failed: no auth_user_id for invoice ${invoice.id}`);
         }
 
         console.log('[WEBHOOK] invoice.payment_failed processing complete');
@@ -572,16 +607,36 @@ serve(async (req) => {
 
       default:
         console.log('[WEBHOOK] Unhandled event type:', event.type);
-        // ignore
+        // ignore - mark done anyway so it doesn't retry forever
         break;
     }
 
+    // Mark event as successfully processed (only if we began processing)
+    if (eventBegun) {
+      console.log('[WEBHOOK] Marking event as done:', event.id);
+      await supabaseAdmin.rpc("stripe_event_mark_done", { p_event_id: event.id });
+    }
+    
     console.log('[WEBHOOK] Event processing complete, returning 200 OK');
     return new Response("OK", { status: 200 });
   } catch (err) {
     console.error('CRITICAL WEBHOOK ERROR:', err);
-    // Important: return 200 or 500?
-    // Return 500 so Stripe retries if we failed to persist state.
+    
+    // If event processing began, mark it as failed
+    if (eventBegun) {
+      try {
+        const errorMessage = err instanceof Error ? `${err.name}: ${err.message}` : JSON.stringify(err);
+        console.log('[WEBHOOK] Marking event as failed:', event.id, errorMessage);
+        await supabaseAdmin.rpc("stripe_event_mark_failed", { 
+          p_event_id: event.id, 
+          p_error: errorMessage 
+        });
+      } catch (markFailedErr) {
+        console.error('[WEBHOOK] Failed to mark event as failed:', markFailedErr);
+      }
+    }
+    
+    // Return 500 so Stripe retries if we failed to persist state
     return new Response("Webhook error", { status: 500 });
   }
 });

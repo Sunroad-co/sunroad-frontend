@@ -153,7 +153,7 @@ export default function OnboardingForm({
 
   // Debounced location search
   useEffect(() => {
-    if (!locationQuery || locationQuery.length < 2 || selectedLocation) {
+    if (!locationQuery || locationQuery.trim().length < 3 || selectedLocation) {
       setLocationSuggestions([]);
       setShowSuggestions(false);
       setIsSearchingLocations(false);

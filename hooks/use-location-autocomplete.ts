@@ -37,15 +37,15 @@ async function fetchLocationAutocomplete(query: string): Promise<GeoapifySuggest
  * Hook for location autocomplete using SWR
  * 
  * @param query - The search query string
- * @param enabled - Whether to enable the search (only searches when enabled and query length >= 2)
+ * @param enabled - Whether to enable the search (only searches when enabled and query length >= 3)
  * @returns Object with suggestions, isLoading, and error
  */
 export function useLocationAutocomplete(query: string, enabled: boolean) {
   // Normalize query for cache key
   const normalizedQuery = query.trim().toLowerCase()
   
-  // Only fetch when enabled and query is at least 2 characters
-  const shouldFetch = enabled && normalizedQuery.length >= 2
+  // Only fetch when enabled and query is at least 3 characters (API requirement)
+  const shouldFetch = enabled && normalizedQuery.length >= 3
   
   // SWR key: null when not fetching (disables SWR)
   const swrKey = shouldFetch ? ['/api/geoapify/autocomplete', normalizedQuery] : null
