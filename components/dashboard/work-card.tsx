@@ -245,29 +245,32 @@ export function MediaPreview({ work, variant = 'card' }: { work: Work; variant?:
     return (
       <div className={`relative w-full ${aspectClass} ${isModal ? 'bg-white' : 'bg-gray-100'} ${roundedClass} ${isModal ? '' : 'overflow-hidden'}`}>
         {isModal ? (
-          // Modal: Photograph-like effect with off-white border and shadow
-          <div className="relative w-full flex items-center justify-center p-3 sm:p-4 md:p-12 min-h-[300px] sm:min-h-[400px] max-h-[60vh] sm:max-h-[75vh]">
-            <div className="relative w-full h-full flex items-center justify-center">
-              <div className="relative inline-block" style={{
+          // Modal: Photograph-like effect with off-white border and shadow.
+          // iOS Safari: avoid h-full/max-h-full in flex children so the container gets an explicit
+          // height; use svh/dvh so the dynamic toolbar doesn't collapse the visible area.
+          <div className="relative w-full flex items-center justify-center p-3 sm:p-4 md:p-12 min-h-[300px] sm:min-h-[400px]">
+            <div
+              className="relative inline-block max-h-[60svh] sm:max-h-[75svh] w-full flex items-center justify-center"
+              style={{
                 borderLeft: '8px solid #faf9f6',
                 boxShadow: '0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
                 borderRadius: '4px',
                 overflow: 'hidden',
-                backgroundColor: '#fff'
-              }}>
-                <SRImage
-                  src={imageSrc}
-                  alt={work.title}
-                  width={1600}
-                  height={1600}
-                  className="object-contain max-w-full max-h-full block"
-                  style={{ width: 'auto', height: 'auto', display: 'block' }}
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                  mode="raw"
-                  sizes="(max-width: 768px) 100vw, 66vw"
-                />
-              </div>
+                backgroundColor: '#fff',
+              }}
+            >
+              <SRImage
+                src={imageSrc}
+                alt={work.title}
+                width={1600}
+                height={1600}
+                className="object-contain max-w-full max-h-[60svh] sm:max-h-[75svh] block"
+                style={{ width: 'auto', height: 'auto', display: 'block' }}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                mode="raw"
+                sizes="(max-width: 768px) 100vw, 66vw"
+              />
             </div>
             {isLoading && (
               <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
