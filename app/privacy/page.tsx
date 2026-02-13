@@ -1,12 +1,29 @@
 import type { Metadata } from "next";
+import { getSiteUrl } from "@/lib/site-url";
 
 // Force static generation with no revalidation
 export const dynamic = "force-static";
 export const revalidate = false;
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
-  title: "Privacy Policy | Sunroad",
-  description: "How Sunroad collects, uses, and protects your data.",
+  title: "Privacy Policy – Sun Road Co.",
+  description: "How Sun Road Co. collects, uses, and protects your data.",
+  alternates: {
+    canonical: "/privacy",
+  },
+  openGraph: {
+    title: "Privacy Policy – Sun Road Co.",
+    description: "How Sun Road Co. collects, uses, and protects your data.",
+    url: "/privacy",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Privacy Policy – Sun Road Co.",
+    description: "How Sun Road Co. collects, uses, and protects your data.",
+  },
 };
 
 export default function PrivacyPage() {

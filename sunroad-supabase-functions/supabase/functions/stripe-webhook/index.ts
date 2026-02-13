@@ -148,6 +148,116 @@ async function callSyncEntitlement(auth_user_id: string) {
   }
 }
 
+/**
+ * Extracts subscription and customer IDs from a Stripe Invoice object.
+ * Handles Stripe API version 2026-01-28.clover where subscription ID may be in nested locations.
+ * 
+ * @param invoice - The Stripe Invoice object
+ * @returns Object with subscriptionId and customerId
+ * @throws Error if either ID is missing, with structured context logged
+ */
+function extractInvoiceIds(invoice: Stripe.Invoice): { subscriptionId: string; customerId: string } {
+  let subscriptionId: string | null = null;
+  let subscriptionSource = 'unknown';
+
+  // Try top-level invoice.subscription first (if present)
+  if (invoice.subscription) {
+    subscriptionId = typeof invoice.subscription === "string" 
+      ? invoice.subscription 
+      : invoice.subscription?.id ?? null;
+    if (subscriptionId) {
+      subscriptionSource = 'invoice.subscription';
+    }
+  }
+
+  // Fallback chain for subscription ID
+  if (!subscriptionId && invoice.parent?.subscription_details?.subscription) {
+    subscriptionId = typeof invoice.parent.subscription_details.subscription === "string"
+      ? invoice.parent.subscription_details.subscription
+      : invoice.parent.subscription_details.subscription?.id ?? null;
+    if (subscriptionId) {
+      subscriptionSource = 'invoice.parent.subscription_details.subscription';
+    }
+  }
+
+  if (!subscriptionId && invoice.subscription_details?.subscription) {
+    subscriptionId = typeof invoice.subscription_details.subscription === "string"
+      ? invoice.subscription_details.subscription
+      : invoice.subscription_details.subscription?.id ?? null;
+    if (subscriptionId) {
+      subscriptionSource = 'invoice.subscription_details.subscription';
+    }
+  }
+
+  if (!subscriptionId && invoice.lines?.data?.[0]?.parent?.subscription_item_details?.subscription) {
+    subscriptionId = typeof invoice.lines.data[0].parent.subscription_item_details.subscription === "string"
+      ? invoice.lines.data[0].parent.subscription_item_details.subscription
+      : invoice.lines.data[0].parent.subscription_item_details.subscription?.id ?? null;
+    if (subscriptionId) {
+      subscriptionSource = 'invoice.lines.data[0].parent.subscription_item_details.subscription';
+    }
+  }
+
+  // Extract customer ID
+  const customerId = typeof invoice.customer === "string" 
+    ? invoice.customer 
+    : invoice.customer?.id ?? null;
+
+  // DEBUG logging
+  if (DEBUG_STRIPE) {
+    console.log('[extractInvoiceIds] DEBUG:', {
+      invoiceId: invoice.id,
+      subscriptionId,
+      subscriptionSource,
+      customerId,
+      hasTopLevelSubscription: !!invoice.subscription,
+      hasParentSubscriptionDetails: !!invoice.parent?.subscription_details,
+      hasSubscriptionDetails: !!invoice.subscription_details,
+      hasLine0Parent: !!invoice.lines?.data?.[0]?.parent,
+      customerType: typeof invoice.customer,
+    });
+  }
+
+  // Validate and throw with structured context if missing
+  if (!subscriptionId || !customerId) {
+    const context = {
+      invoiceId: invoice.id,
+      type: invoice.object,
+      billing_reason: invoice.billing_reason,
+      keysPresent: {
+        hasSubscription: !!invoice.subscription,
+        hasParent: !!invoice.parent,
+        hasSubscriptionDetails: !!invoice.subscription_details,
+        hasLines: !!invoice.lines?.data,
+        hasCustomer: !!invoice.customer,
+      },
+      parentSubscriptionDetails: invoice.parent?.subscription_details ? {
+        hasSubscription: !!invoice.parent.subscription_details.subscription,
+      } : null,
+      subscriptionDetails: invoice.subscription_details ? {
+        hasSubscription: !!invoice.subscription_details.subscription,
+      } : null,
+      line0Parent: invoice.lines?.data?.[0]?.parent ? {
+        hasSubscriptionItemDetails: !!invoice.lines.data[0].parent.subscription_item_details,
+        hasSubscription: !!invoice.lines.data[0].parent.subscription_item_details?.subscription,
+      } : null,
+    };
+
+    console.error('[extractInvoiceIds] Missing IDs with context:', JSON.stringify(context, null, 2));
+    throw new Error(
+      `invoice: missing subscription or customer ID for invoice ${invoice.id}. ` +
+      `subscriptionId: ${subscriptionId || 'MISSING'}, customerId: ${customerId || 'MISSING'}`
+    );
+  }
+
+  // Log where subscriptionId was resolved from
+  if (DEBUG_STRIPE) {
+    console.log(`[extractInvoiceIds] Resolved subscriptionId from: ${subscriptionSource}`);
+  }
+
+  return { subscriptionId, customerId };
+}
+
 async function getArtistHandle(auth_user_id: string): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("artists_min")
@@ -442,21 +552,11 @@ serve(async (req) => {
           console.log('[WEBHOOK] Full invoice object:', JSON.stringify(invoice, null, 2));
         }
 
-        // Extract subscription and customer IDs
-        const subscriptionId = typeof invoice.subscription === "string" 
-          ? invoice.subscription 
-          : invoice.subscription?.id;
-        const customerId = typeof invoice.customer === "string" 
-          ? invoice.customer 
-          : invoice.customer?.id;
+        // Extract subscription and customer IDs using robust helper
+        const { subscriptionId, customerId } = extractInvoiceIds(invoice);
 
         if (DEBUG_STRIPE) {
           console.log('[WEBHOOK] Extracted IDs:', { subscriptionId, customerId, invoiceId: invoice.id });
-        }
-
-        if (!subscriptionId || !customerId) {
-          console.warn("[WEBHOOK] Missing subscription or customer ID in invoice event", invoice.id);
-          throw new Error(`invoice: missing subscription or customer ID for invoice ${invoice.id}`);
         }
 
         // Resolve auth_user_id in priority order

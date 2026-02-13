@@ -266,7 +266,7 @@ export default function BrandManifesto() {
           <div className="relative bg-white/80 backdrop-blur-sm rounded-full shadow-2xl p-3">
             <div className="relative w-[90px] h-[90px]">
               <Image
-                src="/sunroad_logo.webp"
+                src="/sunroad_logo.png"
                 alt="Sun Road"
                 fill
                 sizes="90px"

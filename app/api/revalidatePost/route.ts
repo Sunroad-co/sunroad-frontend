@@ -51,15 +51,15 @@ export async function POST(request: NextRequest) {
     const revalidatedTags: string[] = []
     const revalidatedPaths: string[] = []
 
-    ;(revalidateTag as (tag: string) => void)('sanity:blog')
+    await revalidateTag('sanity:blog', 'max')
     revalidatePath('/blog')
     revalidatedTags.push('sanity:blog')
     revalidatedPaths.push('/blog')
 
-    ;(revalidateTag as (tag: string) => void)('sanity:post')
+    await revalidateTag('sanity:post', 'max')
     revalidatedTags.push('sanity:post')
 
-    ;(revalidateTag as (tag: string) => void)('sanity:featured')
+    await revalidateTag('sanity:featured', 'max')
     revalidatePath('/')
     revalidatedTags.push('sanity:featured')
     revalidatedPaths.push('/')
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     if (_type === 'post' && slug && typeof slug === 'string') {
       const postTag = `sanity:post:${slug}`
       const postPath = `/blog/${slug}`
-      ;(revalidateTag as (tag: string) => void)(postTag)
+      await revalidateTag(postTag, 'max')
       revalidatePath(postPath)
       revalidatedTags.push(postTag)
       revalidatedPaths.push(postPath)

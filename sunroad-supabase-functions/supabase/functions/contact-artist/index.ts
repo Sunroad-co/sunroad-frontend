@@ -579,7 +579,7 @@ Reply to this email to respond directly.
         <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-collapse: collapse; border-radius: 8px; overflow: hidden;">
           <tr>
             <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff;">
-              <img src="https://sunroad.io/assets/img/sunroad-logo.png" alt="Sun Road" width="120" style="display: block; margin: 0 auto; max-width: 120px; height: auto;">
+              <img src="https://sunroad.io/sunroad_logo.png" alt="Sun Road Co. Logo" width="120" style="display: block; margin: 0 auto; max-width: 120px; height: auto;">
             </td>
           </tr>
           <tr>

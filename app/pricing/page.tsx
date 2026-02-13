@@ -278,7 +278,7 @@ export default function PricingPage() {
           {/* Watermark logo */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden="true">
             <Image
-              src="/sunroad_logo.webp"
+              src="/sunroad_logo.png"
               alt=""
               width={300}
               height={164}

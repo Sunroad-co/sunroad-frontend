@@ -6,6 +6,8 @@
  * For server-side calls: Can use system secret via x-revalidate-secret header
  */
 
+import { getSiteUrl } from '@/lib/site-url'
+
 interface RevalidateArtistOptions {
   handle: string
   artistId: string
@@ -16,7 +18,7 @@ interface RevalidateArtistOptions {
 export async function revalidateArtist({ 
   handle, 
   artistId, 
-  baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  baseUrl = getSiteUrl(),
   systemSecret
 }: RevalidateArtistOptions) {
   try {

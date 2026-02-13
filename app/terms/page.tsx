@@ -1,13 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getSiteUrl } from "@/lib/site-url";
 
 // Force static generation with no revalidation
 export const dynamic = "force-static";
 export const revalidate = false;
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
   title: "Terms of Use – Sun Road Co.",
   description: "Terms and conditions for using Sun Road Co. services and platform.",
+  alternates: {
+    canonical: "/terms",
+  },
+  openGraph: {
+    title: "Terms of Use – Sun Road Co.",
+    description: "Terms and conditions for using Sun Road Co. services and platform.",
+    url: "/terms",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Terms of Use – Sun Road Co.",
+    description: "Terms and conditions for using Sun Road Co. services and platform.",
+  },
 };
 
 export default function TermsPage() {

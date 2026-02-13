@@ -33,54 +33,58 @@ function PlaceholderFigure({ caption, alt }: { caption?: string; alt?: string } 
   )
 }
 
+/** Renders a Sanity image block (used for both "image" and "inlineImage" block types). */
+function ImageBlock({ value }: { value: PortableTextImageValue }) {
+  if (!value) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[PostBody] types.image: value is null/undefined')
+    }
+    return <PlaceholderFigure />
+  }
+
+  const hasAsset = value.asset !== undefined && value.asset !== null
+  const hasTopLevelRef = typeof (value as { _ref?: string })._ref === 'string'
+  if (!hasAsset && !hasTopLevelRef) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[PostBody] types.image: missing asset and _ref. value:', JSON.stringify(value, null, 2))
+    }
+    return <PlaceholderFigure caption={value.caption} />
+  }
+
+  const imageUrl = urlForImageWithSize(value, 1200, 800)
+  if (!imageUrl) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[PostBody] types.image: urlForImageWithSize returned null. value:', JSON.stringify(value, null, 2))
+    }
+    return <PlaceholderFigure caption={value.caption} alt={value.alt} />
+  }
+
+  return (
+    <figure className="my-8">
+      <div className="relative w-full h-64 sm:h-96 md:h-[500px] rounded-lg overflow-hidden">
+        <SRImage
+          src={imageUrl}
+          alt={value.alt || 'Blog post image'}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+          mode="raw"
+        />
+      </div>
+      {value.caption && (
+        <figcaption className="mt-2 text-sm text-center text-sunroad-brown-600 italic">
+          {value.caption}
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
 // Custom components for Portable Text rendering
 const components: PortableTextComponents = {
   types: {
-    image: ({ value }: { value: PortableTextImageValue }) => {
-      if (!value) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[PostBody] types.image: value is null/undefined')
-        }
-        return <PlaceholderFigure />
-      }
-
-      const hasAsset = value.asset !== undefined && value.asset !== null
-      const hasTopLevelRef = typeof (value as { _ref?: string })._ref === 'string'
-      if (!hasAsset && !hasTopLevelRef) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[PostBody] types.image: missing asset and _ref. value:', JSON.stringify(value, null, 2))
-        }
-        return <PlaceholderFigure caption={value.caption} />
-      }
-
-      const imageUrl = urlForImageWithSize(value, 1200, 800)
-      if (!imageUrl) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[PostBody] types.image: urlForImageWithSize returned null. value:', JSON.stringify(value, null, 2))
-        }
-        return <PlaceholderFigure caption={value.caption} alt={value.alt} />
-      }
-
-      return (
-        <figure className="my-8">
-          <div className="relative w-full h-64 sm:h-96 md:h-[500px] rounded-lg overflow-hidden">
-            <SRImage
-              src={imageUrl}
-              alt={value.alt || 'Blog post image'}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-              mode="raw"
-            />
-          </div>
-          {value.caption && (
-            <figcaption className="mt-2 text-sm text-center text-sunroad-brown-600 italic">
-              {value.caption}
-            </figcaption>
-          )}
-        </figure>
-      )
-    },
+    image: ImageBlock,
+    inlineImage: ImageBlock,
     embed: ({ value }: { value: { provider?: string; url?: string; caption?: string } }) => {
       if (!value?.url) return null
 

@@ -47,7 +47,7 @@ export default function HeroProduct({ artists }: HeroProductProps) {
               aria-hidden="true"
             >
               <Image 
-                src="/sunroad_logo.webp" 
+                src="/sunroad_logo.png" 
                 alt="" 
                 width={400} 
                 height={219}

@@ -10,6 +10,7 @@ import ContactArtistCTA from '@/components/contact-artist-cta'
 import ScrollableCategories from '@/components/scrollable-categories'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getMediaUrl, getAvatarUrl, getBannerUrl } from '@/lib/media'
+import { getSiteUrl } from '@/lib/site-url'
 import { Work } from '@/hooks/use-user-profile'
 
 interface ArtistWithCategories {
@@ -219,7 +220,7 @@ export async function generateMetadata({
   // Use avatar as Open Graph image, fallback to banner
   const imageUrl = getMediaUrl(artist.avatar_url) || getMediaUrl(artist.banner_url)
 
-  const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sunroad-frontend.vercel.app'
+  const appBaseUrl = getSiteUrl()
 
   const metadata: Metadata = {
     title: `${artist.display_name} | Sun Road`,
@@ -234,11 +235,14 @@ export async function generateMetadata({
       'Sun Road'
     ],
     authors: [{ name: artist.display_name }],
+    alternates: {
+      canonical: `/@${handle}`,
+    },
     openGraph: {
       title: `${artist.display_name} | Sun Road`,
       description,
       type: 'profile',
-      url: `${appBaseUrl}/@${handle}`,
+      url: `/@${handle}`,
       siteName: 'Sun Road',
       ...(imageUrl && {
         images: [
@@ -250,9 +254,6 @@ export async function generateMetadata({
           }
         ]
       }),
-      ...(artist.website_url && {
-        url: artist.website_url,
-      })
     },
     twitter: {
       card: 'summary_large_image',
