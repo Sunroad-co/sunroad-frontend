@@ -5,6 +5,8 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { UserProvider } from "@/contexts/user-context";
 import { getSiteUrl } from "@/lib/site-url";
+import { buildSiteJsonLd } from "@/lib/json-ld";
+import { JsonLdScript } from "@/lib/json-ld-script";
 import "./globals.css";
 
 const siteUrl = getSiteUrl();
@@ -65,30 +67,21 @@ const inter = Inter({
 
 function SiteJsonLd() {
   const url = getSiteUrl();
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": `${url}/#website`,
-        url,
-        name: "Sun Road",
-        description: defaultDescription,
-      },
-      {
-        "@type": "Organization",
-        "@id": `${url}/#organization`,
-        name: "Sun Road",
-        url,
-      },
+  const logoUrl = `${url}/sunroad_logo.png`;
+  const jsonLd = buildSiteJsonLd({
+    siteUrl: url,
+    siteName: "Sun Road",
+    organizationName: "Sun Road Co.",
+    description: defaultDescription,
+    logoUrl,
+    sameAs: [
+      "https://www.youtube.com/@sunroadco",
+      "https://www.instagram.com/sunroadco/",
+      "https://www.facebook.com/sunroadapp",
+      "https://www.linkedin.com/company/sunroadco/",
     ],
-  };
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-    />
-  );
+  });
+  return <JsonLdScript data={jsonLd} />;
 }
 
 export default function RootLayout({

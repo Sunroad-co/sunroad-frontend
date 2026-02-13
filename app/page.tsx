@@ -107,7 +107,7 @@ export default async function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight text-gray-900">Featured Creatives</h2>
-          <Link href="/artists" className="text-amber-600 hover:text-amber-700 font-medium">
+          <Link href="/search" className="text-amber-600 hover:text-amber-700 font-medium" prefetch={false}>
             See More...
           </Link>
         </div>
@@ -125,6 +125,7 @@ export default async function Home() {
             <Link 
               href="/blog" 
               className="text-sunroad-amber-600 hover:text-sunroad-amber-700 font-medium text-sm sm:text-base"
+              prefetch={false}
             >
               Explore all stories →
             </Link>
@@ -137,7 +138,7 @@ export default async function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight text-gray-900">Popular Categories</h2>
-          <Link href="/categories" className="text-amber-600 hover:text-amber-700 font-medium">
+          <Link href="/search" className="text-amber-600 hover:text-amber-700 font-medium" prefetch={false}>
             See More...
           </Link>
         </div>

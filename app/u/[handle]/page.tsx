@@ -11,6 +11,8 @@ import ScrollableCategories from '@/components/scrollable-categories'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getMediaUrl, getAvatarUrl, getBannerUrl } from '@/lib/media'
 import { getSiteUrl } from '@/lib/site-url'
+import { buildArtistPersonJsonLd, collectArtistSameAs } from '@/lib/json-ld'
+import { JsonLdScript } from '@/lib/json-ld-script'
 import { Work } from '@/hooks/use-user-profile'
 
 interface ArtistWithCategories {
@@ -304,8 +306,28 @@ export default async function ArtistPage({ params }: { params: Promise<{ handle:
     // Check if artist can receive contact
     const canReceiveContact = artist?.can_receive_contact === true
 
+    // SEO: Person JSON-LD for public profile (canonical @handle URL)
+    const siteUrl = getSiteUrl()
+    const canonicalProfileUrl = `${siteUrl}/@${handle}`
+    const avatarImageUrl = getMediaUrl(artist.avatar_url) || getMediaUrl(artist.banner_url) || null
+    const personJsonLd = buildArtistPersonJsonLd({
+      displayName: artist.display_name,
+      canonicalUrl: canonicalProfileUrl,
+      imageUrl: avatarImageUrl,
+      description: artist.bio?.trim() || null,
+      address: artist.locations
+        ? {
+            city: artist.locations.city ?? undefined,
+            state: artist.locations.state ?? undefined,
+            country: artist.locations.country ?? undefined,
+          }
+        : undefined,
+      sameAs: collectArtistSameAs(artist),
+    })
+
     return (
       <main className="min-h-screen bg-sunroad-cream">
+        <JsonLdScript data={personJsonLd} />
         {/* Hero Section */}
         <header className="relative max-w-6xl mx-auto">
           {/* Banner */}
